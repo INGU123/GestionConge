@@ -31,13 +31,14 @@ public class Solde_congeController {
 
     // Récupérer tous les soldes selon périmètre (Admin : tous, Manager : équipe)
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
-    @GetMapping({"", "/all"})
+    @GetMapping({ "", "/all" })
     public ResponseEntity<List<Solde_conge>> getAllSoldes() {
         Utilisateur currentUser = getCurrentAuthenticatedUser();
         return ResponseEntity.ok(soldeCongeService.getAllSoldes(currentUser));
     }
 
-    // Récupérer tous les soldes d'un utilisateur (Employé : soi-même, Manager : équipe, Admin : tous)
+    // Récupérer tous les soldes d'un utilisateur (Employé : soi-même, Manager :
+    // équipe, Admin : tous)
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'EMPLOYE')")
     @GetMapping("/utilisateur/{utilisateurId}")
     public ResponseEntity<List<Solde_conge>> getSoldesParUtilisateur(@PathVariable Long utilisateurId) {
@@ -45,7 +46,8 @@ public class Solde_congeController {
         return ResponseEntity.ok(soldeCongeService.getSoldesParUtilisateur(utilisateurId, currentUser));
     }
 
-    // Initialiser le solde d'un utilisateur pour une année (Strictement réservé à l'Admin)
+    // Initialiser le solde d'un utilisateur pour une année (Strictement réservé à
+    // l'Admin)
     @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/initialiser/{utilisateurId}")
     public ResponseEntity<Void> initialiserSoldesAnnuels(@PathVariable Long utilisateurId, @RequestParam int annee) {
@@ -56,11 +58,16 @@ public class Solde_congeController {
     // Ajuster manuellement le solde (Strictement réservé à l'Admin)
     @PreAuthorize("hasRole('ADMIN')")
     @PutMapping("/ajuster/{soldeId}")
-    public ResponseEntity<Solde_conge> ajusterSolde(
-            @PathVariable Long soldeId,
+    public ResponseEntity<Solde_conge> ajusterSolde(@PathVariable Long soldeId,
             @RequestParam int nouveauNombreJoursRestants) {
 
-        Solde_conge soldeAjuste = soldeCongeService.ajusterSolde(soldeId, nouveauNombreJoursRestants);
+        Utilisateur currentUser = getCurrentAuthenticatedUser();
+        if (currentUser == null) {
+            throw new IllegalStateException("Authentification requise pour ajuster le solde.");
+        }
+
+        Solde_conge soldeAjuste = soldeCongeService.ajusterSolde(soldeId, nouveauNombreJoursRestants,
+                currentUser.getId());
         return ResponseEntity.ok(soldeAjuste);
     }
 

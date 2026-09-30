@@ -24,6 +24,7 @@ import com.fruvio.GestionConge.utilisateur.dto.ChangePasswordRequest;
 import com.fruvio.GestionConge.utilisateur.dto.ForgotPasswordRequest;
 import com.fruvio.GestionConge.utilisateur.dto.LoginRequest;
 import com.fruvio.GestionConge.utilisateur.dto.LoginResponse;
+import com.fruvio.GestionConge.utilisateur.dto.ResetPasswordRequest;
 import com.fruvio.GestionConge.utilisateur.dto.UtilisateurCreateRequest;
 import com.fruvio.GestionConge.utilisateur.dto.UtilisateurResponse;
 import com.fruvio.GestionConge.utilisateur.dto.UtilisateurUpdateRequest;
@@ -55,16 +56,13 @@ public class UtilisateurController {
         String password = request.getPassword();
 
         if (identifier == null || identifier.isBlank() || password == null || password.isBlank()) {
-            return ResponseEntity
-                    .status(HttpStatus.BAD_REQUEST)
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body("Le matricule et le mot de passe sont obligatoires.");
         }
 
         Utilisateur utilisateur = utilisateurService.login(identifier, password);
         if (utilisateur == null) {
-            return ResponseEntity
-                    .status(HttpStatus.UNAUTHORIZED)
-                    .body("Matricule ou mot de passe incorrect.");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Matricule ou mot de passe incorrect.");
         }
 
         String roleName = utilisateur.getRole() != null ? utilisateur.getRole().name() : Role.EMPLOYE.name();
@@ -72,10 +70,7 @@ public class UtilisateurController {
 
         UtilisateurResponse userResponse = UtilisateurResponse.fromEntity(utilisateur);
 
-        LoginResponse loginResponse = LoginResponse.builder()
-                .token(token)
-                .utilisateur(userResponse)
-                .build();
+        LoginResponse loginResponse = LoginResponse.builder().token(token).utilisateur(userResponse).build();
 
         return ResponseEntity.ok(loginResponse);
     }
@@ -85,8 +80,7 @@ public class UtilisateurController {
     // =========================================================
 
     @PostMapping("/forgot-password")
-    public ResponseEntity<?> forgotPassword(
-            @RequestBody(required = false) ForgotPasswordRequest body,
+    public ResponseEntity<?> forgotPassword(@RequestBody(required = false) ForgotPasswordRequest body,
             @RequestParam(value = "email", required = false) String paramEmail) {
 
         String email = null;
@@ -106,6 +100,30 @@ public class UtilisateurController {
         return ResponseEntity.ok("Si un compte correspond à cette adresse, un lien de réinitialisation sera envoyé.");
     }
 
+    @PostMapping("/reset-password")
+    public ResponseEntity<?> resetPassword(@Valid @RequestBody(required = false) ResetPasswordRequest body,
+            @RequestParam(value = "token", required = false) String paramToken,
+            @RequestParam(value = "newPassword", required = false) String paramNewPassword) {
+
+        String resetToken = body != null && body.getToken() != null ? body.getToken() : paramToken;
+        String newPassword = body != null && body.getNewPassword() != null ? body.getNewPassword() : paramNewPassword;
+
+        if (resetToken == null || resetToken.trim().isEmpty()) {
+            return ResponseEntity.badRequest().body("Le jeton de réinitialisation est obligatoire.");
+        }
+
+        if (newPassword == null || newPassword.trim().isEmpty()) {
+            return ResponseEntity.badRequest().body("Le nouveau mot de passe est obligatoire.");
+        }
+
+        try {
+            utilisateurService.resetPassword(resetToken.trim(), newPassword.trim());
+            return ResponseEntity.ok("Mot de passe réinitialisé avec succès.");
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
     // =========================================================
     // CREATION D'UN COLLABORATEUR (ADMIN uniquement)
     // =========================================================
@@ -118,10 +136,8 @@ public class UtilisateurController {
 
         UtilisateurResponse response = UtilisateurResponse.fromEntity(saved);
 
-        return ResponseEntity.status(HttpStatus.CREATED).body(Map.of(
-                "utilisateur", response,
-                "message", "Collaborateur créé avec succès. Ses identifiants ont été envoyés par e-mail."
-        ));
+        return ResponseEntity.status(HttpStatus.CREATED).body(Map.of("utilisateur", response, "message",
+                "Collaborateur créé avec succès. Ses identifiants ont été envoyés par e-mail."));
     }
 
     // =========================================================
@@ -163,9 +179,7 @@ public class UtilisateurController {
         Utilisateur currentUser = getCurrentAuthenticatedUser();
         List<Utilisateur> list = utilisateurService.getAllUtilisateurs(currentUser);
 
-        List<UtilisateurResponse> responseList = list.stream()
-                .map(UtilisateurResponse::fromEntity)
-                .toList();
+        List<UtilisateurResponse> responseList = list.stream().map(UtilisateurResponse::fromEntity).toList();
 
         return ResponseEntity.ok(responseList);
     }

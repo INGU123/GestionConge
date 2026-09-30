@@ -34,5 +34,12 @@ build/
 
 # je le fait dans .github/modernize/assessment/.gitignore
 .env
+*.env
+logs/
+*.log
+hs_err_pid*
+core.*
+*.tmp
+*.temp
 src/main/resources/application-local.properties
 

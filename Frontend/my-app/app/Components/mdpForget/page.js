@@ -15,19 +15,19 @@ export default function ForgotPassword() {
     setMessage({ text: "", type: "" });
 
     try {
-      const res = await fetch(`http://localhost:8080/auth/forgot-password?email=${encodeURIComponent(email)}`, {
+      const res = await fetch(`http://localhost:8080/utilisateur/forgot-password?email=${encodeURIComponent(email)}`, {
         method: "POST"
       });
 
       if (res.ok) {
         setMessage({
-          text: "Un lien de réinitialisation a été envoyé à votre adresse e-mail.",
+          text: "Si un compte correspond à cette adresse, un lien de réinitialisation sera envoyé.",
           type: "success"
         });
         setEmail("");
       } else {
         setMessage({
-          text: "Aucun compte n'est associé à cet e-mail.",
+          text: "La demande n'a pas pu être traitée. Vérifiez votre adresse e-mail et réessayez.",
           type: "error"
         });
       }

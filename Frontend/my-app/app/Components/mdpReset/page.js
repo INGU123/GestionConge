@@ -1,8 +1,8 @@
 'use client';
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
-export default function ResetPassword() {
+function ResetPasswordForm() {
   const [newPassword, setNewPassword] = useState("");
   const [message, setMessage] = useState("");
   const searchParams = useSearchParams();
@@ -11,7 +11,7 @@ export default function ResetPassword() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const res = await fetch("http://localhost:8080/auth/reset-password?token=" + token + "&newPassword=" + newPassword, {
+      const res = await fetch("http://localhost:8080/utilisateur/reset-password?token=" + encodeURIComponent(token || "") + "&newPassword=" + encodeURIComponent(newPassword), {
         method: "POST"
       });
       if (res.ok) {
@@ -39,5 +39,13 @@ export default function ResetPassword() {
       </form>
       <p>{message}</p>
     </div>
+  );
+}
+
+export default function ResetPassword() {
+  return (
+    <Suspense fallback={<div>Chargement...</div>}>
+      <ResetPasswordForm />
+    </Suspense>
   );
 }

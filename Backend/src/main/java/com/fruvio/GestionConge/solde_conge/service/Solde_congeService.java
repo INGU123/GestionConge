@@ -10,6 +10,7 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.fruvio.GestionConge.historique_mouvement.service.Historique_mouvementService;
 import com.fruvio.GestionConge.solde_conge.entity.Solde_conge;
 import com.fruvio.GestionConge.solde_conge.repository.Solde_congeRepository;
 import com.fruvio.GestionConge.type_conge.entity.Type_conge;
@@ -24,13 +25,14 @@ public class Solde_congeService {
     private final Solde_congeRepository soldeCongeRepository;
     private final Type_congeRepository typeCongeRepository;
     private final UtilisateurRepository utilisateurRepository;
+    private final Historique_mouvementService historiqueMouvementService;
 
-    public Solde_congeService(Solde_congeRepository soldeCongeRepository,
-                              Type_congeRepository typeCongeRepository,
-                              UtilisateurRepository utilisateurRepository) {
+    public Solde_congeService(Solde_congeRepository soldeCongeRepository, Type_congeRepository typeCongeRepository,
+            UtilisateurRepository utilisateurRepository, Historique_mouvementService historiqueMouvementService) {
         this.soldeCongeRepository = soldeCongeRepository;
         this.typeCongeRepository = typeCongeRepository;
         this.utilisateurRepository = utilisateurRepository;
+        this.historiqueMouvementService = historiqueMouvementService;
     }
 
     // Récupérer tous les soldes d’un utilisateur avec contrôle d'autorisation
@@ -47,7 +49,8 @@ public class Solde_congeService {
             if (!Objects.equals(currentUser.getId(), utilisateurId)) {
                 Utilisateur target = utilisateurRepository.findById(utilisateurId).orElse(null);
                 if (target == null || !Objects.equals(target.getManager_id(), currentUser.getId())) {
-                    throw new AccessDeniedException("Accès non autorisé : cet employé n'appartient pas à votre équipe.");
+                    throw new AccessDeniedException(
+                            "Accès non autorisé : cet employé n'appartient pas à votre équipe.");
                 }
             }
         }
@@ -83,7 +86,8 @@ public class Solde_congeService {
             return soldeCongeRepository.findByUtilisateurIdIn(ids);
         }
 
-        throw new AccessDeniedException("Accès refusé : consultation globale réservée aux managers et administrateurs.");
+        throw new AccessDeniedException(
+                "Accès refusé : consultation globale réservée aux managers et administrateurs.");
     }
 
     // Initialiser les soldes annuels pour un utilisateur (Admin)
@@ -92,7 +96,8 @@ public class Solde_congeService {
         List<Type_conge> types = typeCongeRepository.findAll();
 
         for (Type_conge type : types) {
-            if (!soldeCongeRepository.existsByUtilisateurIdAndTypeCongeIdAndPeriode(utilisateurId, type.getId(), annee)) {
+            if (!soldeCongeRepository.existsByUtilisateurIdAndTypeCongeIdAndPeriode(utilisateurId, type.getId(),
+                    annee)) {
                 Solde_conge solde = new Solde_conge();
                 solde.setUtilisateurId(utilisateurId);
                 solde.setTypeCongeId(type.getId());
@@ -111,12 +116,35 @@ public class Solde_congeService {
     // Ajuster manuellement le solde (Strictement réservé à l'Admin)
     @Transactional
     public Solde_conge ajusterSolde(Long soldeId, int nouveauNombreJoursRestants) {
+        return ajusterSolde(soldeId, nouveauNombreJoursRestants, null);
+    }
+
+    @Transactional
+    public Solde_conge ajusterSolde(Long soldeId, int nouveauNombreJoursRestants, Long acteurId) {
+        if (nouveauNombreJoursRestants < 0) {
+            throw new IllegalArgumentException("Le solde ne peut pas être négatif.");
+        }
+
         Solde_conge solde = soldeCongeRepository.findById(soldeId)
                 .orElseThrow(() -> new IllegalArgumentException("Solde introuvable"));
 
+        int ancienRestant = solde.getSoldeRestant() != null ? solde.getSoldeRestant() : 0;
+        int acquis = solde.getSoldeAquis() != null ? solde.getSoldeAquis() : 0;
+        int pris = Math.max(0, acquis - nouveauNombreJoursRestants);
+
         solde.setSoldeRestant(nouveauNombreJoursRestants);
+        solde.setSoldePris(pris);
         solde.setDate_maj(new Timestamp(System.currentTimeMillis()));
 
-        return soldeCongeRepository.save(solde);
+        Solde_conge saved = soldeCongeRepository.save(solde);
+
+        if (acteurId != null && solde.getUtilisateurId() != null) {
+            int delta = Math.abs(nouveauNombreJoursRestants - ancienRestant);
+            historiqueMouvementService.enregistrerMouvement(solde.getUtilisateurId(), "AJUSTEMENT_SOLDE", delta,
+                    solde.getTypeCongeId(), null,
+                    "Ajustement manuel du solde : " + ancienRestant + " -> " + nouveauNombreJoursRestants, acteurId);
+        }
+
+        return saved;
     }
 }

@@ -1,0 +1,46 @@
+# OS / editors
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Environment / secrets
+.env
+.env.*
+*.env
+**/.env
+**/.env.*
+**/*.env
+!/.env.example
+
+# Logs
+logs/
+*.log
+hs_err_pid*
+core.*
+
+# Java / Spring Boot
+**/target/
+**/build/
+**/bin/
+**/generated/
+**/out/
+**/.classpath
+**/.factorypath
+**/.project
+**/.settings/
+**/.springBeans
+**/.sts4-cache
+
+# Node / Next.js
+**/node_modules/
+**/.next/
+**/out/
+**/coverage/
+**/.turbo/
+
+# Temporary files
+*.tmp
+*.temp

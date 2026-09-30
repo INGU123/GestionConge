@@ -8,6 +8,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,11 +37,9 @@ public class DemandeCongeService {
     private final Notification_congeService notificationService;
     private final UtilisateurRepository utilisateurRepo;
 
-    public DemandeCongeService(DemandeCongeRepository demandeRepo,
-                               Solde_congeRepository soldeRepo,
-                               Historique_mouvementService historiqueService,
-                               Notification_congeService notificationService,
-                               UtilisateurRepository utilisateurRepo) {
+    public DemandeCongeService(DemandeCongeRepository demandeRepo, Solde_congeRepository soldeRepo,
+            Historique_mouvementService historiqueService, Notification_congeService notificationService,
+            UtilisateurRepository utilisateurRepo) {
         this.demandeRepo = demandeRepo;
         this.soldeRepo = soldeRepo;
         this.historiqueService = historiqueService;
@@ -69,6 +68,25 @@ public class DemandeCongeService {
             }
             long diff = ChronoUnit.DAYS.between(demande.getDateDebut(), demande.getDateFin()) + 1;
             demande.setNombreJours((int) Math.max(1, diff));
+
+            for (DemandeConge existing : demandeRepo.findByUtilisateurId(utilisateurId)) {
+                if (existing == null || Objects.equals(existing.getId(), demande.getId())) {
+                    continue;
+                }
+                if (existing.getDateDebut() == null || existing.getDateFin() == null) {
+                    continue;
+                }
+                if ("ANNULEE".equalsIgnoreCase(existing.getStatut())
+                        || "REFUSEE".equalsIgnoreCase(existing.getStatut())) {
+                    continue;
+                }
+                boolean overlaps = !(demande.getDateFin().isBefore(existing.getDateDebut())
+                        || demande.getDateDebut().isAfter(existing.getDateFin()));
+                if (overlaps) {
+                    throw new IllegalStateException(
+                            "Cette période chevauche une autre demande de congé déjà enregistrée.");
+                }
+            }
         } else {
             demande.setNombreJours(1);
         }
@@ -76,12 +94,8 @@ public class DemandeCongeService {
         DemandeConge saved = demandeRepo.save(demande);
 
         try {
-            notificationService.creerNotification(
-                utilisateurId,
-                "Votre demande de congé du " + demande.getDateDebut() + " au " + demande.getDateFin() + " a été soumise avec succès.",
-                "INFO",
-                "/dashboard/demande"
-            );
+            notificationService.creerNotification(utilisateurId, "Votre demande de congé du " + demande.getDateDebut()
+                    + " au " + demande.getDateFin() + " a été soumise avec succès.", "INFO", "/dashboard/demande");
         } catch (Exception e) {
             log.warn("Impossible de créer la notification pour la demande #{} : {}", saved.getId(), e.getMessage());
         }
@@ -91,7 +105,8 @@ public class DemandeCongeService {
 
     // Traiter une demande avec vérification stricte du périmètre managérial
     @Transactional
-    public DemandeConge traiterDemande(Long demandeId, Long requestedManagerId, String statut, String motifRefus, Utilisateur currentUser) {
+    public DemandeConge traiterDemande(Long demandeId, Long requestedManagerId, String statut, String motifRefus,
+            Utilisateur currentUser) {
         if (currentUser == null) {
             throw new AccessDeniedException("Authentification requise.");
         }
@@ -107,23 +122,35 @@ public class DemandeCongeService {
         Utilisateur demandeur = utilisateurRepo.findById(demandeurId)
                 .orElseThrow(() -> new IllegalArgumentException("Collaborateur demandeur introuvable."));
 
-        // Si le validateur est un MANAGER, il ne peut traiter que les demandes des membres de son équipe
+        // Si le validateur est un MANAGER, il ne peut traiter que les demandes des
+        // membres de son équipe
         if (currentUser.getRole() == Role.MANAGER) {
             if (!Objects.equals(demandeur.getManager_id(), currentUser.getId())) {
-                throw new AccessDeniedException("Accès refusé : vous n'êtes pas le manager responsable de ce collaborateur.");
+                throw new AccessDeniedException(
+                        "Accès refusé : vous n'êtes pas le manager responsable de ce collaborateur.");
             }
+        }
+
+        String statutNormalise = statut == null ? "" : statut.trim().toUpperCase();
+        if (!Set.of("VALIDEE", "REFUSEE", "ANNULEE").contains(statutNormalise)) {
+            throw new IllegalArgumentException("Le statut de traitement est invalide.");
+        }
+
+        if (!"EN_ATTENTE".equalsIgnoreCase(demande.getStatut())) {
+            throw new IllegalStateException("Seule une demande en attente peut être traitée.");
         }
 
         Long actualValidatorId = currentUser.getId();
         demande.setValideePar(actualValidatorId);
-        demande.setStatut(statut);
+        demande.setStatut(statutNormalise);
         demande.setDateValidation(LocalDate.now());
 
-        if ("REFUSEE".equalsIgnoreCase(statut)) {
+        if ("REFUSEE".equalsIgnoreCase(statutNormalise)) {
             demande.setMotifRefus(motifRefus);
         }
 
-        boolean estValidee = "VALIDEE".equalsIgnoreCase(statut) || "VALIDE".equalsIgnoreCase(statut) || "APPROVED".equalsIgnoreCase(statut);
+        boolean estValidee = "VALIDEE".equalsIgnoreCase(statutNormalise) || "VALIDE".equalsIgnoreCase(statutNormalise)
+                || "APPROVED".equalsIgnoreCase(statutNormalise);
 
         if (estValidee && demande.getDateDebut() != null && demande.getDateFin() != null) {
             long joursLong = ChronoUnit.DAYS.between(demande.getDateDebut(), demande.getDateFin()) + 1;
@@ -134,61 +161,56 @@ public class DemandeCongeService {
 
             if (demande.getTypeCongeId() != null && demande.getUtilisateurId() != null) {
                 Optional<Solde_conge> soldeOpt = soldeRepo.findByUtilisateurIdAndTypeCongeIdAndPeriode(
-                    demande.getUtilisateurId(), demande.getTypeCongeId(), annee
-                );
+                        demande.getUtilisateurId(), demande.getTypeCongeId(), annee);
 
-                if (soldeOpt.isPresent()) {
-                    Solde_conge solde = soldeOpt.get();
-                    int prisActuel = (solde.getSoldePris() != null) ? solde.getSoldePris() : 0;
-                    int acquisActuel = (solde.getSoldeAquis() != null) ? solde.getSoldeAquis() : 0;
-
-                    int nouveauSoldePris = prisActuel + jours;
-                    solde.setSoldePris(nouveauSoldePris);
-                    solde.setSoldeRestant(Math.max(0, acquisActuel - nouveauSoldePris));
-                    solde.setDate_maj(new Timestamp(System.currentTimeMillis()));
-
-                    soldeRepo.save(solde);
-                } else {
-                    throw new IllegalStateException("Aucun solde trouvé pour le collaborateur #"
-                        + demande.getUtilisateurId() + ", le type #" + demande.getTypeCongeId()
-                        + " pour l'année " + annee);
+                if (soldeOpt.isEmpty()) {
+                    throw new IllegalStateException(
+                            "Aucun solde trouvé pour le collaborateur #" + demande.getUtilisateurId() + ", le type #"
+                                    + demande.getTypeCongeId() + " pour l'année " + annee);
                 }
 
+                Solde_conge solde = soldeOpt.get();
+                int prisActuel = (solde.getSoldePris() != null) ? solde.getSoldePris() : 0;
+                int acquisActuel = (solde.getSoldeAquis() != null) ? solde.getSoldeAquis() : 0;
+                int joursDisponibles = Math.max(0, acquisActuel - prisActuel);
+
+                if (joursDisponibles < jours) {
+                    throw new IllegalStateException("Solde insuffisant : " + jours + " jour(s) demandés pour "
+                            + joursDisponibles + " jour(s) disponibles.");
+                }
+
+                int nouveauSoldePris = prisActuel + jours;
+                solde.setSoldePris(nouveauSoldePris);
+                solde.setSoldeRestant(Math.max(0, acquisActuel - nouveauSoldePris));
+                solde.setDate_maj(new Timestamp(System.currentTimeMillis()));
+
+                soldeRepo.save(solde);
+
                 try {
-                    historiqueService.enregistrerMouvement(
-                        demande.getUtilisateurId(),
-                        "DEBIT_CONGE",
-                        jours,
-                        demande.getTypeCongeId(),
-                        demande.getId(),
-                        "Congé validé par le responsable #" + actualValidatorId,
-                        actualValidatorId
-                    );
+                    historiqueService.enregistrerMouvement(demande.getUtilisateurId(), "DEBIT_CONGE", jours,
+                            demande.getTypeCongeId(), demande.getId(),
+                            "Congé validé par le responsable #" + actualValidatorId, actualValidatorId);
                 } catch (Exception e) {
                     log.warn("Impossible d'enregistrer le mouvement d'historique : {}", e.getMessage());
                 }
             }
 
             try {
-                notificationService.creerNotification(
-                    demande.getUtilisateurId(),
-                    "Votre demande de congé du " + demande.getDateDebut() + " au " + demande.getDateFin() + " a été VALIDÉE.",
-                    "VALIDATION",
-                    "/dashboard/demande"
-                );
+                notificationService
+                        .creerNotification(
+                                demande.getUtilisateurId(), "Votre demande de congé du " + demande.getDateDebut()
+                                        + " au " + demande.getDateFin() + " a été VALIDÉE.",
+                                "VALIDATION", "/dashboard/demande");
             } catch (Exception e) {
                 log.warn("Échec d'envoi notification validation : {}", e.getMessage());
             }
 
-        } else if ("REFUSEE".equalsIgnoreCase(statut)) {
+        } else if ("REFUSEE".equalsIgnoreCase(statutNormalise)) {
             try {
-                notificationService.creerNotification(
-                    demande.getUtilisateurId(),
-                    "Votre demande de congé du " + demande.getDateDebut() + " a été REFUSÉE" +
-                    (motifRefus != null && !motifRefus.isEmpty() ? " (Motif : " + motifRefus + ")" : "."),
-                    "REFUS",
-                    "/dashboard/demande"
-                );
+                notificationService.creerNotification(demande.getUtilisateurId(),
+                        "Votre demande de congé du " + demande.getDateDebut() + " a été REFUSÉE"
+                                + (motifRefus != null && !motifRefus.isEmpty() ? " (Motif : " + motifRefus + ")" : "."),
+                        "REFUS", "/dashboard/demande");
             } catch (Exception e) {
                 log.warn("Échec d'envoi notification refus : {}", e.getMessage());
             }
@@ -231,7 +253,8 @@ public class DemandeCongeService {
 
         if (currentUser.getRole() == Role.EMPLOYE) {
             if (!Objects.equals(currentUser.getId(), utilisateurId)) {
-                throw new AccessDeniedException("Accès non autorisé : vous ne pouvez consulter que vos propres demandes.");
+                throw new AccessDeniedException(
+                        "Accès non autorisé : vous ne pouvez consulter que vos propres demandes.");
             }
             return demandeRepo.findByUtilisateurId(utilisateurId);
         }

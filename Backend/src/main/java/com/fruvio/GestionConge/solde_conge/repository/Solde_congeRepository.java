@@ -14,6 +14,8 @@ public interface Solde_congeRepository extends JpaRepository<Solde_conge, Long> 
     // Récupérer tous les soldes d’un utilisateur
     List<Solde_conge> findByUtilisateurId(Long utilisateurId);
 
+    boolean existsByUtilisateurId(Long utilisateurId);
+
     // Récupérer tous les soldes d'une liste d'utilisateurs
     List<Solde_conge> findByUtilisateurIdIn(List<Long> utilisateurIds);
 

@@ -38,7 +38,7 @@ public class Notification_congeController {
         this.notificationService = notificationService;
     }
 
-    // Notifications non lues d'un utilisateur (soi-même ou ADMIN)
+    // Notifications non lues du compte authentifié
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'EMPLOYE')")
     @GetMapping("/utilisateur/{utilisateurId}/non-lues")
     public ResponseEntity<List<Notification>> getNonLues(@PathVariable Long utilisateurId) {
@@ -47,7 +47,7 @@ public class Notification_congeController {
         return ResponseEntity.ok(notificationService.getNotificationsNonLues(utilisateurId));
     }
 
-    // Toutes les notifications d'un utilisateur (soi-même ou ADMIN)
+    // Toutes les notifications du compte authentifié
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'EMPLOYE')")
     @GetMapping("/utilisateur/{utilisateurId}")
     public ResponseEntity<List<Notification>> getToutes(@PathVariable Long utilisateurId) {
@@ -66,8 +66,7 @@ public class Notification_congeController {
         }
 
         Utilisateur currentUser = getCurrentAuthenticatedUser();
-        if (currentUser == null || (currentUser.getRole() != Role.ADMIN
-                && !Objects.equals(currentUser.getId(), notification.getUtilisateurId()))) {
+        if (currentUser == null || !Objects.equals(currentUser.getId(), notification.getUtilisateurId())) {
             throw new AccessDeniedException("Vous ne pouvez marquer comme lue que vos propres notifications.");
         }
 
@@ -113,7 +112,7 @@ public class Notification_congeController {
         if (currentUser == null) {
             throw new AccessDeniedException("Authentification requise.");
         }
-        if (currentUser.getRole() != Role.ADMIN && !Objects.equals(currentUser.getId(), utilisateurId)) {
+        if (!Objects.equals(currentUser.getId(), utilisateurId)) {
             throw new AccessDeniedException("Vous ne pouvez consulter que vos propres notifications.");
         }
     }

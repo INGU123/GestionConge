@@ -9,6 +9,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -184,6 +185,17 @@ public class UtilisateurController {
         }
 
         return ResponseEntity.ok(UtilisateurResponse.fromEntity(user));
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> delete(@PathVariable Long id) {
+        Utilisateur currentUser = getCurrentAuthenticatedUser();
+        if (!utilisateurService.deleteUtilisateur(id, currentUser)) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Collaborateur non trouvé."));
+        }
+
+        return ResponseEntity.ok(Map.of("message", "Collaborateur supprimé avec succès."));
     }
 
     // =========================================================

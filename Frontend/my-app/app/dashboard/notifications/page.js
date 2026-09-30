@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import {
   getNotificationNonLues,
   getToutesLesNotifications,
@@ -18,53 +18,47 @@ import {
 } from "lucide-react";
 
 export default function NotificationHeaderMenu() {
-  const [user, setUser] = useState(null);
+  const [user] = useState(getCurrentUser);
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(false);
   const [filterNonLues, setFilterNonLues] = useState(true);
   const [isOpen, setIsOpen] = useState(false);
-  
+
   // State pour la notification Toast éphémère
   const [activeToast, setActiveToast] = useState(null);
 
-  // 1. Charger l'utilisateur au montage
+  // 2. Charger uniquement les notifications du compte courant
   useEffect(() => {
-    const currentUser = getCurrentUser();
-    if (currentUser) {
-      setUser(currentUser);
-    }
-  }, []);
-
-  // 2. Fonction de chargement stabilisée avec useCallback
-  const loadNotifications = useCallback(async () => {
     if (!user?.id) return;
-    try {
-      setLoading(true);
-      const data = filterNonLues
-        ? await getNotificationNonLues(user.id)
-        : await getToutesLesNotifications(user.id);
-      
-      const notifsList = Array.isArray(data) ? data : [];
-      setNotifications(notifsList);
 
-      // Afficher un Toast s'il y a une notification non lue récente
-      const derniereNonLue = notifsList.find((n) => !n.lue);
-      if (derniereNonLue) {
-        setActiveToast(derniereNonLue);
-      }
-    } catch (err) {
-      console.error("Erreur chargement notifications:", err);
-    } finally {
-      setLoading(false);
-    }
+    let cancelled = false;
+    const request = filterNonLues
+      ? getNotificationNonLues(user.id)
+      : getToutesLesNotifications(user.id);
+
+    request
+      .then((data) => {
+        if (cancelled) return;
+
+        const notifsList = Array.isArray(data) ? data : [];
+        setNotifications(notifsList);
+
+        const derniereNonLue = notifsList.find((notification) => !notification.lue);
+        if (derniereNonLue) {
+          setActiveToast(derniereNonLue);
+        }
+      })
+      .catch((err) => {
+        console.error("Erreur chargement notifications:", err);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, [user?.id, filterNonLues]);
-
-  // 3. Charger les notifications dès que 'user' ou 'filterNonLues' change
-  useEffect(() => {
-    if (user?.id) {
-      loadNotifications();
-    }
-  }, [user?.id, filterNonLues, loadNotifications]);
 
   // Auto-fermeture du Toast après 5 secondes
   useEffect(() => {
@@ -77,7 +71,8 @@ export default function NotificationHeaderMenu() {
   const handleMarquerLue = async (notifId, e) => {
     if (e) e.stopPropagation();
     try {
-      await marquerNotificationLue(notifId);
+      const updated = await marquerNotificationLue(notifId);
+      if (!updated) return;
       setNotifications((prev) =>
         prev.map((n) => (n.id === notifId ? { ...n, lue: true } : n))
       );
@@ -108,7 +103,7 @@ export default function NotificationHeaderMenu() {
       <button
         onClick={() => setIsOpen(!isOpen)}
         className="relative p-2 rounded-xl text-slate-300 hover:text-white hover:bg-slate-800 transition-all focus:outline-none"
-        aria-label="Notifications"
+        aria-label={nonLuesCount > 0 ? `Notifications, ${nonLuesCount} non lues` : "Notifications"}
       >
         <Bell className="w-5 h-5" />
         {nonLuesCount > 0 && (
@@ -126,10 +121,13 @@ export default function NotificationHeaderMenu() {
               <Bell className="w-4 h-4 text-blue-400" />
               <span className="font-semibold text-sm">Notifications</span>
             </div>
-            
+
             {/* Filtres Rapides */}
             <button
-              onClick={() => setFilterNonLues(!filterNonLues)}
+              onClick={() => {
+                setLoading(true);
+                setFilterNonLues(!filterNonLues);
+              }}
               className="text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1 bg-slate-800 px-2 py-1 rounded-lg"
             >
               <Filter className="w-3 h-3" />
@@ -150,9 +148,8 @@ export default function NotificationHeaderMenu() {
               notifications.slice(0, 5).map((n) => (
                 <div
                   key={n.id}
-                  className={`p-3 text-xs flex items-start gap-3 transition-colors ${
-                    n.lue ? "bg-white" : "bg-blue-50/50"
-                  }`}
+                  className={`p-3 text-xs flex items-start gap-3 transition-colors ${n.lue ? "bg-white" : "bg-blue-50/50"
+                    }`}
                 >
                   {getNotificationIcon(n.type)}
                   <div className="flex-1">

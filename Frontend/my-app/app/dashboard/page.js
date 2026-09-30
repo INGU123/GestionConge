@@ -2,15 +2,14 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { 
-  CalendarDays, 
-  Clock, 
-  CheckCircle2, 
-  XCircle, 
-  FileText, 
-  PieChart, 
-  PlusCircle, 
-  Eye 
+import {
+  CalendarDays,
+  Clock,
+  CheckCircle2,
+  XCircle,
+  FileText,
+  PieChart,
+  Eye
 } from "lucide-react";
 
 import { getMesDemandes } from "../api/demandeConge/demandeConge";
@@ -63,6 +62,7 @@ export default function Dashboard() {
   const enAttenteCount = demandes.filter((d) => d.statut === "EN_ATTENTE").length;
   const valideCount = demandes.filter((d) => d.statut === "VALIDEE").length;
   const refuseCount = demandes.filter((d) => d.statut === "REFUSEE").length;
+  const isAdmin = ["ADMIN", "ROLE_ADMIN"].includes(user?.role?.toUpperCase());
 
   const getTypeLabel = (typeId) => {
     const found = typesConge.find((t) => t.id === typeId);
@@ -93,13 +93,14 @@ export default function Dashboard() {
           </p>
         </div>
         <div className="flex gap-3">
-          <Link
-            href="/dashboard/demande"
-            className="btn btn-primary btn-sm font-semibold gap-2 shadow"
-          >
-            <PlusCircle className="w-4 h-4" />
-            Nouvelle demande
-          </Link>
+          {!isAdmin && (
+            <Link
+              href="/dashboard/demande"
+              className="btn btn-primary btn-sm font-semibold gap-2 shadow"
+            >
+              Nouvelle demande
+            </Link>
+          )}
           <Link
             href="/dashboard/solde"
             className="btn btn-outline btn-sm text-slate-200 border-slate-600 hover:bg-slate-800 hover:text-white gap-2"
@@ -130,7 +131,7 @@ export default function Dashboard() {
         <div className="bg-white rounded-xl p-5 shadow-sm border border-slate-200 flex items-center justify-between">
           <div>
             <p className="text-xs font-bold uppercase text-slate-500 tracking-wider">
-             {` En cours d'instruction`}
+              {` En cours d'instruction`}
             </p>
             <p className="text-3xl font-bold text-amber-600 mt-1">
               {enAttenteCount}
@@ -212,15 +213,14 @@ export default function Dashboard() {
                       </td>
                       <td>
                         <span
-                          className={`badge badge-sm font-semibold ${
-                            d.statut === "VALIDEE"
+                          className={`badge badge-sm font-semibold ${d.statut === "VALIDEE"
                               ? "badge-success text-white"
                               : d.statut === "REFUSEE"
-                              ? "badge-error text-white"
-                              : d.statut === "ANNULEE"
-                              ? "badge-ghost text-slate-600"
-                              : "badge-warning text-slate-800"
-                          }`}
+                                ? "badge-error text-white"
+                                : d.statut === "ANNULEE"
+                                  ? "badge-ghost text-slate-600"
+                                  : "badge-warning text-slate-800"
+                            }`}
                         >
                           {d.statut === "EN_ATTENTE" ? "En attente" : d.statut}
                         </span>

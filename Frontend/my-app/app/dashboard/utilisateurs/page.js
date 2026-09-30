@@ -13,11 +13,11 @@ import {
   UserX,
   Calendar,
   Mail,
-  Lock,
   ShieldCheck,
   X,
   User
 } from "lucide-react";
+import { FaEdit, FaTrashAlt } from "react-icons/fa";
 
 export default function UtilisateursPage() {
   const [currentUser] = useState(() => getCurrentUser());
@@ -25,6 +25,8 @@ export default function UtilisateursPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [showModal, setShowModal] = useState(false);
+  const [editingUser, setEditingUser] = useState(null);
+  const [deletingUserId, setDeletingUserId] = useState(null);
   const [newUser, setNewUser] = useState({
     matricule: "",
     nom: "",
@@ -67,34 +69,39 @@ export default function UtilisateursPage() {
     };
   }, []);
 
-  const handleCreate = async (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setMsg({ type: "", text: "" });
     try {
       const payload = {
+        ...(editingUser ? { id: editingUser.id } : {}),
         matricule: newUser.matricule.trim(),
         nom: newUser.nom.trim(),
         prenom: newUser.prenom.trim(),
         email: newUser.email.trim(),
-        password: newUser.mot_de_pass ? newUser.mot_de_pass.trim() : null,
-        mot_de_pass: newUser.mot_de_pass ? newUser.mot_de_pass.trim() : null,
         role: newUser.role,
-        date_embauche: newUser.date_embauche,
-        actif: true,
+        actif: editingUser ? newUser.actif : true,
+        ...(!editingUser ? { date_embauche: newUser.date_embauche } : {}),
+        ...(newUser.mot_de_pass?.trim() ? { password: newUser.mot_de_pass.trim() } : {}),
       };
 
-      const res = await authFetch("http://localhost:8080/utilisateur/create", {
-        method: "POST",
-        body: JSON.stringify(payload),
-      });
+      const res = await authFetch(
+        `http://localhost:8080/utilisateur/${editingUser ? "update" : "create"}`,
+        {
+          method: editingUser ? "PUT" : "POST",
+          body: JSON.stringify(payload),
+        }
+      );
 
       if (res.ok) {
         const responseData = await res.json();
         const createdUser = responseData.utilisateur || responseData;
-        const generatedPass = responseData.generatedPassword;
-
-        setUsers((prev) => [...prev, createdUser]);
+        setUsers((prev) => editingUser
+          ? prev.map((user) => user.id === createdUser.id ? createdUser : user)
+          : [...prev, createdUser]
+        );
         setShowModal(false);
+        setEditingUser(null);
         setNewUser({
           matricule: "",
           nom: "",
@@ -106,7 +113,9 @@ export default function UtilisateursPage() {
           actif: true,
         });
 
-        const successText = responseData.message || "Collaborateur créé avec succès et soldes initialisés ! Ses identifiants ont été envoyés par e-mail.";
+        const successText = responseData.message || (editingUser
+          ? "Collaborateur modifié avec succès."
+          : "Collaborateur créé avec succès. Ses identifiants ont été envoyés par e-mail.");
         setMsg({ type: "success", text: successText });
       } else {
         const txt = await res.text();
@@ -114,12 +123,56 @@ export default function UtilisateursPage() {
         try {
           const parsed = JSON.parse(txt);
           if (parsed && parsed.message) errMsg = parsed.message;
-        } catch (_) {}
+        } catch { }
         setMsg({ type: "error", text: errMsg || "Erreur lors de la création." });
       }
     } catch (err) {
       setMsg({ type: "error", text: `Erreur : ${err.message}` });
     }
+  };
+
+  const handleDelete = async (user) => {
+    if (!window.confirm(`Confirmer la suppression du compte de ${user.prenom} ${user.nom} ?`)) return;
+
+    setMsg({ type: "", text: "" });
+    setDeletingUserId(user.id);
+    try {
+      const res = await authFetch(`http://localhost:8080/utilisateur/${user.id}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) {
+        const text = await res.text();
+        let errorMessage = text;
+        try {
+          const parsed = JSON.parse(text);
+          errorMessage = parsed.message || errorMessage;
+        } catch { }
+        setMsg({ type: "error", text: errorMessage || "Erreur lors de la suppression." });
+        return;
+      }
+
+      setUsers((prev) => prev.filter((item) => item.id !== user.id));
+      setMsg({ type: "success", text: "Collaborateur supprimé avec succès." });
+    } catch (err) {
+      setMsg({ type: "error", text: `Erreur : ${err.message}` });
+    } finally {
+      setDeletingUserId(null);
+    }
+  };
+
+  const startCreate = () => {
+    setEditingUser(null);
+    setNewUser({
+      matricule: "", nom: "", prenom: "", email: "", mot_de_pass: "",
+      role: "EMPLOYE", date_embauche: new Date().toISOString().split("T")[0], actif: true,
+    });
+    setShowModal(true);
+  };
+
+  const startEdit = (user) => {
+    setEditingUser(user);
+    setNewUser({ ...user, mot_de_pass: "", date_embauche: user.date_embauche || "" });
+    setShowModal(true);
   };
 
   const isAdmin = currentUser?.role?.toUpperCase() === "ADMIN";
@@ -131,7 +184,7 @@ export default function UtilisateursPage() {
         <div>
           <h3 className="text-base font-bold text-amber-900">Accès Restreint — SPAT</h3>
           <p className="text-sm text-amber-700 mt-1">
-            Seuls les Administrateurs RH de la SPAT sont habilités à gérer l'annuaire et les comptes collaborateurs.
+            {"Seuls les Administrateurs RH de la SPAT sont habilités à gérer l'annuaire et les comptes collaborateurs."}
           </p>
         </div>
       </div>
@@ -194,7 +247,7 @@ export default function UtilisateursPage() {
         </div>
 
         <button
-          onClick={() => setShowModal(true)}
+          onClick={startCreate}
           className="btn btn-primary text-white font-semibold gap-2 shadow-xs"
         >
           <UserPlus className="w-4 h-4" />
@@ -204,9 +257,8 @@ export default function UtilisateursPage() {
 
       {msg.text && (
         <div
-          className={`alert ${
-            msg.type === "success" ? "alert-success text-white" : "alert-error text-white"
-          } shadow-sm rounded-xl flex items-center gap-2`}
+          className={`alert ${msg.type === "success" ? "alert-success text-white" : "alert-error text-white"
+            } shadow-sm rounded-xl flex items-center gap-2`}
         >
           {msg.type === "success" ? (
             <CheckCircle2 className="w-5 h-5 shrink-0" />
@@ -255,6 +307,7 @@ export default function UtilisateursPage() {
                   <th className="py-3">Rôle & Privilèges</th>
                   <th className="py-3">{`Date d'embauche`}</th>
                   <th className="py-3">Statut</th>
+                  <th className="py-3 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -301,6 +354,29 @@ export default function UtilisateursPage() {
                         </span>
                       )}
                     </td>
+                    <td className="py-3.5">
+                      <div className="flex justify-end gap-2">
+                        <button
+                          type="button"
+                          onClick={() => startEdit(u)}
+                          className="btn btn-ghost btn-sm btn-square text-blue-700"
+                          title="Modifier le collaborateur"
+                          aria-label={`Modifier ${u.prenom} ${u.nom}`}
+                        >
+                          <FaEdit />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDelete(u)}
+                          disabled={deletingUserId === u.id || u.id === currentUser?.id}
+                          className="btn btn-ghost btn-sm btn-square text-rose-700"
+                          title={u.id === currentUser?.id ? "Impossible de supprimer votre compte" : "Supprimer le collaborateur"}
+                          aria-label={`Supprimer ${u.prenom} ${u.nom}`}
+                        >
+                          <FaTrashAlt />
+                        </button>
+                      </div>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -309,14 +385,14 @@ export default function UtilisateursPage() {
         )}
       </div>
 
-      {/* Modal d'ajout utilisateur */}
+      {/* Formulaire partagé de création et modification */}
       {showModal && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-xl max-w-lg w-full p-6 space-y-4 text-slate-800 border border-slate-100">
             <div className="flex justify-between items-center pb-3 border-b border-slate-100">
               <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
                 <UserPlus className="w-5 h-5 text-blue-600" />
-                Ajouter un Collaborateur SPAT
+                {editingUser ? "Modifier le collaborateur" : "Ajouter un Collaborateur SPAT"}
               </h3>
               <button
                 onClick={() => setShowModal(false)}
@@ -326,7 +402,7 @@ export default function UtilisateursPage() {
               </button>
             </div>
 
-            <form onSubmit={handleCreate} className="space-y-3">
+            <form onSubmit={handleSubmit} className="space-y-3">
               <div>
                 <label className="block text-xs font-bold uppercase text-slate-600 mb-1">
                   Matricule
@@ -407,12 +483,12 @@ export default function UtilisateursPage() {
                   >
                     <option value="EMPLOYE">Employé</option>
                     <option value="MANAGER">Manager</option>
-                    <option value="ADMIN">Administrateur</option>
+                    {editingUser?.role === "ADMIN" && <option value="ADMIN">Administrateur</option>}
                   </select>
                 </div>
               </div>
 
-              <div>
+              {!editingUser && <div>
                 <label className="block text-xs font-bold uppercase text-slate-600 mb-1">
                   {`Date d'embauche`}
                 </label>
@@ -422,18 +498,30 @@ export default function UtilisateursPage() {
                   onChange={(e) => setNewUser({ ...newUser, date_embauche: e.target.value })}
                   className="input input-bordered input-sm w-full bg-white text-slate-800 focus:outline-hidden"
                 />
-              </div>
+              </div>}
+
+              {editingUser && (
+                <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
+                  <input
+                    type="checkbox"
+                    checked={newUser.actif !== false}
+                    onChange={(e) => setNewUser({ ...newUser, actif: e.target.checked })}
+                    className="checkbox checkbox-sm"
+                  />
+                  Compte actif
+                </label>
+              )}
 
               <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
                 <button
                   type="button"
-                  onClick={() => setShowModal(false)}
+                  onClick={() => { setShowModal(false); setEditingUser(null); }}
                   className="btn btn-ghost btn-sm font-semibold"
                 >
                   Annuler
                 </button>
                 <button type="submit" className="btn btn-primary btn-sm text-white font-semibold">
-                  Créer le compte
+                  {editingUser ? "Enregistrer" : "Créer le compte"}
                 </button>
               </div>
             </form>

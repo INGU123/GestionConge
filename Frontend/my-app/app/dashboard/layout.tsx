@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import { getCurrentUser, clearAuthSession } from "@/lib/apiClient";
+import NotificationHeaderMenu from "./notifications/page";
 
 interface DashboardUser {
   id?: number;
@@ -137,16 +138,6 @@ export default function DashboardLayout({
       ),
       show: true,
     },
-    {
-      href: "/dashboard/notifications",
-      label: "Notifications",
-      icon: (
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-        </svg>
-      ),
-      show: true,
-    },
   ];
 
   const visibleNavItems = navItems.filter((item) => item.show);
@@ -167,19 +158,19 @@ export default function DashboardLayout({
         </div>
 
         <div className="flex items-center gap-4">
+          <NotificationHeaderMenu />
           <div className="text-right">
             <p className="text-sm font-semibold text-white">
               {user ? (user.prenom ? `${user.prenom} ${user.nom || ""}` : user.email) : "Invité"}
             </p>
             {user?.role && (
               <span
-                className={`badge badge-sm uppercase font-bold text-xs ${
-                  isAdmin
+                className={`badge badge-sm uppercase font-bold text-xs ${isAdmin
                     ? "badge-primary text-white"
                     : isManager
-                    ? "badge-secondary text-white"
-                    : "badge-ghost text-slate-300"
-                }`}
+                      ? "badge-secondary text-white"
+                      : "badge-ghost text-slate-300"
+                  }`}
               >
                 {user.role}
               </span>
@@ -210,11 +201,10 @@ export default function DashboardLayout({
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-                    isActive
+                  className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${isActive
                       ? "bg-blue-600 text-white shadow"
                       : "text-slate-300 hover:bg-slate-700 hover:text-white"
-                  }`}
+                    }`}
                 >
                   <span className="text-base">{item.icon}</span>
                   <span>{item.label}</span>

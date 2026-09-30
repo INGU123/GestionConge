@@ -11,6 +11,10 @@ import com.fruvio.GestionConge.demande_conge.entity.DemandeConge;
 public interface DemandeCongeRepository extends JpaRepository<DemandeConge, Long> {
     List<DemandeConge> findByUtilisateurId(Long utilisateurId);
 
+    boolean existsByUtilisateurId(Long utilisateurId);
+
+    boolean existsByValideePar(Long valideePar);
+
     List<DemandeConge> findByValideeParAndStatut(Long managerId, String statut);
 
     List<DemandeConge> findByStatut(String statut);

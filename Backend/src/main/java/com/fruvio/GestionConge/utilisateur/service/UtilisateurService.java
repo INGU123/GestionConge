@@ -12,12 +12,20 @@ import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.mail.MailException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.fruvio.GestionConge.demande_conge.repository.DemandeCongeRepository;
+import com.fruvio.GestionConge.historique_mouvement.repository.Historique_mouvementRepository;
+import com.fruvio.GestionConge.notifications_conge.repository.NotificationRepository;
 import com.fruvio.GestionConge.solde_conge.service.Solde_congeService;
+import com.fruvio.GestionConge.solde_conge.repository.Solde_congeRepository;
+import com.fruvio.GestionConge.service_conge.repository.Service_congeRepository;
 import com.fruvio.GestionConge.utilisateur.dto.ChangePasswordRequest;
 import com.fruvio.GestionConge.utilisateur.dto.UtilisateurCreateRequest;
 import com.fruvio.GestionConge.utilisateur.dto.UtilisateurUpdateRequest;
@@ -34,6 +42,11 @@ public class UtilisateurService {
     private final PasswordEncoder passwordEncoder;
     private final Solde_congeService soldeCongeService;
     private final EmailService emailService;
+    private final DemandeCongeRepository demandeCongeRepository;
+    private final Solde_congeRepository soldeCongeRepository;
+    private final Historique_mouvementRepository historiqueRepository;
+    private final NotificationRepository notificationRepository;
+    private final Service_congeRepository serviceRepository;
 
     private static final String CHAR_LOWER = "abcdefghijklmnopqrstuvwxyz";
     private static final String CHAR_UPPER = CHAR_LOWER.toUpperCase();
@@ -47,12 +60,22 @@ public class UtilisateurService {
             UtilisateurRepository utilisateurRepository,
             PasswordEncoder passwordEncoder,
             @Lazy Solde_congeService soldeCongeService,
-            EmailService emailService) {
+            EmailService emailService,
+            DemandeCongeRepository demandeCongeRepository,
+            Solde_congeRepository soldeCongeRepository,
+            Historique_mouvementRepository historiqueRepository,
+            NotificationRepository notificationRepository,
+            Service_congeRepository serviceRepository) {
 
         this.utilisateurRepository = utilisateurRepository;
         this.passwordEncoder = passwordEncoder;
         this.soldeCongeService = soldeCongeService;
         this.emailService = emailService;
+        this.demandeCongeRepository = demandeCongeRepository;
+        this.soldeCongeRepository = soldeCongeRepository;
+        this.historiqueRepository = historiqueRepository;
+        this.notificationRepository = notificationRepository;
+        this.serviceRepository = serviceRepository;
     }
 
     // =========================================================
@@ -167,8 +190,12 @@ public class UtilisateurService {
 
         Role assignedRole = request.getRole() != null ? request.getRole() : Role.EMPLOYE;
 
+        if (assignedRole == Role.ADMIN) {
+            throw new IllegalArgumentException("La création d'un compte ADMIN n'est pas autorisée depuis cet endpoint.");
+        }
+
         // Seul un ADMIN peut attribuer un rôle
-        if (currentUser != null && currentUser.getRole() != Role.ADMIN) {
+        if (currentUser == null || currentUser.getRole() != Role.ADMIN) {
             throw new AccessDeniedException("Seul un administrateur peut créer des utilisateurs.");
         }
 
@@ -206,8 +233,9 @@ public class UtilisateurService {
         // Notification par e-mail des identifiants (mot de passe temporaire uniquement envoyé par e-mail)
         try {
             emailService.sendWelcomeEmail(saved.getEmail(), saved.getMatricule(), rawPassword);
-        } catch (Exception e) {
-            log.warn("Impossible d'envoyer le message de bienvenue avec les identifiants à {} : {}", saved.getEmail(), e.getMessage());
+        } catch (MailException e) {
+            log.error("Échec SMTP lors de la création de l'utilisateur #{} ({})", saved.getId(), e.getClass().getSimpleName());
+            throw e;
         }
 
         // Retourner l'entité enregistrée avec son hash BCrypt intact. Le mot de passe en clair n'est JAMAIS stocké dans l'entité.
@@ -239,6 +267,12 @@ public class UtilisateurService {
         // Contrôle des autorisations d'accès à la modification
         if (!isAdmin && !isSelf) {
             throw new AccessDeniedException("Vous ne disposez pas des privilèges nécessaires pour modifier ce compte.");
+        }
+
+        if (!isAdmin && (request.getRole() != null || request.getActif() != null
+                || request.getMatricule() != null || request.getService_id() != null
+                || request.getManager_id() != null)) {
+            throw new AccessDeniedException("Seul un administrateur peut modifier les informations administratives d'un compte.");
         }
 
         // 1. Modification des informations personnelles autorisées (Tous rôles sur leur propre compte ou ADMIN)
@@ -307,6 +341,61 @@ public class UtilisateurService {
         }
 
         return utilisateurRepository.save(targetUser);
+    }
+
+    @Transactional
+    public boolean deleteUtilisateur(Long id, Utilisateur currentUser) {
+        if (currentUser == null || currentUser.getRole() != Role.ADMIN) {
+            throw new AccessDeniedException("Seul un administrateur peut supprimer un collaborateur.");
+        }
+
+        Utilisateur targetUser = utilisateurRepository.findById(id).orElse(null);
+        if (targetUser == null) {
+            return false;
+        }
+
+        if (Objects.equals(currentUser.getId(), targetUser.getId())) {
+            throw new IllegalStateException("Vous ne pouvez pas supprimer le compte ADMIN actuellement connecté.");
+        }
+
+        Long targetId = targetUser.getId();
+        boolean hasAssociatedData = demandeCongeRepository.existsByUtilisateurId(targetId)
+                || demandeCongeRepository.existsByValideePar(targetId)
+                || soldeCongeRepository.existsByUtilisateurId(targetId)
+                || historiqueRepository.existsByUtilisateurId(targetId)
+                || historiqueRepository.existsByActorId(targetId)
+                || notificationRepository.existsByUtilisateurId(targetId)
+                || !utilisateurRepository.findByManagerId(targetId).isEmpty()
+                || (targetId <= Integer.MAX_VALUE && serviceRepository.existsByResponsableId(targetId.intValue()));
+
+        if (hasAssociatedData) {
+            throw new IllegalStateException("Ce collaborateur possède des données métier associées. Pour préserver l'historique, désactivez son compte au lieu de le supprimer.");
+        }
+
+        String email = targetUser.getEmail();
+        String matricule = targetUser.getMatricule();
+        utilisateurRepository.delete(targetUser);
+
+        Runnable sendDeletionEmail = () -> {
+            try {
+                emailService.sendAccountDeletedEmail(email, matricule);
+            } catch (Exception e) {
+                log.error("Échec SMTP après suppression de l'utilisateur #{} ({})", targetId, e.getClass().getSimpleName());
+            }
+        };
+
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    sendDeletionEmail.run();
+                }
+            });
+        } else {
+            sendDeletionEmail.run();
+        }
+
+        return true;
     }
 
     // =========================================================
@@ -443,8 +532,8 @@ public class UtilisateurService {
 
         try {
             emailService.sendResetPasswordEmail(user.getEmail(), token);
-        } catch (Exception e) {
-            log.error("Échec de l'envoi de l'e-mail de réinitialisation à {}: {}", user.getEmail(), e.getMessage());
+        } catch (MailException e) {
+            log.error("Échec SMTP pour la réinitialisation de l'utilisateur #{} ({})", user.getId(), e.getClass().getSimpleName());
         }
     }
 

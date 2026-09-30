@@ -7,6 +7,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.mail.MailException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.validation.FieldError;
@@ -105,6 +106,24 @@ public class GlobalExceptionHandler {
 
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
     }
+
+        @ExceptionHandler(MailException.class)
+        public ResponseEntity<ErrorResponse> handleMailException(
+                        MailException ex,
+                        HttpServletRequest request) {
+
+                log.error("Échec SMTP sur URI [{}] ({})", request.getRequestURI(), ex.getClass().getSimpleName());
+
+                ErrorResponse response = ErrorResponse.builder()
+                                .timestamp(LocalDateTime.now())
+                                .status(HttpStatus.BAD_GATEWAY.value())
+                                .error("Mail Delivery Error")
+                                .message("L'e-mail n'a pas pu être envoyé. Vérifiez la configuration SMTP.")
+                                .path(request.getRequestURI())
+                                .build();
+
+                return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(response);
+        }
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleGenericException(

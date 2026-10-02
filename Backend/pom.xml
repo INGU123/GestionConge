@@ -1,7 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 
-                             http://maven.apache.org/xsd/maven-4.0.0.xsd">
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+                             https://maven.apache.org/xsd/maven-4.0.0.xsd">
 
     <modelVersion>4.0.0</modelVersion>
 
@@ -10,7 +11,9 @@
     <version>0.0.1-SNAPSHOT</version>
     <packaging>jar</packaging>
 
-    <!-- Spring Boot -->
+    <!-- ============================== -->
+    <!-- Spring Boot                    -->
+    <!-- ============================== -->
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
@@ -18,7 +21,9 @@
         <relativePath/>
     </parent>
 
-    <!-- Java -->
+    <!-- ============================== -->
+    <!-- Java                           -->
+    <!-- ============================== -->
     <properties>
         <java.version>17</java.version>
     </properties>
@@ -70,11 +75,12 @@
 
 
         <!-- ============================== -->
-        <!-- Email                           -->
+        <!-- Resend Email API                -->
         <!-- ============================== -->
         <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-mail</artifactId>
+            <groupId>com.resend</groupId>
+            <artifactId>resend-java</artifactId>
+            <version>4.0.0</version>
         </dependency>
 
 
@@ -119,7 +125,7 @@
 
 
         <!-- ============================== -->
-        <!-- Jakarta Validation               -->
+        <!-- Jakarta Validation              -->
         <!-- ============================== -->
         <dependency>
             <groupId>jakarta.validation</groupId>
@@ -129,7 +135,7 @@
 
 
         <!-- ============================== -->
-        <!-- Jakarta Annotation               -->
+        <!-- Jakarta Annotation              -->
         <!-- ============================== -->
         <dependency>
             <groupId>jakarta.annotation</groupId>

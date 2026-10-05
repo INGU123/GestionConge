@@ -1,28 +1,24 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import {
   getAllTypeConge,
   creerTypeConge,
   deleteTypeConge,
 } from "../../api/typeConge/typeConge";
-import { getCurrentUser } from "@/lib/apiClient";
 import {
   FolderKanban,
   PlusCircle,
   Trash2,
   CheckCircle2,
   AlertCircle,
-  ShieldAlert,
   FileText,
   Check,
   X,
-  Clock,
   Layers
 } from "lucide-react";
 
 export default function TypeCongePage() {
-  const [currentUser, setCurrentUser] = useState(null);
   const [types, setTypes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -38,27 +34,21 @@ export default function TypeCongePage() {
     actif: true,
   });
 
-  const loadTypes = useCallback(async () => {
-    try {
-      setLoading(true);
-      const data = await getAllTypeConge();
-      setTypes(Array.isArray(data) ? data : []);
-    } catch (err) {
-      console.error("Erreur récupération types:", err);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
   useEffect(() => {
-    try {
-      const u = getCurrentUser();
-      if (u) setCurrentUser(u);
-    } catch (err) {
-      console.error("Erreur chargement utilisateur:", err);
-    }
-    loadTypes();
-  }, [loadTypes]);
+    const fetchTypes = async () => {
+      try {
+        setLoading(true);
+        const data = await getAllTypeConge();
+        setTypes(Array.isArray(data) ? data : []);
+      } catch (err) {
+        console.error("Erreur récupération types:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    void fetchTypes();
+  }, []);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -132,7 +122,7 @@ export default function TypeCongePage() {
             Configuration des Types de Congés
           </h1>
           <p className="text-slate-400 text-sm mt-1">
-            Définissez les différentes catégories d'absences, quotas annuels et règles d'imputation RH.
+            Définissez les différentes catégories d&apos;absences, quotas annuels et règles d&apos;imputation RH.
           </p>
         </div>
       </div>

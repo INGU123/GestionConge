@@ -59,10 +59,8 @@ export async function authFetch(url, options = {}) {
   });
 
   if (response.status === 401) {
-    // Si non autorisé ou token expiré, redirection propre vers la page de login
-    if (typeof window !== "undefined" && window.location.pathname !== "/") {
+    if (typeof window !== "undefined") {
       clearAuthSession();
-      window.location.href = "/";
     }
   }
 

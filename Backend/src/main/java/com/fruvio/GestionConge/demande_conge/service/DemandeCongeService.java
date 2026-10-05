@@ -2,7 +2,6 @@ package com.fruvio.GestionConge.demande_conge.service;
 
 import java.sql.Timestamp;
 import java.time.LocalDate;
-import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -19,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.fruvio.GestionConge.demande_conge.entity.DemandeConge;
 import com.fruvio.GestionConge.demande_conge.repository.DemandeCongeRepository;
 import com.fruvio.GestionConge.historique_mouvement.service.Historique_mouvementService;
+import com.fruvio.GestionConge.jour_ferie.service.JourFerieService;
 import com.fruvio.GestionConge.notifications_conge.service.Notification_congeService;
 import com.fruvio.GestionConge.solde_conge.entity.Solde_conge;
 import com.fruvio.GestionConge.solde_conge.repository.Solde_congeRepository;
@@ -36,15 +36,17 @@ public class DemandeCongeService {
     private final Historique_mouvementService historiqueService;
     private final Notification_congeService notificationService;
     private final UtilisateurRepository utilisateurRepo;
+    private final JourFerieService jourFerieService;
 
     public DemandeCongeService(DemandeCongeRepository demandeRepo, Solde_congeRepository soldeRepo,
             Historique_mouvementService historiqueService, Notification_congeService notificationService,
-            UtilisateurRepository utilisateurRepo) {
+            UtilisateurRepository utilisateurRepo, JourFerieService jourFerieService) {
         this.demandeRepo = demandeRepo;
         this.soldeRepo = soldeRepo;
         this.historiqueService = historiqueService;
         this.notificationService = notificationService;
         this.utilisateurRepo = utilisateurRepo;
+        this.jourFerieService = jourFerieService;
     }
 
     // Créer une demande avec vérification d'identité
@@ -66,8 +68,13 @@ public class DemandeCongeService {
             if (demande.getDateFin().isBefore(demande.getDateDebut())) {
                 throw new IllegalArgumentException("La date de fin ne peut pas être antérieure à la date de début.");
             }
-            long diff = ChronoUnit.DAYS.between(demande.getDateDebut(), demande.getDateFin()) + 1;
-            demande.setNombreJours((int) Math.max(1, diff));
+
+            int joursOuvres = calculerJoursOuvres(demande.getDateDebut(), demande.getDateFin());
+            if (joursOuvres <= 0) {
+                throw new IllegalArgumentException(
+                        "Cette période ne contient aucune journée ouvrée. La demande de congé doit inclure au moins un jour ouvré.");
+            }
+            demande.setNombreJours(joursOuvres);
 
             for (DemandeConge existing : demandeRepo.findByUtilisateurId(utilisateurId)) {
                 if (existing == null || Objects.equals(existing.getId(), demande.getId())) {
@@ -88,16 +95,21 @@ public class DemandeCongeService {
                 }
             }
         } else {
-            demande.setNombreJours(1);
+            demande.setNombreJours(0);
         }
 
         DemandeConge saved = demandeRepo.save(demande);
 
-        try {
-            notificationService.creerNotification(utilisateurId, "Votre demande de congé du " + demande.getDateDebut()
-                    + " au " + demande.getDateFin() + " a été soumise avec succès.", "INFO", "/dashboard/demande");
-        } catch (Exception e) {
-            log.warn("Impossible de créer la notification pour la demande #{} : {}", saved.getId(), e.getMessage());
+        if (saved != null) {
+            try {
+                notificationService
+                        .creerNotification(
+                                utilisateurId, "Votre demande de congé du " + demande.getDateDebut() + " au "
+                                        + demande.getDateFin() + " a été soumise avec succès.",
+                                "INFO", "/dashboard/demande");
+            } catch (Exception e) {
+                log.warn("Impossible de créer la notification pour la demande #{} : {}", saved.getId(), e.getMessage());
+            }
         }
 
         return saved;
@@ -153,8 +165,11 @@ public class DemandeCongeService {
                 || "APPROVED".equalsIgnoreCase(statutNormalise);
 
         if (estValidee && demande.getDateDebut() != null && demande.getDateFin() != null) {
-            long joursLong = ChronoUnit.DAYS.between(demande.getDateDebut(), demande.getDateFin()) + 1;
-            int jours = (int) Math.max(1, joursLong);
+            int jours = calculerJoursOuvres(demande.getDateDebut(), demande.getDateFin());
+            if (jours <= 0) {
+                throw new IllegalStateException(
+                        "La période demandée ne contient aucune journée ouvrée. Aucune validation ne peut être effectuée.");
+            }
             demande.setNombreJours(jours);
 
             int annee = demande.getDateDebut().getYear();
@@ -233,12 +248,37 @@ public class DemandeCongeService {
             throw new AccessDeniedException("Vous ne pouvez annuler que vos propres demandes.");
         }
 
-        if (!"EN_ATTENTE".equalsIgnoreCase(demande.getStatut())) {
-            throw new IllegalStateException("Seule une demande en attente peut être annulée.");
+        if (!"EN_ATTENTE".equalsIgnoreCase(demande.getStatut()) && !"VALIDEE".equalsIgnoreCase(demande.getStatut())) {
+            throw new IllegalStateException("Seule une demande en attente ou validée peut être annulée.");
+        }
+
+        if ("VALIDEE".equalsIgnoreCase(demande.getStatut())) {
+            int joursAReintegrer = demande.getNombreJours() != null ? demande.getNombreJours()
+                    : calculerJoursOuvres(demande.getDateDebut(), demande.getDateFin());
+            if (demande.getTypeCongeId() != null && demande.getUtilisateurId() != null && demande.getDateDebut() != null
+                    && demande.getDateFin() != null) {
+                int annee = demande.getDateDebut().getYear();
+                Optional<Solde_conge> soldeOpt = soldeRepo.findByUtilisateurIdAndTypeCongeIdAndPeriode(
+                        demande.getUtilisateurId(), demande.getTypeCongeId(), annee);
+                if (soldeOpt.isPresent()) {
+                    Solde_conge solde = soldeOpt.get();
+                    int prisActuel = solde.getSoldePris() != null ? solde.getSoldePris() : 0;
+                    int acquisActuel = solde.getSoldeAquis() != null ? solde.getSoldeAquis() : 0;
+                    int nouveauPris = Math.max(0, prisActuel - joursAReintegrer);
+                    solde.setSoldePris(nouveauPris);
+                    solde.setSoldeRestant(Math.max(0, acquisActuel - nouveauPris));
+                    solde.setDate_maj(new Timestamp(System.currentTimeMillis()));
+                    soldeRepo.save(solde);
+                }
+            }
         }
 
         demande.setStatut("ANNULEE");
         return demandeRepo.save(demande);
+    }
+
+    private int calculerJoursOuvres(LocalDate dateDebut, LocalDate dateFin) {
+        return jourFerieService.compterJoursOuvres(dateDebut, dateFin);
     }
 
     // Récupérer les demandes d'un utilisateur avec contrôle d'accès

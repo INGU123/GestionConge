@@ -23,7 +23,7 @@ export const loginUser = async (identifier, motDePass) => {
       if (jsonErr && jsonErr.message) {
         parsedMessage = jsonErr.message;
       }
-    } catch (_) {}
+    } catch {}
     throw new Error(parsedMessage || "Matricule ou mot de passe incorrect.");
   }
 

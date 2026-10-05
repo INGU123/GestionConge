@@ -2,15 +2,56 @@
 
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { getJoursFeries } from "@/app/api/joursFeries/joursFeries";
 import {
   annulerDemandeConge,
   creerDemandeConge,
   getMesDemandes,
-} from "../../api/demandeConge/demandeConge.js";
-import { getAllTypeConge } from "../../api/typeConge/typeConge.js";
-
+} from "@/app/api/demandeConge/demandeConge";
+import { getAllTypeConge } from "@/app/api/typeConge/typeConge";
 import { getCurrentUser } from "@/lib/apiClient";
+
+const toLocalDateKey = (date) => {
+  if (!date) return "";
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
+const computeWorkingDays = (start, end, holidays = []) => {
+  if (!start || !end) return 0;
+
+  const startDate = new Date(start);
+  const endDate = new Date(end);
+  const holidaySet = new Set(
+    holidays
+      .map((holiday) => {
+        const rawDate = holiday?.date || holiday?.jour || holiday?.libelle;
+        if (!rawDate) return null;
+        const parsed = new Date(rawDate);
+        return Number.isNaN(parsed.getTime()) ? null : toLocalDateKey(parsed);
+      })
+      .filter(Boolean)
+  );
+
+  let count = 0;
+  const cursor = new Date(startDate);
+  cursor.setHours(0, 0, 0, 0);
+  endDate.setHours(0, 0, 0, 0);
+
+  while (cursor <= endDate) {
+    const day = cursor.getDay();
+    const dateKey = toLocalDateKey(cursor);
+    if (day !== 0 && day !== 6 && !holidaySet.has(dateKey)) {
+      count += 1;
+    }
+    cursor.setDate(cursor.getDate() + 1);
+  }
+
+  return count;
+};
 
 export default function DemandesPage() {
   const [utilisateurId, setUtilisateurId] = useState(null);
@@ -22,7 +63,19 @@ export default function DemandesPage() {
   });
   const [demandes, setDemandes] = useState([]);
   const [typesConge, setTypesConge] = useState([]);
+  const [holidays, setHolidays] = useState([]);
   const [loading, setLoading] = useState(false);
+
+  const workingDaysSummary = useMemo(() => {
+    if (!formData.debut || !formData.fin) return { calendarDays: 0, workingDays: 0 };
+    const start = new Date(formData.debut);
+    const end = new Date(formData.fin);
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return { calendarDays: 0, workingDays: 0 };
+
+    const calendarDays = Math.max(0, Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1);
+    const workingDays = computeWorkingDays(start, end, holidays);
+    return { calendarDays, workingDays };
+  }, [formData.debut, formData.fin, holidays]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -34,12 +87,15 @@ export default function DemandesPage() {
         }
 
         setUtilisateurId(currentUserId);
-        const [demandesData, typesData] = await Promise.all([
+        const [demandesData, typesData, holidayData] = await Promise.all([
           getMesDemandes(currentUserId),
           getAllTypeConge(),
+          getJoursFeries(),
         ]);
+
         setDemandes(Array.isArray(demandesData) ? demandesData : []);
         setTypesConge(Array.isArray(typesData) ? typesData : []);
+        setHolidays(Array.isArray(holidayData) ? holidayData : []);
       } catch (err) {
         console.error("Erreur lors du chargement des demandes:", err);
       }
@@ -99,27 +155,25 @@ export default function DemandesPage() {
   const getTypeLabel = (demande) => {
     const targetId = demande?.typeCongeId || demande?.typeConge?.id;
     const type = typesConge.find((item) => String(item.id) === String(targetId));
-    return type?.libelle || type?.code || demande?.typeConge?.libelle || `Type #${targetId || 'N/A'}`;
+    return type?.libelle || type?.code || demande?.typeConge?.libelle || `Type #${targetId || "N/A"}`;
   };
 
   return (
-    <div className="min-h-screen bg-slate-50/50 p-6 space-y-8 max-w-7xl mx-auto">
-      {/* En-tête de section */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200 pb-5">
+    <div className="min-h-screen p-6 space-y-8 max-w-7xl mx-auto" style={{ background: "transparent" }}>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b pb-5" style={{ borderColor: "var(--border)" }}>
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+          <h1 className="text-2xl font-bold tracking-tight" style={{ color: "var(--text-main)" }}>
             Mes Demandes de Congé
           </h1>
-          <p className="text-sm text-slate-500 mt-1">
+          <p className="text-sm mt-1" style={{ color: "var(--text-muted)" }}>
             Gestion et suivi de vos absences — Port de Toamasina (SPAT)
           </p>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        {/* Formulaire de demande (7 colonnes sur desktop) */}
-        <section className="lg:col-span-7 bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-          <div className="bg-slate-900 px-6 py-4 text-white">
+        <section className="lg:col-span-7 rounded-xl shadow-sm border overflow-hidden" style={{ background: "var(--panel)", borderColor: "var(--border)" }}>
+          <div className="px-6 py-4 text-white" style={{ background: "linear-gradient(135deg, #0b1f3a, #123a6d)" }}>
             <h2 className="font-semibold text-lg flex items-center gap-2">
               <svg className="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
@@ -129,19 +183,17 @@ export default function DemandesPage() {
           </div>
 
           <form onSubmit={handleSubmit} className="p-6 space-y-5">
-            {/* Type de congé */}
             <div>
-              <label htmlFor="typeCongeId" className="block text-sm font-semibold text-slate-700 mb-1.5">
+              <label htmlFor="typeCongeId" className="block text-sm font-semibold mb-1.5" style={{ color: "var(--text-main)" }}>
                 Type de congé <span className="text-red-500">*</span>
               </label>
               <select
                 id="typeCongeId"
                 name="typeCongeId"
                 value={formData.typeCongeId}
-                onChange={(e) =>
-                  setFormData({ ...formData, typeCongeId: e.target.value })
-                }
-                className="w-full rounded-lg border-slate-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm py-2.5 px-3 transition-colors border"
+                onChange={(e) => setFormData({ ...formData, typeCongeId: e.target.value })}
+                className="w-full rounded-lg shadow-sm text-sm py-2.5 px-3 transition-colors border"
+                style={{ background: "var(--panel-soft)", borderColor: "var(--border)", color: "var(--text-main)" }}
                 required
               >
                 <option value="">Sélectionner un type de congé</option>
@@ -153,64 +205,75 @@ export default function DemandesPage() {
               </select>
             </div>
 
-            {/* Dates début et fin */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="flex flex-col">
-                <label className="block text-sm font-semibold text-slate-700 mb-1.5">
+                <label className="block text-sm font-semibold mb-1.5" style={{ color: "var(--text-main)" }}>
                   Date de début <span className="text-red-500">*</span>
                 </label>
-                <div className="relative border border-slate-300 rounded-lg p-1.5 bg-slate-50 focus-within:bg-white focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500 transition-all">
+                <div className="relative border rounded-lg p-1.5 focus-within:ring-1 transition-all" style={{ background: "var(--panel-soft)", borderColor: "var(--border)" }}>
                   <DatePicker
                     selected={formData.debut}
                     onChange={(date) => setFormData({ ...formData, debut: date })}
                     dateFormat="yyyy-MM-dd"
-                    className="w-full bg-transparent text-sm text-slate-800 outline-none cursor-pointer"
+                    className="w-full bg-transparent text-sm outline-none cursor-pointer"
                     placeholderText="Choisir une date"
+                    style={{ color: "var(--text-main)" }}
                   />
                 </div>
               </div>
 
               <div className="flex flex-col">
-                <label className="block text-sm font-semibold text-slate-700 mb-1.5">
+                <label className="block text-sm font-semibold mb-1.5" style={{ color: "var(--text-main)" }}>
                   Date de fin <span className="text-red-500">*</span>
                 </label>
-                <div className="relative border border-slate-300 rounded-lg p-1.5 bg-slate-50 focus-within:bg-white focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500 transition-all">
+                <div className="relative border rounded-lg p-1.5 focus-within:ring-1 transition-all" style={{ background: "var(--panel-soft)", borderColor: "var(--border)" }}>
                   <DatePicker
                     selected={formData.fin}
                     onChange={(date) => setFormData({ ...formData, fin: date })}
                     dateFormat="yyyy-MM-dd"
-                    className="w-full bg-transparent text-sm text-slate-800 outline-none cursor-pointer"
+                    className="w-full bg-transparent text-sm outline-none cursor-pointer"
                     placeholderText="Choisir une date"
+                    style={{ color: "var(--text-main)" }}
                   />
                 </div>
               </div>
             </div>
 
-            {/* Commentaire */}
+            {(formData.debut || formData.fin) && (
+              <div className="rounded-xl border p-4" style={{ background: "var(--primary-soft)", borderColor: "var(--primary-border)" }}>
+                <div className="text-sm font-semibold" style={{ color: "var(--primary)" }}>
+                  Calcul des jours ouvrés
+                </div>
+                <div className="mt-2 flex flex-wrap gap-3 text-sm" style={{ color: "var(--text-main)" }}>
+                  <span className="badge badge-ghost">{workingDaysSummary.calendarDays} jours calendaires</span>
+                  <span className="badge badge-info text-white">{workingDaysSummary.workingDays} jours ouvrés</span>
+                </div>
+              </div>
+            )}
+
             <div>
-              <label htmlFor="commentaire" className="block text-sm font-semibold text-slate-700 mb-1.5">
+              <label htmlFor="commentaire" className="block text-sm font-semibold mb-1.5" style={{ color: "var(--text-main)" }}>
                 Commentaire ou justification <span className="text-red-500">*</span>
               </label>
               <textarea
                 id="commentaire"
                 name="commentaire"
                 value={formData.commentaire}
-                onChange={(e) =>
-                  setFormData({ ...formData, commentaire: e.target.value })
-                }
-                className="w-full rounded-lg border-slate-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm p-3 border resize-none transition-colors"
+                onChange={(e) => setFormData({ ...formData, commentaire: e.target.value })}
+                className="w-full rounded-lg shadow-sm text-sm p-3 border resize-none transition-colors"
                 rows="3"
                 placeholder="Saisissez un motif ou une précision concernant votre absence..."
+                style={{ background: "var(--panel-soft)", borderColor: "var(--border)", color: "var(--text-main)" }}
                 required
               />
             </div>
 
-            {/* Bouton de soumission */}
             <div className="pt-2">
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full sm:w-auto inline-flex justify-center items-center gap-2 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-medium px-6 py-2.5 rounded-lg shadow-sm transition-all disabled:opacity-50 text-sm"
+                className="w-full sm:w-auto inline-flex justify-center items-center gap-2 text-white font-medium px-6 py-2.5 rounded-lg shadow-sm transition-all disabled:opacity-50 text-sm"
+                style={{ background: "linear-gradient(135deg, #0b3d74, #2563eb)" }}
               >
                 {loading ? (
                   <>
@@ -233,95 +296,51 @@ export default function DemandesPage() {
           </form>
         </section>
 
-        {/* Historique des demandes (5 colonnes sur desktop) */}
-        <section className="lg:col-span-5 bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-          <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
-            <h2 className="font-semibold text-slate-800 text-lg flex items-center gap-2">
-              <svg className="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <section className="lg:col-span-5 rounded-xl shadow-sm border overflow-hidden" style={{ background: "var(--panel)", borderColor: "var(--border)" }}>
+          <div className="px-6 py-4 border-b flex items-center justify-between" style={{ background: "var(--panel-alt)", borderColor: "var(--border)" }}>
+            <h2 className="font-semibold text-lg flex items-center gap-2" style={{ color: "var(--text-main)" }}>
+              <svg className="w-5 h-5" style={{ color: "var(--text-muted)" }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
               Historique
             </h2>
-            <span className="text-xs font-semibold px-2.5 py-1 bg-slate-200 text-slate-700 rounded-full">
-              {demandes.length}
-            </span>
           </div>
 
-          <div className="p-6">
+          <div className="p-4 space-y-3 max-h-[760px] overflow-y-auto">
             {demandes.length === 0 ? (
-              <div className="text-center py-8">
-                <svg className="mx-auto h-12 w-12 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-                <p className="mt-2 text-sm text-slate-500 font-medium">Aucune demande enregistrée pour l`instant.</p>
+              <div className="rounded-lg border p-5 text-sm" style={{ background: "var(--panel-soft)", borderColor: "var(--border)", color: "var(--text-muted)" }}>
+                Aucune demande pour le moment.
               </div>
             ) : (
-              <ul className="space-y-3">
-                {demandes.map((demande) => {
-                  const isEnAttente = demande.statut === "EN_ATTENTE";
-                  const isValide = demande.statut === "VALIDE" || demande.statut === "APPROUVE";
-                  const isRefuse = demande.statut === "REFUSE" || demande.statut === "ANNULE";
-
-                  return (
-                    <li
-                      key={demande.id}
-                      className="p-4 rounded-lg border border-slate-100 bg-slate-50/50 hover:bg-slate-50 transition-colors flex flex-col justify-between gap-3"
-                    >
-                      <div className="flex justify-between items-start gap-2">
-                        <div>
-                          <p className="font-semibold text-slate-900 text-sm">
-                            {getTypeLabel(demande)}
-                          </p>
-                          <p className="text-xs text-slate-500 mt-1 flex items-center gap-1">
-                            <svg className="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                            </svg>
-                            {demande.dateDebut || demande.debut} → {demande.dateFin || demande.fin}
-                          </p>
-                        </div>
-
-                        {/* Badge de statut */}
-                        <span
-                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${
-                            isEnAttente
-                              ? "bg-amber-50 text-amber-800 border-amber-200"
-                              : isValide
-                              ? "bg-emerald-50 text-emerald-800 border-emerald-200"
-                              : isRefuse
-                              ? "bg-rose-50 text-rose-800 border-rose-200"
-                              : "bg-slate-100 text-slate-800 border-slate-200"
-                          }`}
-                        >
-                          <span
-                            className={`w-1.5 h-1.5 rounded-full mr-1.5 ${
-                              isEnAttente
-                                ? "bg-amber-500"
-                                : isValide
-                                ? "bg-emerald-500"
-                                : isRefuse
-                                ? "bg-rose-500"
-                                : "bg-slate-400"
-                            }`}
-                          />
-                          {demande.statut}
-                        </span>
+              demandes.map((demande) => (
+                <div key={demande.id} className="rounded-lg border p-4" style={{ background: "var(--panel-soft)", borderColor: "var(--border)" }}>
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <div className="font-semibold" style={{ color: "var(--text-main)" }}>{getTypeLabel(demande)}</div>
+                      <div className="text-xs mt-1" style={{ color: "var(--text-muted)" }}>
+                        {demande.dateDebut} → {demande.dateFin}
                       </div>
+                    </div>
+                    <span className="badge badge-sm uppercase" style={{ background: demande.statut === "VALIDEE" ? "rgba(16,185,129,0.12)" : demande.statut === "REFUSEE" ? "rgba(239,68,68,0.12)" : "rgba(59,130,246,0.12)", color: "var(--text-main)" }}>
+                      {demande.statut}
+                    </span>
+                  </div>
 
-                      {/* Action Annuler */}
-                      {isEnAttente && (
-                        <div className="pt-2 border-t border-slate-100 flex justify-end">
-                          <button
-                            onClick={() => handleAnnuler(demande.id)}
-                            className="text-xs text-rose-600 hover:text-rose-700 hover:bg-rose-50 font-medium px-2.5 py-1 rounded transition-colors"
-                          >
-                            Annuler la demande
-                          </button>
-                        </div>
-                      )}
-                    </li>
-                  );
-                })}
-              </ul>
+                  <p className="mt-3 text-sm" style={{ color: "var(--text-muted)" }}>
+                    {demande.commentaire || "Aucun commentaire."}
+                  </p>
+
+                  {demande.statut === "EN_ATTENTE" && (
+                    <button
+                      type="button"
+                      onClick={() => handleAnnuler(demande.id)}
+                      className="mt-4 btn btn-sm btn-outline"
+                    >
+                      Annuler la demande
+                    </button>
+                  )}
+                </div>
+              ))
             )}
           </div>
         </section>

@@ -6,18 +6,12 @@ import { authFetch, getCurrentUser } from "@/lib/apiClient";
 const API_URL = "http://localhost:8080/services";
 
 export default function ServicesPage() {
-  const [user, setUser] = useState(null);
+  const [user] = useState(() => getCurrentUser());
   const [services, setServices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [form, setForm] = useState({ nom: "", responsable_id: "", effectifMinimum: 1 });
-
-  useEffect(() => {
-    const currentUser = getCurrentUser();
-    setUser(currentUser);
-    loadServices();
-  }, []);
 
   const loadServices = async () => {
     try {
@@ -32,6 +26,24 @@ export default function ServicesPage() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    const fetchServices = async () => {
+      try {
+        setLoading(true);
+        const response = await authFetch(API_URL);
+        if (!response.ok) throw new Error("Impossible de charger les services.");
+        const data = await response.json();
+        setServices(Array.isArray(data) ? data : []);
+      } catch (err) {
+        setError(err.message || "Erreur lors du chargement.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    void fetchServices();
+  }, []);
 
   const isAdmin = user?.role?.toUpperCase() === "ADMIN";
 

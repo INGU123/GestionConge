@@ -1,42 +1,22 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { getCurrentUser, authFetch } from "@/lib/apiClient";
 
 export default function Parametres() {
-  const [userId, setUserId] = useState(null);
-  const [userRole, setUserRole] = useState("EMPLOYE");
+  const currentUser = getCurrentUser();
+  const [userId] = useState(currentUser?.id ?? null);
+  const [userRole] = useState(currentUser?.role || "EMPLOYE");
   const [formData, setFormData] = useState({
-    nom: "",
-    prenom: "",
-    email: "",
+    nom: currentUser?.nom || "",
+    prenom: currentUser?.prenom || "",
+    email: currentUser?.email || "",
     mot_de_pass: "",
-    role: "EMPLOYE",
+    role: currentUser?.role || "EMPLOYE",
     notification: true,
   });
   const [status, setStatus] = useState({ type: "", message: "" });
   const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    try {
-      const user = getCurrentUser();
-      if (user) {
-        setUserId(user.id);
-        const role = user.role || "EMPLOYE";
-        setUserRole(role);
-        setFormData({
-          nom: user.nom || "",
-          prenom: user.prenom || "",
-          email: user.email || "",
-          mot_de_pass: "",
-          role: role,
-          notification: true,
-        });
-      }
-    } catch (e) {
-      console.error("Erreur lecture utilisateur:", e);
-    }
-  }, []);
 
   const isAdmin = userRole?.toUpperCase() === "ADMIN";
 
@@ -95,7 +75,7 @@ export default function Parametres() {
         try {
           const parsed = JSON.parse(errText);
           if (parsed && parsed.message) message = parsed.message;
-        } catch (_) {}
+        } catch {}
         setStatus({
           type: "error",
           message: message || "Erreur lors de la mise à jour des paramètres.",

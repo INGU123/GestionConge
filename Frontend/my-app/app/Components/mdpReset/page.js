@@ -1,14 +1,22 @@
 'use client';
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 
-export default function ResetPasswordForm() {
+export default function ResetPasswordPage() {
+  return (
+    <Suspense fallback={<div className="max-w-md mx-auto mt-10 p-6 text-center text-slate-600">Chargement...</div>}>
+      <ResetPasswordForm />
+    </Suspense>
+  );
+}
+
+function ResetPasswordForm() {
   const [newPassword, setNewPassword] = useState("");
   const [message, setMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  
+
   const searchParams = useSearchParams();
   const router = useRouter();
   const token = searchParams.get("token");
@@ -34,7 +42,7 @@ export default function ResetPasswordForm() {
       } else {
         setMessage("Erreur : token invalide ou expiré.");
       }
-    } catch (err) {
+    } catch {
       setMessage("Erreur de connexion au serveur.");
     } finally {
       setIsLoading(false);

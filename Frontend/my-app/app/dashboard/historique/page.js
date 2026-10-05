@@ -15,7 +15,6 @@ import {
   Calendar,
   MessageSquare,
   Users,
-  CheckCircle2,
   Layers,
   ShieldCheck
 } from "lucide-react";

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import {
   getToutesDemandesEnAttente,
   getAllDemandes,
@@ -25,7 +25,7 @@ import {
 } from "lucide-react";
 
 export default function ValidationPage() {
-  const [manager, setManager] = useState(null);
+  const [manager] = useState(() => getCurrentUser());
   const [demandes, setDemandes] = useState([]);
   const [typesConge, setTypesConge] = useState([]);
   const [utilisateurs, setUtilisateurs] = useState([]);
@@ -35,42 +35,38 @@ export default function ValidationPage() {
   const [actionLoading, setActionLoading] = useState(null);
   const [msg, setMsg] = useState({ type: "", text: "" });
 
-  // Récupération sécurisée du manager / utilisateur connecté
   useEffect(() => {
-    try {
-      const u = getCurrentUser();
-      if (u) {
-        setManager(u);
+    let ignore = false;
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        const [demandesData, typesData, usersRes] = await Promise.all([
+          filter === "EN_ATTENTE" ? getToutesDemandesEnAttente() : getAllDemandes(),
+          getAllTypeConge().catch(() => []),
+          authFetch("http://localhost:8080/utilisateur/all")
+            .then((r) => (r && r.ok ? r.json() : []))
+            .catch(() => []),
+        ]);
+
+        if (!ignore) {
+          setDemandes(Array.isArray(demandesData) ? demandesData : []);
+          setTypesConge(Array.isArray(typesData) ? typesData : []);
+          setUtilisateurs(Array.isArray(usersRes) ? usersRes : []);
+        }
+      } catch (err) {
+        console.error("Erreur chargement validation:", err);
+      } finally {
+        if (!ignore) {
+          setLoading(false);
+        }
       }
-    } catch (err) {
-      console.error("Erreur récupération manager:", err);
-    }
-  }, []);
+    };
 
-  // Utilisation de useCallback pour stabiliser loadData et éviter les boucles
-  const loadData = useCallback(async () => {
-    try {
-      setLoading(true);
-      const [demandesData, typesData, usersRes] = await Promise.all([
-        filter === "EN_ATTENTE" ? getToutesDemandesEnAttente() : getAllDemandes(),
-        getAllTypeConge().catch(() => []),
-        authFetch("http://localhost:8080/utilisateur/all")
-          .then((r) => (r && r.ok ? r.json() : []))
-          .catch(() => []),
-      ]);
-      setDemandes(Array.isArray(demandesData) ? demandesData : []);
-      setTypesConge(Array.isArray(typesData) ? typesData : []);
-      setUtilisateurs(Array.isArray(usersRes) ? usersRes : []);
-    } catch (err) {
-      console.error("Erreur chargement validation:", err);
-    } finally {
-      setLoading(false);
-    }
+    void fetchData();
+    return () => {
+      ignore = true;
+    };
   }, [filter]);
-
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
 
   const role = manager?.role ? String(manager.role).toUpperCase() : "";
   const canValidate = role === "ADMIN" || role === "MANAGER";
@@ -82,7 +78,7 @@ export default function ValidationPage() {
         <div>
           <h3 className="text-base font-bold text-amber-900">Accès Restreint — SPAT</h3>
           <p className="text-sm text-amber-700 mt-1">
-            Seuls les Responsables Hiérarchiques (Managers) et Administrateurs RH sont habilités à traiter les demandes d'autorisation d'absence.
+            Seuls les Responsables Hiérarchiques (Managers) et Administrateurs RH sont habilités à traiter les demandes d&apos;autorisation d&apos;absence.
           </p>
         </div>
       </div>
@@ -198,10 +194,10 @@ export default function ValidationPage() {
           </div>
           <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
             <FileCheck2 className="w-6 h-6 text-blue-400" />
-            Validation des Demandes d'Absence & Congés
+            Validation des Demandes d&apos;Absence &amp; Congés
           </h1>
           <p className="text-slate-400 text-sm mt-1">
-            Espace d'arbitrage hiérarchique pour l'instruction et la validation des autorisations d'absence.
+            Espace d&apos;arbitrage hiérarchique pour l&apos;instruction et la validation des autorisations d&apos;absence.
           </p>
         </div>
 
@@ -391,7 +387,7 @@ export default function ValidationPage() {
               Confirmation de Refus de Congé
             </h3>
             <p className="text-xs text-slate-500 leading-relaxed">
-              Veuillez préciser la raison motivant le rejet de cette demande d'absence afin d'en informer le collaborateur :
+              Veuillez préciser la raison motivant le rejet de cette demande d&apos;absence afin d&apos;en informer le collaborateur :
             </p>
             <textarea
               rows={3}

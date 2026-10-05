@@ -31,7 +31,7 @@ export default function ForgotPassword() {
           type: "error"
         });
       }
-    } catch (err) {
+    } catch {
       setMessage({
         text: "Impossible de contacter le serveur. Veuillez réessayer plus tard.",
         type: "error"

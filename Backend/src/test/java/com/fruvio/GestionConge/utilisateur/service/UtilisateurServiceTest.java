@@ -1,26 +1,39 @@
 package com.fruvio.GestionConge.utilisateur.service;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.time.LocalDateTime;
+import java.util.Properties;
 import java.util.Optional;
+
+import jakarta.mail.Session;
+import jakarta.mail.internet.InternetAddress;
+import jakarta.mail.internet.MimeMessage;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.ResponseEntity;
+import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.security.access.AccessDeniedException;
 
 import com.fruvio.GestionConge.demande_conge.repository.DemandeCongeRepository;
 import com.fruvio.GestionConge.historique_mouvement.repository.Historique_mouvementRepository;
 import com.fruvio.GestionConge.utilisateur.config.JwtUtil;
-import com.fruvio.GestionConge.utilisateur.controller.UtilisateurController;
+import com.fruvio.GestionConge.utilisateur.controller.PasswordResetController;
 import com.fruvio.GestionConge.notifications_conge.repository.NotificationRepository;
 import com.fruvio.GestionConge.service_conge.repository.Service_congeRepository;
 import com.fruvio.GestionConge.solde_conge.repository.Solde_congeRepository;
@@ -83,7 +96,8 @@ class UtilisateurServiceTest {
 
     @Test
     void resetPasswordEndpointAcceptsTokenAndNewPassword() {
-        UtilisateurController controller = new UtilisateurController(utilisateurService, jwtUtil);
+        PasswordResetController controller = new PasswordResetController(
+                new PasswordResetService(utilisateurRepository, emailService, passwordEncoder));
         ResetPasswordRequest request = ResetPasswordRequest.builder().token("tok-123")
                 .newPassword("NouveauMotDePasse123!").build();
 
@@ -97,6 +111,55 @@ class UtilisateurServiceTest {
 
         assert (response.getStatusCode().is2xxSuccessful());
         verify(utilisateurRepository).save(user);
+    }
+
+    @Test
+    void createPasswordResetTokenStoresTokenAndSendsThroughEmailService() {
+        PasswordResetService passwordResetService = new PasswordResetService(utilisateurRepository, emailService,
+                passwordEncoder);
+        Utilisateur user = Utilisateur.builder().id(10L).email("employee@example.com").actif(true).build();
+        when(utilisateurRepository.findByEmail("employee@example.com")).thenReturn(Optional.of(user));
+
+        passwordResetService.createPasswordResetToken("employee@example.com");
+
+        assertNotNull(user.getResetToken());
+        assertTrue(user.getTokenExpiration().isAfter(LocalDateTime.now()));
+        verify(emailService).sendResetPasswordEmail(eq(user.getEmail()), eq(user.getResetToken()));
+        verify(utilisateurRepository).save(user);
+    }
+
+    @Test
+    void createPasswordResetTokenClearsTokenWhenEmailCannotBeSent() {
+        PasswordResetService passwordResetService = new PasswordResetService(utilisateurRepository, emailService,
+                passwordEncoder);
+        Utilisateur user = Utilisateur.builder().id(10L).email("employee@example.com").actif(true).build();
+        when(utilisateurRepository.findByEmail("employee@example.com")).thenReturn(Optional.of(user));
+        doThrow(new IllegalStateException("SMTP unavailable")).when(emailService)
+                .sendResetPasswordEmail(eq(user.getEmail()), any());
+
+        passwordResetService.createPasswordResetToken("employee@example.com");
+
+        assertNull(user.getResetToken());
+        assertNull(user.getTokenExpiration());
+        verify(utilisateurRepository, org.mockito.Mockito.times(2)).save(user);
+    }
+
+    @Test
+    void resetEmailUsesConfiguredFrontendAndFruvioSender() throws Exception {
+        JavaMailSender mailSender = org.mockito.Mockito.mock(JavaMailSender.class);
+        MimeMessage mimeMessage = new MimeMessage(Session.getInstance(new Properties()));
+        when(mailSender.createMimeMessage()).thenReturn(mimeMessage);
+        EmailService service = new EmailService(mailSender, "no-reply@example.com", "https://gestion.example/");
+
+        service.sendResetPasswordEmail("employee@example.com", "test-token");
+
+        ArgumentCaptor<MimeMessage> messageCaptor = ArgumentCaptor.forClass(MimeMessage.class);
+        verify(mailSender).send(messageCaptor.capture());
+        MimeMessage sentMessage = messageCaptor.getValue();
+        InternetAddress sender = (InternetAddress) sentMessage.getFrom()[0];
+        assertEquals("Fruvio", sender.getPersonal());
+        assertTrue(((String) sentMessage.getContent())
+                .contains("https://gestion.example/Components/mdpReset?token=test-token"));
     }
 
     @Test

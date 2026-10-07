@@ -29,18 +29,16 @@ public class JwtAuthFilter extends OncePerRequestFilter {
     }
 
     @Override
-    protected boolean shouldNotFilter(HttpServletRequest request) throws ServletException {
+    protected boolean shouldNotFilter(@NonNull HttpServletRequest request) throws ServletException {
         String path = request.getServletPath();
-        return path.startsWith("/utilisateur/login")
-            || path.startsWith("/utilisateur/forgot-password")
-            || path.startsWith("/auth/")
-            || path.startsWith("/error");
+        return path.startsWith("/utilisateur/login") || path.startsWith("/utilisateur/forgot-password")
+                || path.startsWith("/utilisateur/reset-password") || path.startsWith("/auth/")
+                || path.startsWith("/error");
     }
 
     @Override
-    protected void doFilterInternal(@NonNull HttpServletRequest request,
-                                    @NonNull HttpServletResponse response,
-                                    @NonNull FilterChain filterChain) throws ServletException, IOException {
+    protected void doFilterInternal(@NonNull HttpServletRequest request, @NonNull HttpServletResponse response,
+            @NonNull FilterChain filterChain) throws ServletException, IOException {
 
         String authHeader = request.getHeader("Authorization");
 
@@ -59,15 +57,13 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                         // Vérification critique : compte actif et non verrouillé
                         if (userDetails != null && userDetails.isEnabled() && userDetails.isAccountNonLocked()) {
                             UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
-                                    userDetails,
-                                    null,
-                                    userDetails.getAuthorities()
-                            );
+                                    userDetails, null, userDetails.getAuthorities());
                             authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
 
                             SecurityContextHolder.getContext().setAuthentication(authToken);
                         } else {
-                            logger.warn("Tentative d'accès rejetée : compte inactif ou désactivé pour le matricule " + matricule);
+                            logger.warn("Tentative d'accès rejetée : compte inactif ou désactivé pour le matricule "
+                                    + matricule);
                         }
                     }
                 }

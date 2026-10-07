@@ -22,16 +22,16 @@ public class PasswordResetService {
     private final EmailService emailService;
     private final PasswordEncoder passwordEncoder;
 
-    public PasswordResetService(UtilisateurRepository utilisateurRepository,
-                                EmailService emailService,
-                                PasswordEncoder passwordEncoder) {
+    public PasswordResetService(UtilisateurRepository utilisateurRepository, EmailService emailService,
+            PasswordEncoder passwordEncoder) {
         this.utilisateurRepository = utilisateurRepository;
         this.emailService = emailService;
         this.passwordEncoder = passwordEncoder;
     }
 
     /**
-     * Génère un token de réinitialisation sécurisé et envoie un e-mail sans révéler l'existence du compte.
+     * Génère un token de réinitialisation sécurisé et envoie un e-mail sans révéler
+     * l'existence du compte.
      */
     @Transactional
     public void createPasswordResetToken(String email) {
@@ -56,27 +56,19 @@ public class PasswordResetService {
         user.setTokenExpiration(LocalDateTime.now().plusMinutes(30));
         utilisateurRepository.save(user);
 
-        // Lien pointant vers la page Next.js de réinitialisation
-        String resetLink = "http://localhost:3000/Components/mdpReset?token=" + token;
-
         try {
-            emailService.sendEmail(
-                    user.getEmail(),
-                    "Réinitialisation de votre mot de passe - SPAT",
-                    "Bonjour " + (user.getPrenom() != null ? user.getPrenom() : "") + ",\n\n"
-                    + "Une demande de réinitialisation de votre mot de passe a été enregistrée.\n"
-                    + "Cliquez sur ce lien sécurisé pour définir un nouveau mot de passe :\n"
-                    + resetLink + "\n\n"
-                    + "Ce lien expire dans 30 minutes et ne peut être utilisé qu'une seule fois.\n"
-                    + "Si vous n'êtes pas à l'origine de cette demande, vous pouvez ignorer ce message."
-            );
+            emailService.sendResetPasswordEmail(user.getEmail(), token);
         } catch (Exception e) {
-            log.error("Échec d'envoi du mail de réinitialisation à {} : {}", user.getEmail(), e.getMessage());
+            user.setResetToken(null);
+            user.setTokenExpiration(null);
+            utilisateurRepository.save(user);
+            log.error("Échec d'envoi du mail de réinitialisation à {} : {}", user.getEmail(), e.getMessage(), e);
         }
     }
 
     /**
-     * Réinitialise le mot de passe si le token est valide, non expiré, et l'invalide immédiatement.
+     * Réinitialise le mot de passe si le token est valide, non expiré, et
+     * l'invalide immédiatement.
      */
     @Transactional
     public void resetPassword(String token, String newPassword) {

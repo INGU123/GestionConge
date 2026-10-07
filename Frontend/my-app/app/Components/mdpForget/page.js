@@ -4,6 +4,8 @@ import { useState } from "react";
 
 import Link from "next/link";
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+
 export default function ForgotPassword() {
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState({ text: "", type: "" });
@@ -15,8 +17,10 @@ export default function ForgotPassword() {
     setMessage({ text: "", type: "" });
 
     try {
-      const res = await fetch(`http://localhost:8080/utilisateur/forgot-password?email=${encodeURIComponent(email)}`, {
-        method: "POST"
+      const res = await fetch(`${API_URL}/auth/forgot-password`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
       });
 
       if (res.ok) {

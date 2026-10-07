@@ -42,6 +42,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/utilisateur/login").permitAll()
                         .requestMatchers(HttpMethod.POST, "/utilisateur/forgot-password").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/utilisateur/reset-password").permitAll()
                         .requestMatchers("/auth/**").permitAll().requestMatchers("/error").permitAll()
 
                         // Endpoints réservés à l'ADMIN

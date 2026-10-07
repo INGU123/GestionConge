@@ -75,12 +75,11 @@
 
 
         <!-- ============================== -->
-        <!-- Resend Email API                -->
+        <!-- Email - Spring Mail / SMTP     -->
         <!-- ============================== -->
         <dependency>
-            <groupId>com.resend</groupId>
-            <artifactId>resend-java</artifactId>
-            <version>4.0.0</version>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-mail</artifactId>
         </dependency>
 
 

@@ -3,9 +3,17 @@
 import { Suspense, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+
 export default function ResetPasswordPage() {
   return (
-    <Suspense fallback={<div className="max-w-md mx-auto mt-10 p-6 text-center text-slate-600">Chargement...</div>}>
+    <Suspense
+      fallback={
+        <div className="max-w-md mx-auto mt-10 p-6 text-center text-slate-600">
+          Chargement...
+        </div>
+      }
+    >
       <ResetPasswordForm />
     </Suspense>
   );
@@ -13,6 +21,7 @@ export default function ResetPasswordPage() {
 
 function ResetPasswordForm() {
   const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [message, setMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -23,8 +32,19 @@ function ResetPasswordForm() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
     if (!token) {
-      setMessage("Erreur : token manquant.");
+      setMessage("Erreur : token manquant dans l’URL.");
+      return;
+    }
+
+    if (!newPassword || newPassword.trim().length < 6) {
+      setMessage("Le mot de passe doit contenir au moins 6 caractères.");
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setMessage("Les mots de passe ne correspondent pas.");
       return;
     }
 
@@ -32,17 +52,32 @@ function ResetPasswordForm() {
     setMessage("");
 
     try {
-      const res = await fetch(
-        `http://localhost:8080/utilisateur/reset-password?token=${encodeURIComponent(token)}&newPassword=${encodeURIComponent(newPassword)}`,
-        { method: "POST" }
-      );
+      const res = await fetch(`${API_URL}/auth/reset-password`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          token: token,
+          newPassword: newPassword,
+        }),
+      });
+
+      const data = await res.json().catch(() => ({}));
 
       if (res.ok) {
-        setMessage("Mot de passe réinitialisé avec succès.");
+        setMessage(data.message || "Mot de passe réinitialisé avec succès.");
+        setNewPassword("");
+        setConfirmPassword("");
+
+        setTimeout(() => {
+          router.push("/");
+        }, 1500);
       } else {
-        setMessage("Erreur : token invalide ou expiré.");
+        setMessage(data.message || "Erreur : token invalide ou expiré.");
       }
-    } catch {
+    } catch (error) {
+      console.error(error);
       setMessage("Erreur de connexion au serveur.");
     } finally {
       setIsLoading(false);
@@ -50,17 +85,16 @@ function ResetPasswordForm() {
   };
 
   const handleBack = () => {
-    // Redirige vers la page de connexion ou la page précédente
-    router.back(); 
-    // Si tu préfères une route fixe, remplace par : router.push('/login');
+    router.back();
   };
 
   return (
     <div className="max-w-md mx-auto mt-10 p-6 border rounded-lg shadow-sm bg-white">
-      <h2 className="text-xl font-semibold mb-4 text-gray-800">Réinitialiser le mot de passe</h2>
-      
+      <h2 className="text-xl font-semibold mb-4 text-gray-800">
+        Réinitialiser le mot de passe
+      </h2>
+
       <form onSubmit={handleSubmit} className="space-y-4">
-        {/* Champ de mot de passe avec option voir / cacher */}
         <div className="relative">
           <input
             type={showPassword ? "text" : "password"}
@@ -77,40 +111,81 @@ function ResetPasswordForm() {
             tabIndex={-1}
           >
             {showPassword ? (
-              // Icône œil barré (Cacher)
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88" />
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                strokeWidth={1.5}
+                stroke="currentColor"
+                className="w-5 h-5"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M3 3l18 18M10.5 10.5A2.5 2.5 0 0013.5 13.5M9.88 5.08A10.94 10.94 0 0112 5c4.97 0 9.27 3.11 11 7a12.17 12.17 0 01-4.34 5.12M7.42 7.42A15.09 15.09 0 001 12c1.73 4.89 6.03 8 11 8a11.7 11.7 0 005.09-1.12"
+                />
               </svg>
             ) : (
-              // Icône œil ouvert (Voir)
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                strokeWidth={1.5}
+                stroke="currentColor"
+                className="w-5 h-5"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M2.25 12s3.75-6.75 9.75-6.75S21.75 12 21.75 12 18 18.75 12 18.75 2.25 12 2.25 12zm9.75 3.75A3.75 3.75 0 1012 8.25a3.75 3.75 0 000 7.5z"
+                />
               </svg>
             )}
           </button>
         </div>
 
-        {/* Bouton de validation */}
-        <button
-          type="submit"
-          disabled={isLoading}
-          className="w-full bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700 disabled:opacity-50 transition-colors font-medium"
-        >
-          {isLoading ? "Chargement..." : "Réinitialiser"}
-        </button>
+        <div className="relative">
+          <input
+            type={showPassword ? "text" : "password"}
+            placeholder="Confirmer le mot de passe"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            required
+            className="w-full px-3 py-2 pr-10 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
 
-        {/* Bouton de retour (sans modifier) */}
-        <button
-          type="button"
-          onClick={handleBack}
-          className="w-full bg-gray-100 text-gray-700 py-2 rounded-md hover:bg-gray-200 transition-colors font-medium"
-        >
-          Retour
-        </button>
+        {message && (
+          <div
+            className={`text-sm rounded-md p-3 ${
+              message.toLowerCase().includes("succès") ||
+              message.toLowerCase().includes("réinitialisé")
+                ? "bg-green-100 text-green-700"
+                : "bg-red-100 text-red-700"
+            }`}
+          >
+            {message}
+          </div>
+        )}
+
+        <div className="flex gap-3">
+          <button
+            type="submit"
+            disabled={isLoading}
+            className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 disabled:opacity-50"
+          >
+            {isLoading ? "En cours..." : "Valider"}
+          </button>
+
+          <button
+            type="button"
+            onClick={handleBack}
+            className="flex-1 bg-gray-200 text-gray-800 py-2 px-4 rounded-md hover:bg-gray-300"
+          >
+            Retour
+          </button>
+        </div>
       </form>
-
-      {message && <p className="mt-4 text-sm text-center font-medium">{message}</p>}
     </div>
   );
 }

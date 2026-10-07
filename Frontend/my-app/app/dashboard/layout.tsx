@@ -304,7 +304,6 @@ export default function DashboardLayout({
               width={42}
               height={42}
               className="object-contain"
-              priority
             />
 
             <span

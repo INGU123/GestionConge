@@ -30,6 +30,7 @@ import com.fruvio.GestionConge.utilisateur.dto.UtilisateurResponse;
 import com.fruvio.GestionConge.utilisateur.dto.UtilisateurUpdateRequest;
 import com.fruvio.GestionConge.utilisateur.entity.Role;
 import com.fruvio.GestionConge.utilisateur.entity.Utilisateur;
+import com.fruvio.GestionConge.utilisateur.service.PasswordResetService;
 import com.fruvio.GestionConge.utilisateur.service.UtilisateurService;
 
 import jakarta.validation.Valid;
@@ -40,10 +41,13 @@ public class UtilisateurController {
 
     private final UtilisateurService utilisateurService;
     private final JwtUtil jwtUtil;
+    private final PasswordResetService passwordResetService;
 
-    public UtilisateurController(UtilisateurService utilisateurService, JwtUtil jwtUtil) {
+    public UtilisateurController(UtilisateurService utilisateurService, JwtUtil jwtUtil,
+            PasswordResetService passwordResetService) {
         this.utilisateurService = utilisateurService;
         this.jwtUtil = jwtUtil;
+        this.passwordResetService = passwordResetService;
     }
 
     // =========================================================
@@ -94,7 +98,7 @@ public class UtilisateurController {
             return ResponseEntity.badRequest().body("L'adresse e-mail est obligatoire.");
         }
 
-        utilisateurService.forgotPassword(email.trim());
+        passwordResetService.createPasswordResetToken(email.trim());
 
         // Réponse générique constante pour prévenir l'énumération des utilisateurs
         return ResponseEntity.ok("Si un compte correspond à cette adresse, un lien de réinitialisation sera envoyé.");
@@ -117,7 +121,7 @@ public class UtilisateurController {
         }
 
         try {
-            utilisateurService.resetPassword(resetToken.trim(), newPassword.trim());
+            passwordResetService.resetPassword(resetToken.trim(), newPassword);
             return ResponseEntity.ok("Mot de passe réinitialisé avec succès.");
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(e.getMessage());

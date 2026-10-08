@@ -10,19 +10,21 @@ import {
   FolderKanban,
   PlusCircle,
   Trash2,
-  CheckCircle2,
-  AlertCircle,
   FileText,
   Check,
   X,
   Layers
 } from "lucide-react";
+import { useToast } from "../../components/ToastProvider";
+import ConfirmDialog from "../../components/ConfirmDialog";
 
 export default function TypeCongePage() {
   const [types, setTypes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [msg, setMsg] = useState({ type: "", text: "" });
+  const [typeToDelete, setTypeToDelete] = useState(null);
+  const [deletingTypeId, setDeletingTypeId] = useState(null);
+  const showToast = useToast();
 
   const [formData, setFormData] = useState({
     code: "",
@@ -42,13 +44,14 @@ export default function TypeCongePage() {
         setTypes(Array.isArray(data) ? data : []);
       } catch (err) {
         console.error("Erreur récupération types:", err);
+        showToast(`Impossible de charger les types de congé : ${err.message}`, "error");
       } finally {
         setLoading(false);
       }
     };
 
     void fetchTypes();
-  }, []);
+  }, [showToast]);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -61,12 +64,11 @@ export default function TypeCongePage() {
   const handleAddType = async (e) => {
     e.preventDefault();
     if (!formData.code.trim() || !formData.libelle.trim()) {
-      setMsg({ type: "error", text: "Veuillez renseigner le code et le libellé." });
+      showToast("Veuillez renseigner le code et le libellé.", "warning");
       return;
     }
 
     setSubmitting(true);
-    setMsg({ type: "", text: "" });
     try {
       const payload = {
         code: formData.code.trim().toUpperCase(),
@@ -88,24 +90,27 @@ export default function TypeCongePage() {
         couleur: "#2563eb",
         actif: true,
       });
-      setMsg({ type: "success", text: "Type de congé créé avec succès !" });
+      showToast("Type de congé créé avec succès.", "success");
     } catch (err) {
-      setMsg({ type: "error", text: `Erreur : ${err.message}` });
+      showToast(`Erreur lors de la création : ${err.message}`, "error");
     } finally {
       setSubmitting(false);
     }
   };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm("Êtes-vous sûr de vouloir supprimer ce type de congé ?")) {
-      return;
-    }
+  const handleDelete = async () => {
+    if (!typeToDelete) return;
+    const id = typeToDelete.id;
+    setDeletingTypeId(id);
     try {
       await deleteTypeConge(id);
       setTypes((prev) => prev.filter((t) => t.id !== id));
-      setMsg({ type: "success", text: "Type de congé supprimé." });
+      setTypeToDelete(null);
+      showToast("Type de congé supprimé.", "success");
     } catch (err) {
-      setMsg({ type: "error", text: `Erreur lors de la suppression : ${err.message}` });
+      showToast(`Erreur lors de la suppression : ${err.message}`, "error");
+    } finally {
+      setDeletingTypeId(null);
     }
   };
 
@@ -126,21 +131,6 @@ export default function TypeCongePage() {
           </p>
         </div>
       </div>
-
-      {msg.text && (
-        <div
-          className={`alert ${
-            msg.type === "success" ? "alert-success text-white" : "alert-error text-white"
-          } shadow-sm rounded-xl flex items-center gap-2`}
-        >
-          {msg.type === "success" ? (
-            <CheckCircle2 className="w-5 h-5 shrink-0" />
-          ) : (
-            <AlertCircle className="w-5 h-5 shrink-0" />
-          )}
-          <span>{msg.text}</span>
-        </div>
-      )}
 
       {/* Formulaire de création */}
       <div className="bg-white shadow-sm border border-slate-200 rounded-2xl p-6">
@@ -320,7 +310,7 @@ export default function TypeCongePage() {
                     </td>
                     <td className="py-3.5 text-right">
                       <button
-                        onClick={() => handleDelete(t.id)}
+                        onClick={() => setTypeToDelete(t)}
                         className="btn btn-ghost btn-xs text-rose-600 hover:bg-rose-50 font-semibold gap-1"
                         title="Supprimer ce type de congé"
                       >
@@ -334,6 +324,17 @@ export default function TypeCongePage() {
           </div>
         )}
       </div>
+      {typeToDelete && (
+        <ConfirmDialog
+          title="Supprimer ce type de congé ?"
+          message={`Le type « ${typeToDelete.libelle || typeToDelete.code} » sera supprimé. Cette action ne peut pas être annulée.`}
+          pending={deletingTypeId === typeToDelete.id}
+          onCancel={() => {
+            if (deletingTypeId === null) setTypeToDelete(null);
+          }}
+          onConfirm={handleDelete}
+        />
+      )}
     </div>
   );
 }

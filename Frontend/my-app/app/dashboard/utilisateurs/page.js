@@ -2,12 +2,13 @@
 
 import { useEffect, useState } from "react";
 import { authFetch, getCurrentUser } from "@/lib/apiClient";
+import { useToast } from "../../components/ToastProvider";
+import ConfirmDialog from "../../components/ConfirmDialog";
 import {
   Users,
   UserPlus,
   Search,
   CheckCircle2,
-  AlertCircle,
   ShieldAlert,
   BadgeCheck,
   UserX,
@@ -27,6 +28,7 @@ export default function UtilisateursPage() {
   const [showModal, setShowModal] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
   const [deletingUserId, setDeletingUserId] = useState(null);
+  const [userToDelete, setUserToDelete] = useState(null);
   const [newUser, setNewUser] = useState({
     matricule: "",
     nom: "",
@@ -37,7 +39,7 @@ export default function UtilisateursPage() {
     date_embauche: new Date().toISOString().split("T")[0],
     actif: true,
   });
-  const [msg, setMsg] = useState({ type: "", text: "" });
+  const showToast = useToast();
 
   useEffect(() => {
     let isMounted = true;
@@ -54,9 +56,11 @@ export default function UtilisateursPage() {
         } else {
           const errorMsg = await res.text();
           console.error("Erreur serveur:", errorMsg);
+          if (isMounted) showToast(errorMsg || "Impossible de charger la liste des collaborateurs.", "error");
         }
       } catch (err) {
         console.error("Erreur chargement utilisateurs:", err);
+        if (isMounted) showToast("Impossible de charger la liste des collaborateurs.", "error");
       } finally {
         if (isMounted) setLoading(false);
       }
@@ -67,11 +71,10 @@ export default function UtilisateursPage() {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [showToast]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setMsg({ type: "", text: "" });
     try {
       const payload = {
         ...(editingUser ? { id: editingUser.id } : {}),
@@ -116,7 +119,7 @@ export default function UtilisateursPage() {
         const successText = responseData.message || (editingUser
           ? "Collaborateur modifié avec succès."
           : "Collaborateur créé avec succès. Ses identifiants ont été envoyés par e-mail.");
-        setMsg({ type: "success", text: successText });
+        showToast(successText, "success");
       } else {
         const txt = await res.text();
         let errMsg = txt;
@@ -124,17 +127,16 @@ export default function UtilisateursPage() {
           const parsed = JSON.parse(txt);
           if (parsed && parsed.message) errMsg = parsed.message;
         } catch { }
-        setMsg({ type: "error", text: errMsg || "Erreur lors de la création." });
+        showToast(errMsg || "Erreur lors de l'enregistrement du collaborateur.", "error");
       }
     } catch (err) {
-      setMsg({ type: "error", text: `Erreur : ${err.message}` });
+      showToast(`Erreur : ${err.message}`, "error");
     }
   };
 
-  const handleDelete = async (user) => {
-    if (!window.confirm(`Confirmer la suppression du compte de ${user.prenom} ${user.nom} ?`)) return;
-
-    setMsg({ type: "", text: "" });
+  const handleDelete = async () => {
+    if (!userToDelete) return;
+    const user = userToDelete;
     setDeletingUserId(user.id);
     try {
       const res = await authFetch(`http://localhost:8080/utilisateur/${user.id}`, {
@@ -147,14 +149,15 @@ export default function UtilisateursPage() {
           const parsed = JSON.parse(text);
           errorMessage = parsed.message || errorMessage;
         } catch { }
-        setMsg({ type: "error", text: errorMessage || "Erreur lors de la suppression." });
+        showToast(errorMessage || "Erreur lors de la suppression du collaborateur.", "error");
         return;
       }
 
       setUsers((prev) => prev.filter((item) => item.id !== user.id));
-      setMsg({ type: "success", text: "Collaborateur supprimé avec succès." });
+      setUserToDelete(null);
+      showToast("Collaborateur supprimé avec succès.", "success");
     } catch (err) {
-      setMsg({ type: "error", text: `Erreur : ${err.message}` });
+      showToast(`Erreur : ${err.message}`, "error");
     } finally {
       setDeletingUserId(null);
     }
@@ -255,20 +258,6 @@ export default function UtilisateursPage() {
         </button>
       </div>
 
-      {msg.text && (
-        <div
-          className={`alert ${msg.type === "success" ? "alert-success text-white" : "alert-error text-white"
-            } shadow-sm rounded-xl flex items-center gap-2`}
-        >
-          {msg.type === "success" ? (
-            <CheckCircle2 className="w-5 h-5 shrink-0" />
-          ) : (
-            <AlertCircle className="w-5 h-5 shrink-0" />
-          )}
-          <span>{msg.text}</span>
-        </div>
-      )}
-
       {/* Main Table Container */}
       <div className="bg-white shadow-sm border border-slate-200 rounded-2xl p-6">
         <div className="flex justify-between items-center mb-4 gap-4 flex-wrap">
@@ -367,7 +356,7 @@ export default function UtilisateursPage() {
                         </button>
                         <button
                           type="button"
-                          onClick={() => handleDelete(u)}
+                          onClick={() => setUserToDelete(u)}
                           disabled={deletingUserId === u.id || u.id === currentUser?.id}
                           className="btn btn-ghost btn-sm btn-square text-rose-700"
                           title={u.id === currentUser?.id ? "Impossible de supprimer votre compte" : "Supprimer le collaborateur"}
@@ -527,6 +516,17 @@ export default function UtilisateursPage() {
             </form>
           </div>
         </div>
+      )}
+      {userToDelete && (
+        <ConfirmDialog
+          title="Supprimer ce collaborateur ?"
+          message={`Le compte de ${userToDelete.prenom} ${userToDelete.nom} sera supprimé. Cette action ne peut pas être annulée.`}
+          pending={deletingUserId === userToDelete.id}
+          onCancel={() => {
+            if (deletingUserId === null) setUserToDelete(null);
+          }}
+          onConfirm={handleDelete}
+        />
       )}
     </div>
   );

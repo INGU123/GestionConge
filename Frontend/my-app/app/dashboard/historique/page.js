@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import {
   getAllHistorique,
+  getHistoriquePdf,
   getHistoriqueUtilisateur,
 } from "../../api/historiqueMouvements/historiqueMouvement";
 import { getAllTypeConge } from "../../api/typeConge/typeConge";
@@ -16,8 +17,10 @@ import {
   MessageSquare,
   Users,
   Layers,
-  ShieldCheck
+  ShieldCheck,
+  Download,
 } from "lucide-react";
+import { useToast } from "../../components/ToastProvider";
 
 export default function HistoriquePage() {
   const [currentUser, setCurrentUser] = useState(null);
@@ -26,6 +29,8 @@ export default function HistoriquePage() {
   const [utilisateurs, setUtilisateurs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [viewAll, setViewAll] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const showToast = useToast();
 
   useEffect(() => {
     let isMounted = true;
@@ -64,6 +69,7 @@ export default function HistoriquePage() {
         }
       } catch (err) {
         console.error("Erreur lors du chargement :", err);
+        if (isMounted) showToast("Impossible de charger l'historique.", "error");
         if (isMounted) setMouvements([]);
       } finally {
         if (isMounted) setLoading(false);
@@ -75,12 +81,16 @@ export default function HistoriquePage() {
     return () => {
       isMounted = false;
     };
-  }, [viewAll]);
+  }, [viewAll, showToast]);
 
   const getUserName = (userId) => {
     const found = utilisateurs.find((u) => u.id === userId);
-    if (!found) return `Utilisateur #${userId}`;
-    return found.prenom ? `${found.prenom} ${found.nom || ""}` : found.email;
+    if (found) return found.prenom ? `${found.prenom} ${found.nom || ""}` : found.email;
+    if (String(currentUser?.id) === String(userId)) {
+      const name = `${currentUser.prenom || ""} ${currentUser.nom || ""}`.trim();
+      return name || currentUser.email || `Utilisateur #${userId}`;
+    }
+    return `Utilisateur #${userId}`;
   };
 
   const getTypeLabel = (typeId) => {
@@ -89,6 +99,33 @@ export default function HistoriquePage() {
   };
 
   const isManager = currentUser?.role === "ADMIN" || currentUser?.role === "MANAGER";
+
+  const handleExportPdf = async () => {
+    setExporting(true);
+    try {
+      const blob = await getHistoriquePdf(viewAll && isManager ? "all" : "mine");
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      const today = new Date();
+      const date = [
+        today.getFullYear(),
+        String(today.getMonth() + 1).padStart(2, "0"),
+        String(today.getDate()).padStart(2, "0"),
+      ].join("-");
+      link.href = url;
+      link.download = `historique_conges_${date}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+      showToast("L'historique a été exporté en PDF.", "success");
+    } catch (error) {
+      console.error("Erreur lors de l'export PDF de l'historique :", error);
+      showToast(error.message || "Impossible d'exporter l'historique en PDF.", "error");
+    } finally {
+      setExporting(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -107,33 +144,47 @@ export default function HistoriquePage() {
           </p>
         </div>
 
-        {/* Boutons de bascule d'affichage pour les managers/admins */}
-        {isManager && (
-          <div className="inline-flex p-1 bg-slate-800 rounded-xl border border-slate-700">
-            <button
-              onClick={() => setViewAll(false)}
-              className={`px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all flex items-center gap-1.5 ${
-                !viewAll
-                  ? "bg-blue-600 text-white shadow-sm"
-                  : "text-slate-300 hover:text-white"
-              }`}
-            >
-              <User className="w-3.5 h-3.5" />
-              Mes mouvements
-            </button>
-            <button
-              onClick={() => setViewAll(true)}
-              className={`px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all flex items-center gap-1.5 ${
-                viewAll
-                  ? "bg-blue-600 text-white shadow-sm"
-                  : "text-slate-300 hover:text-white"
-              }`}
-            >
-              <Users className="w-3.5 h-3.5" />
-              Tous les collaborateurs
-            </button>
-          </div>
-        )}
+        <div className="flex flex-wrap items-center gap-3">
+          {isManager && (
+            <div className="inline-flex p-1 bg-slate-800 rounded-xl border border-slate-700">
+              <button
+                onClick={() => setViewAll(false)}
+                className={`px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all flex items-center gap-1.5 ${
+                  !viewAll
+                    ? "bg-blue-600 text-white shadow-sm"
+                    : "text-slate-300 hover:text-white"
+                }`}
+              >
+                <User className="w-3.5 h-3.5" />
+                Mes mouvements
+              </button>
+              <button
+                onClick={() => setViewAll(true)}
+                className={`px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all flex items-center gap-1.5 ${
+                  viewAll
+                    ? "bg-blue-600 text-white shadow-sm"
+                    : "text-slate-300 hover:text-white"
+                }`}
+              >
+                <Users className="w-3.5 h-3.5" />
+                Tous les collaborateurs
+              </button>
+            </div>
+          )}
+          <button
+            type="button"
+            onClick={handleExportPdf}
+            disabled={exporting || loading}
+            className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {exporting ? (
+              <span className="loading loading-spinner loading-xs" />
+            ) : (
+              <Download className="h-4 w-4" />
+            )}
+            {exporting ? "Export en cours..." : "Exporter en PDF"}
+          </button>
+        </div>
       </div>
 
       {/* Tableau des mouvements */}

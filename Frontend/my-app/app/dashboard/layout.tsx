@@ -7,6 +7,7 @@ import { useRouter, usePathname } from "next/navigation";
 import { FiMoon, FiSun } from "react-icons/fi";
 import { getCurrentUser, clearAuthSession } from "@/lib/apiClient";
 import NotificationHeaderMenu from "./notifications/page";
+import { ToastProvider } from "../components/ToastProvider";
 
 interface DashboardUser {
   id?: number;
@@ -283,10 +284,11 @@ export default function DashboardLayout({
 
   return (
     <div className="theme-shell min-h-screen" data-theme={theme}>
-      <div
-        className="flex min-h-screen flex-col"
-        style={{ background: "var(--page-bg)" }}
-      >
+      <ToastProvider>
+        <div
+          className="flex min-h-screen flex-col"
+          style={{ background: "var(--page-bg)" }}
+        >
         {/* HEADER */}
         <header
           className="navbar px-6 flex justify-between items-center h-16 sticky top-0 z-50 shrink-0 border-b"
@@ -451,7 +453,8 @@ export default function DashboardLayout({
             {children}
           </main>
         </div>
-      </div>
+        </div>
+      </ToastProvider>
     </div>
   );
 }

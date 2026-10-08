@@ -33,3 +33,15 @@ export const getHistoriqueUtilisateur = async (utilisateurId) => {
     return [];
   }
 };
+
+export const getHistoriquePdf = async (scope) => {
+  const response = await authFetch(
+    `${API_URL}/export/pdf?scope=${encodeURIComponent(scope)}`,
+    { headers: { Accept: "application/pdf" } },
+  );
+  if (!response.ok) {
+    const message = await response.text();
+    throw new Error(message || `Erreur lors de l'export PDF (${response.status}).`);
+  }
+  return response.blob();
+};

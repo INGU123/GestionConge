@@ -11,6 +11,7 @@ import {
 } from "@/app/api/demandeConge/demandeConge";
 import { getAllTypeConge } from "@/app/api/typeConge/typeConge";
 import { getCurrentUser } from "@/lib/apiClient";
+import { useToast } from "../../components/ToastProvider";
 
 const toLocalDateKey = (date) => {
   if (!date) return "";
@@ -65,6 +66,7 @@ export default function DemandesPage() {
   const [typesConge, setTypesConge] = useState([]);
   const [holidays, setHolidays] = useState([]);
   const [loading, setLoading] = useState(false);
+  const showToast = useToast();
 
   const workingDaysSummary = useMemo(() => {
     if (!formData.debut || !formData.fin) return { calendarDays: 0, workingDays: 0 };
@@ -98,24 +100,25 @@ export default function DemandesPage() {
         setHolidays(Array.isArray(holidayData) ? holidayData : []);
       } catch (err) {
         console.error("Erreur lors du chargement des demandes:", err);
+        showToast(`Impossible de charger les demandes : ${err.message}`, "error");
       }
     };
 
     fetchData();
-  }, []);
+  }, [showToast]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!utilisateurId) {
-      alert("Utilisateur connecté introuvable");
+      showToast("Utilisateur connecté introuvable.", "warning");
       return;
     }
     if (!formData.typeCongeId || !formData.debut || !formData.fin) {
-      alert("Veuillez renseigner le type et les deux dates de congé");
+      showToast("Veuillez renseigner le type et les deux dates de congé.", "warning");
       return;
     }
     if (formData.fin < formData.debut) {
-      alert("La date de fin doit être postérieure ou égale à la date de début");
+      showToast("La date de fin doit être postérieure ou égale à la date de début.", "warning");
       return;
     }
 
@@ -129,9 +132,10 @@ export default function DemandesPage() {
         fin: null,
         commentaire: "",
       });
+      showToast("Votre demande de congé a été envoyée.", "success");
     } catch (err) {
       console.error("Erreur création demande:", err);
-      alert(`Erreur lors de la création de la demande: ${err.message}`);
+      showToast(`Erreur lors de la création de la demande : ${err.message}`, "error");
     } finally {
       setLoading(false);
     }
@@ -146,9 +150,10 @@ export default function DemandesPage() {
           demande.id === demandeId ? updated : demande,
         ),
       );
+      showToast("La demande a été annulée.", "success");
     } catch (err) {
       console.error("Erreur annulation demande:", err);
-      alert("Erreur lors de l'annulation");
+      showToast(`Erreur lors de l'annulation : ${err.message}`, "error");
     }
   };
 

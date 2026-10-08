@@ -8,6 +8,7 @@ import {
 } from "../../api/demandeConge/demandeConge";
 import { getAllTypeConge } from "../../api/typeConge/typeConge";
 import { getCurrentUser, authFetch } from "@/lib/apiClient";
+import { useToast } from "../../components/ToastProvider";
 import {
   CheckCircle2,
   XCircle,
@@ -20,8 +21,7 @@ import {
   User,
   Calendar,
   MessageSquare,
-  FileCheck2,
-  AlertCircle
+  FileCheck2
 } from "lucide-react";
 
 export default function ValidationPage() {
@@ -33,7 +33,7 @@ export default function ValidationPage() {
   const [filter, setFilter] = useState("EN_ATTENTE");
   const [modalRefus, setModalRefus] = useState({ open: false, demandeId: null, motif: "" });
   const [actionLoading, setActionLoading] = useState(null);
-  const [msg, setMsg] = useState({ type: "", text: "" });
+  const showToast = useToast();
 
   useEffect(() => {
     let ignore = false;
@@ -55,6 +55,7 @@ export default function ValidationPage() {
         }
       } catch (err) {
         console.error("Erreur chargement validation:", err);
+        if (!ignore) showToast("Impossible de charger les demandes à valider.", "error");
       } finally {
         if (!ignore) {
           setLoading(false);
@@ -66,7 +67,7 @@ export default function ValidationPage() {
     return () => {
       ignore = true;
     };
-  }, [filter]);
+  }, [filter, showToast]);
 
   const role = manager?.role ? String(manager.role).toUpperCase() : "";
   const canValidate = role === "ADMIN" || role === "MANAGER";
@@ -110,19 +111,18 @@ export default function ValidationPage() {
 
   const handleValider = async (demandeId) => {
     if (!manager?.id) {
-      alert("Validateur non identifié.");
+      showToast("Validateur non identifié.", "warning");
       return;
     }
     setActionLoading(demandeId);
-    setMsg({ type: "", text: "" });
     try {
       await traiterDemandeConge(demandeId, manager.id, "VALIDEE");
       setDemandes((prev) =>
         prev.map((d) => (d.id === demandeId ? { ...d, statut: "VALIDEE" } : d))
       );
-      setMsg({ type: "success", text: "Demande validée avec succès !" });
+      showToast("Demande validée avec succès.", "success");
     } catch (err) {
-      setMsg({ type: "error", text: `Erreur validation : ${err.message}` });
+      showToast(`Erreur lors de la validation : ${err.message}`, "error");
     } finally {
       setActionLoading(null);
     }
@@ -149,10 +149,10 @@ export default function ValidationPage() {
             : d
         )
       );
-      setMsg({ type: "success", text: "Demande refusée." });
+      showToast("Demande refusée.", "success");
       setModalRefus({ open: false, demandeId: null, motif: "" });
     } catch (err) {
-      setMsg({ type: "error", text: `Erreur refus : ${err.message}` });
+      showToast(`Erreur lors du refus : ${err.message}`, "error");
     } finally {
       setActionLoading(null);
     }
@@ -227,21 +227,6 @@ export default function ValidationPage() {
           </button>
         </div>
       </div>
-
-      {msg.text && (
-        <div
-          className={`alert ${
-            msg.type === "success" ? "alert-success text-white" : "alert-error text-white"
-          } shadow-sm rounded-xl flex items-center gap-2`}
-        >
-          {msg.type === "success" ? (
-            <CheckCircle2 className="w-5 h-5 shrink-0" />
-          ) : (
-            <AlertCircle className="w-5 h-5 shrink-0" />
-          )}
-          <span>{msg.text}</span>
-        </div>
-      )}
 
       {/* Main Table Container */}
       <div className="bg-white shadow-sm border border-slate-200 rounded-2xl p-6">

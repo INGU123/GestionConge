@@ -4,6 +4,7 @@ import { loginUser } from "@/lib/apiLogin.js";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 
 const Home = () => {
   const [matricule, setMatricule] = useState("");
@@ -41,7 +42,14 @@ const Home = () => {
         <div className="bg-[#023E8A] p-8 text-center text-white relative">
           <div className="w-16 h-16 bg-white/10 rounded-full flex items-center justify-center mx-auto mb-3 border border-white/20">
             <span className="text-2xl font-black tracking-wider text-white">
-              SPAT
+              {/* LOGO + TITRE */}
+            <Image
+              src="/SpatLogo.png"
+              alt="Logo SPAT"
+              width={42}
+              height={42}
+              className="object-contain"
+            />
             </span>
           </div>
           <h1 className="text-2xl font-bold tracking-wide">

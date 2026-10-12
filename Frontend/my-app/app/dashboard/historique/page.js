@@ -19,6 +19,7 @@ import {
   Layers,
   ShieldCheck,
   Download,
+  Printer,
 } from "lucide-react";
 import { useToast } from "../../components/ToastProvider";
 
@@ -127,6 +128,43 @@ export default function HistoriquePage() {
     }
   };
 
+  const handlePrintPdf = async () => {
+    // Ouvrir la fenêtre immédiatement pour éviter le blocage des pop-ups après l'appel réseau.
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) {
+      showToast("Autorise les fenêtres pop-up pour imprimer l'historique.", "error");
+      return;
+    }
+
+    setExporting(true);
+    try {
+      const blob = await getHistoriquePdf(viewAll && isManager ? "all" : "mine");
+      const url = URL.createObjectURL(blob);
+      printWindow.location.href = url;
+      printWindow.focus();
+
+      // Laisser le temps au lecteur PDF du navigateur de charger le document.
+      window.setTimeout(() => {
+        try {
+          printWindow.focus();
+          printWindow.print();
+        } catch (error) {
+          console.warn("L'impression automatique n'a pas pu démarrer :", error);
+          showToast("Le PDF est ouvert. Lance l'impression avec Ctrl+P.", "info");
+        }
+      }, 1200);
+
+      // Conserver l'URL assez longtemps pour que le lecteur PDF puisse l'utiliser.
+      window.setTimeout(() => URL.revokeObjectURL(url), 60000);
+    } catch (error) {
+      printWindow.close();
+      console.error("Erreur lors de la préparation de l'impression PDF :", error);
+      showToast(error.message || "Impossible de préparer l'impression de l'historique.", "error");
+    } finally {
+      setExporting(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Banner Institutionnelle SPAT */}
@@ -183,6 +221,15 @@ export default function HistoriquePage() {
               <Download className="h-4 w-4" />
             )}
             {exporting ? "Export en cours..." : "Exporter en PDF"}
+          </button>
+          <button
+            type="button"
+            onClick={handlePrintPdf}
+            disabled={exporting || loading || mouvements.length === 0}
+            className="inline-flex items-center gap-2 rounded-xl border border-slate-600 bg-slate-800 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            <Printer className="h-4 w-4" />
+            Imprimer en PDF
           </button>
         </div>
       </div>

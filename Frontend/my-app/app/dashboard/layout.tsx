@@ -280,6 +280,28 @@ export default function DashboardLayout({
     },
   ];
 
+  // Le guide est accessible à tous les profils.
+  navItems.push({
+    href: "/dashboard/aide",
+    label: "Aide / Guide",
+    icon: (
+      <svg
+        className="w-4 h-4"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth="2"
+          d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5S19.832 5.477 21 6.253v13C19.832 18.477 18.246 18 16.5 18s-3.332.477-4.5 1.253"
+        />
+      </svg>
+    ),
+    show: true,
+  });
+
   const visibleNavItems = navItems.filter((item) => item.show);
 
   return (

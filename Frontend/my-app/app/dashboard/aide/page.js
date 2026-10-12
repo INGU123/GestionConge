@@ -62,7 +62,7 @@ const sections = [
     title: "3. Créer et suivre une demande de congé",
     description: "Saisir les informations puis suivre la décision.",
     icon: ClipboardList,
-    roles: "Collaborateur",
+    roles: "Collaborateur et manager selon les droits",
     href: "/dashboard/demande",
     action: "Ouvrir Mes Demandes",
     steps: [
@@ -270,7 +270,7 @@ export default function GuideUtilisateurPage() {
         </div>
       </section>
 
-      <section className="rounded-2xl border border-[var(--primary-border)] bg-[var(--card-bg)] p-4 shadow-sm sm:p-5">
+      <section className="rounded-2xl border border-[var(--primary-border)] bg-[var(--panel)] p-4 shadow-sm sm:p-5">
         <label htmlFor="guide-search" className="mb-2 block text-sm font-semibold" style={{ color: "var(--text-main)" }}>
           Rechercher dans le guide
         </label>
@@ -300,7 +300,7 @@ export default function GuideUtilisateurPage() {
         ].map((role) => {
           const Icon = role.icon;
           return (
-            <div key={role.label} className="flex items-start gap-3 rounded-xl border border-[var(--primary-border)] bg-[var(--card-bg)] p-4">
+            <div key={role.label} className="flex items-start gap-3 rounded-xl border border-[var(--primary-border)] bg-[var(--panel)] p-4">
               <div className="rounded-lg bg-blue-500/10 p-2 text-blue-600">
                 <Icon className="h-5 w-5" />
               </div>
@@ -316,9 +316,9 @@ export default function GuideUtilisateurPage() {
       <section className="space-y-3">
         {filteredSections.map((section) => {
           const Icon = section.icon;
-          const isOpen = openSections.includes(section.id) || Boolean(search.trim());
+          const isOpen = openSections.includes(section.id);
           return (
-            <article key={section.id} id={section.id} className="overflow-hidden rounded-2xl border border-[var(--primary-border)] bg-[var(--card-bg)] shadow-sm">
+            <article key={section.id} id={section.id} className="overflow-hidden rounded-2xl border border-[var(--primary-border)] bg-[var(--panel)] shadow-sm">
               <button
                 type="button"
                 onClick={() => toggleSection(section.id)}

@@ -259,6 +259,17 @@ export default function DashboardLayout({
     },
 
     {
+      href: "/dashboard/reinitialisations",
+      label: "Réinitialisations",
+      icon: (
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v6h6M20 20v-6h-6M5.64 18.36A8 8 0 0018.36 5.64L20 10M4 14l1.64 4.36A8 8 0 0018.36 5.64" />
+        </svg>
+      ),
+      show: isAdmin,
+    },
+
+    {
       href: "/dashboard/historique",
       label: "Historique",
       icon: (

@@ -9,17 +9,17 @@ import {
 import { getAllTypeConge } from "../../api/typeConge/typeConge";
 import { getCurrentUser, authFetch } from "@/lib/apiClient";
 import {
-  Scale,
-  CalendarDays,
-  Clock,
-  RotateCcw,
-  Sliders,
-  UserCheck,
-  CheckCircle2,
-  PieChart,
-  FileCheck,
-  AlertCircle,
-} from "lucide-react";
+  FiActivity as Scale,
+  FiCalendar as CalendarDays,
+  FiClock as Clock,
+  FiRefreshCw as RotateCcw,
+  FiSliders as Sliders,
+  FiUser as UserCheck,
+  FiCheckCircle as CheckCircle2,
+  FiPieChart as PieChart,
+  FiFileText as FileCheck,
+  FiAlertCircle as AlertCircle,
+} from "react-icons/fi";
 
 export default function SoldeConge() {
   /*

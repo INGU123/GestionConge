@@ -32,7 +32,8 @@ public class JwtAuthFilter extends OncePerRequestFilter {
     protected boolean shouldNotFilter(@NonNull HttpServletRequest request) throws ServletException {
         String path = request.getServletPath();
         return path.startsWith("/utilisateur/login") || path.startsWith("/utilisateur/forgot-password")
-                || path.startsWith("/utilisateur/reset-password") || path.startsWith("/auth/")
+                || path.startsWith("/utilisateur/reset-password")
+                || path.equals("/auth/forgot-password") || path.equals("/auth/reset-password")
                 || path.startsWith("/error");
     }
 

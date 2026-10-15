@@ -720,8 +720,7 @@ export default function SoldeConge() {
                             }
                             className="btn btn-xs btn-outline btn-primary font-semibold gap-1"
                           >
-                            <Sliders className="w-3 h-3" />
-                            Ajuster
+                            <Sliders className="w-3 h-3" aria-hidden="true" />
                           </button>
                         </td>
                       )}

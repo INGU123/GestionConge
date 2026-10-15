@@ -4,7 +4,7 @@ import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter, usePathname } from "next/navigation";
-import { FiMoon, FiSun } from "react-icons/fi";
+import { FiMoon, FiSun, FiChevronLeft, FiChevronRight, FiLogOut } from "react-icons/fi";
 import { getCurrentUser, clearAuthSession } from "@/lib/apiClient";
 import NotificationHeaderMenu from "./notifications/page";
 import { ToastProvider } from "../components/ToastProvider";
@@ -26,6 +26,7 @@ export default function DashboardLayout({
 }) {
   const [user, setUser] = useState<DashboardUser | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
   const [theme, setTheme] = useState<ThemeMode>(() => {
     if (typeof window === "undefined") return "day";
@@ -291,6 +292,27 @@ export default function DashboardLayout({
     },
   ];
 
+  navItems.push({
+    href: "/dashboard/aide",
+    label: "Aide / Guide",
+    icon: (
+      <svg
+        className="w-4 h-4"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth="2"
+          d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5S19.832 5.477 21 6.253v13C19.832 18.477 18.246 18 16.5 18s-3.332.477-4.5 1.253"
+        />
+      </svg>
+    ),
+    show: true,
+  });
+
   const visibleNavItems = navItems.filter((item) => item.show);
 
   return (
@@ -395,11 +417,26 @@ export default function DashboardLayout({
 
             {/* DECONNEXION */}
             <button
+              type="button"
               onClick={handleLogout}
-              className="btn btn-outline btn-sm flex items-center gap-1"
+              className="inline-flex items-center justify-center w-9 h-9 rounded-full border transition-all duration-200 hover:scale-105"
+              style={{
+                backgroundColor: "#450a0a", // Rouge très sombre au repos
+                borderColor: "#7f1d1d",
+                color: "#ffffff",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = "#ef4444"; // Rouge très clair au hover
+                e.currentTarget.style.borderColor = "#f87171";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = "#450a0a";
+                e.currentTarget.style.borderColor = "#7f1d1d";
+              }}
               title="Se déconnecter"
+              aria-label="Se déconnecter"
             >
-              <span>Déconnexion</span>
+              <FiLogOut className="text-lg" />
             </button>
           </div>
         </header>
@@ -409,17 +446,41 @@ export default function DashboardLayout({
 
           {/* SIDEBAR */}
           <aside
-            className="w-64 flex flex-col p-4 shadow-lg shrink-0 h-[calc(100vh-4rem)] sticky top-16 overflow-y-auto"
+            className={`flex flex-col p-4 shadow-lg shrink-0 h-[calc(100vh-4rem)] sticky top-16 overflow-y-auto transition-all duration-300 ${
+              isSidebarCollapsed ? "w-20" : "w-64"
+            }`}
             style={{
               background: "var(--sidebar-bg)",
               color: "var(--sidebar-text)",
             }}
           >
-            <div
-              className="text-xs uppercase tracking-wider font-bold px-3 mb-3"
-              style={{ color: "var(--text-muted)" }}
-            >
-              Menu ({userRoleClean || "EMPLOYE"})
+            <div className="flex items-center justify-between mb-3 px-1">
+              {!isSidebarCollapsed && (
+                <span
+                  className="text-xs uppercase tracking-wider font-bold truncate"
+                  style={{ color: "var(--text-muted)" }}
+                >
+                  Menu ({userRoleClean || "EMPLOYE"})
+                </span>
+              )}
+              <button
+                type="button"
+                onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+                className="p-1.5 rounded-lg border transition-all duration-200 hover:scale-105 ml-auto"
+                style={{
+                  borderColor: "var(--primary-border)",
+                  color: "var(--sidebar-text)",
+                  background: "rgba(148, 163, 184, 0.08)",
+                }}
+                title={isSidebarCollapsed ? "Développer le menu" : "Rétracter le menu"}
+                aria-label={isSidebarCollapsed ? "Développer le menu" : "Rétracter le menu"}
+              >
+                {isSidebarCollapsed ? (
+                  <FiChevronRight className="w-4 h-4" />
+                ) : (
+                  <FiChevronLeft className="w-4 h-4" />
+                )}
+              </button>
             </div>
 
             <nav className="flex flex-col space-y-1">
@@ -430,9 +491,10 @@ export default function DashboardLayout({
                   <Link
                     key={item.href}
                     href={item.href}
+                    title={isSidebarCollapsed ? item.label : undefined}
                     className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                       isActive ? "shadow" : ""
-                    }`}
+                    } ${isSidebarCollapsed ? "justify-center" : ""}`}
                     style={
                       isActive
                         ? {
@@ -445,11 +507,13 @@ export default function DashboardLayout({
                           }
                     }
                   >
-                    <span className="text-base">
+                    <span className="text-base shrink-0">
                       {item.icon}
                     </span>
 
-                    <span>{item.label}</span>
+                    {!isSidebarCollapsed && (
+                      <span className="truncate">{item.label}</span>
+                    )}
                   </Link>
                 );
               })}

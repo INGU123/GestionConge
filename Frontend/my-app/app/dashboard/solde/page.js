@@ -720,6 +720,8 @@ export default function SoldeConge() {
                             }
                             className="btn btn-xs btn-outline btn-primary font-semibold gap-1"
                           >
+                            title="Ajuster le solde de congé"
+                            aria-label="Ajuster le solde de congé"
                             <Sliders className="w-3 h-3" aria-hidden="true" />
                           </button>
                         </td>

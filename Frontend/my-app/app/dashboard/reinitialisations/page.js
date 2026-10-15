@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Check, X, RefreshCw, ShieldCheck } from "lucide-react";
+import { FiCheck as Check, FiX as X, FiRefreshCw as RefreshCw, FiShield as ShieldCheck } from "react-icons/fi";
 import { authFetch, getCurrentUser } from "@/lib/apiClient";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";

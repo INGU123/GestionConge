@@ -238,7 +238,7 @@ export default function Dashboard() {
           <div className="flex justify-between items-center mb-4 pb-2 border-b border-slate-100">
             <h2 className="text-base font-bold text-slate-800 flex items-center gap-2">
               <PieChart className="w-5 h-5 text-blue-600" />
-              Répartition des Soldes
+              Répartition des Soldes de Congés — SPAT
             </h2>
             <Link
               href="/dashboard/solde"
@@ -248,6 +248,7 @@ export default function Dashboard() {
             </Link>
           </div>
 
+          <p className="text-xs text-slate-500 mb-4">Synthèse des droits acquis, jours consommés et reliquats enregistrés pour votre compte agent.</p>
           {soldes.length === 0 ? (
             <div className="text-center py-8 text-slate-400 text-sm">
               Aucun solde de congé initialisé.

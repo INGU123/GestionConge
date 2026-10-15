@@ -6,6 +6,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -26,6 +29,7 @@ import jakarta.validation.Valid;
 @RestController
 @RequestMapping("/auth")
 public class PasswordResetController {
+    private static final Logger log = LoggerFactory.getLogger(PasswordResetController.class);
     private final PasswordResetService passwordResetService;
     private final UtilisateurRepository utilisateurRepository;
     private final PasswordResetRequestRepository requestRepository;
@@ -65,7 +69,10 @@ public class PasswordResetController {
                         + "\nDate : " + request.getDateDemande() + "\n\nConnectez-vous à GestionConge, rubrique « Réinitialisations », pour accepter ou refuser cette demande.\n";
                 for (Utilisateur admin : admins) {
                     try { emailService.sendEmail(admin.getEmail(), subject, text); }
-                    catch (Exception ex) { /* La demande reste enregistrée pour traitement dans l'application. */ }
+                    catch (Exception ex) {
+                        log.error("La demande de réinitialisation {} est enregistrée, mais l'e-mail d'alerte à l'administrateur (matricule {}) a échoué.",
+                                request.getId(), admin.getMatricule(), ex);
+                    }
                 }
             }
         }

@@ -3,23 +3,23 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import {
-  BookOpen,
-  Search,
-  LogIn,
-  LayoutDashboard,
-  ClipboardList,
-  CalendarDays,
-  History,
-  Users,
-  CheckCircle2,
-  Bell,
-  KeyRound,
-  ShieldCheck,
-  CircleHelp,
-  ChevronDown,
-  ArrowRight,
-  Info,
-} from "lucide-react";
+  FiBookOpen as BookOpen,
+  FiSearch as Search,
+  FiLogIn as LogIn,
+  FiGrid as LayoutDashboard,
+  FiClipboard as ClipboardList,
+  FiCalendar as CalendarDays,
+  FiClock as History,
+  FiUsers as Users,
+  FiCheckCircle as CheckCircle2,
+  FiBell as Bell,
+  FiKey as KeyRound,
+  FiShield as ShieldCheck,
+  FiHelpCircle as CircleHelp,
+  FiChevronDown as ChevronDown,
+  FiArrowRight as ArrowRight,
+  FiInfo as Info,
+} from "react-icons/fi";
 
 const sections = [
   {

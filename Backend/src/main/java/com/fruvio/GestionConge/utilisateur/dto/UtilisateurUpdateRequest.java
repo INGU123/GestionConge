@@ -71,6 +71,9 @@ public class UtilisateurUpdateRequest {
 
     private Boolean actif;
 
+    @JsonProperty("date_embauche")
+    private java.time.LocalDate dateEmbauche;
+
     @JsonProperty("mot_de_pass")
     public void setMotDePass(String motDePass) {
         if (this.password == null || this.password.isBlank()) {

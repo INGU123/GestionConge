@@ -8,6 +8,7 @@ import com.fruvio.GestionConge.utilisateur.entity.Role;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Past;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -33,6 +34,27 @@ public class UtilisateurCreateRequest {
     @NotBlank(message = "Le prénom est obligatoire.")
     @Size(min = 1, max = 100, message = "Le prénom doit contenir au maximum 100 caractères.")
     private String prenom;
+
+    @JsonProperty("numero_cin")
+    @Size(max = 30, message = "Le numéro CIN ne peut pas dépasser 30 caractères.")
+    private String numeroCin;
+
+    @JsonProperty("date_naissance")
+    @Past(message = "La date de naissance doit être dans le passé.")
+    private LocalDate dateNaissance;
+
+    @Size(max = 30, message = "Le téléphone ne peut pas dépasser 30 caractères.")
+    private String telephone;
+
+    @Size(max = 500, message = "L'adresse ne peut pas dépasser 500 caractères.")
+    private String adresse;
+
+    @Size(max = 100, message = "La fonction ne peut pas dépasser 100 caractères.")
+    private String fonction;
+
+    @JsonProperty("type_contrat")
+    @Size(max = 80, message = "Le type de contrat ne peut pas dépasser 80 caractères.")
+    private String typeContrat;
 
     @NotBlank(message = "L'adresse e-mail est obligatoire.")
     @Email(message = "Format d'adresse e-mail invalide.")

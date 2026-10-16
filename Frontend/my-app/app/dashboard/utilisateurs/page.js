@@ -34,7 +34,9 @@ export default function UtilisateursPage() {
   const [showModal, setShowModal] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
   const [deletingUserId, setDeletingUserId] = useState(null);
-  const [userToDelete, setUserToDelete] = useState(null);\n  const [detailUser, setDetailUser] = useState(null);\n  const [openActionMenu, setOpenActionMenu] = useState(null);
+  const [userToDelete, setUserToDelete] = useState(null);
+  const [detailUser, setDetailUser] = useState(null);
+  const [openActionMenu, setOpenActionMenu] = useState(null);
   const [newUser, setNewUser] = useState({
     matricule: "",
     nom: "",
@@ -198,6 +200,30 @@ export default function UtilisateursPage() {
       showToast(`Erreur : ${err.message}`, "error");
     } finally {
       setDeletingUserId(null);
+    }
+  };
+
+  const handleToggleActive = async (user) => {
+    const nextActive = user.actif === false;
+    setOpenActionMenu(null);
+    try {
+      const res = await authFetch("http://localhost:8080/utilisateur/update", {
+        method: "PUT",
+        body: JSON.stringify({ id: user.id, actif: nextActive }),
+      });
+      if (!res.ok) {
+        const body = await res.text();
+        let message = body;
+        try { message = JSON.parse(body).message || body; } catch {}
+        showToast(message || "Impossible de modifier le statut du collaborateur.", "error");
+        return;
+      }
+      const updated = await res.json();
+      setUsers((prev) => prev.map((item) => item.id === user.id ? { ...item, ...updated, actif: updated.actif ?? nextActive } : item));
+      if (detailUser?.id === user.id) setDetailUser((prev) => prev ? { ...prev, ...updated, actif: updated.actif ?? nextActive } : prev);
+      showToast(nextActive ? "Collaborateur activé avec succès." : "Collaborateur désactivé avec succès.", "success");
+    } catch (err) {
+      showToast(`Erreur : ${err.message}`, "error");
     }
   };
 
@@ -412,7 +438,7 @@ export default function UtilisateursPage() {
                           <div role="menu" className="absolute right-0 top-10 z-30 min-w-48 rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl">
                             <button type="button" role="menuitem" onClick={() => { setDetailUser(u); setOpenActionMenu(null); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"><Eye className="h-4 w-4" />Voir détail</button>
                             <button type="button" role="menuitem" onClick={() => { startEdit(u); setOpenActionMenu(null); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"><FaEdit />Modifier</button>
-                            <button type="button" role="menuitem" onClick={() => { startEdit(u); setOpenActionMenu(null); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-amber-700 hover:bg-amber-50"><UserMinus className="h-4 w-4" />Désactiver / activer</button>
+                            <button type="button" role="menuitem" onClick={() => handleToggleActive(u)} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-amber-700 hover:bg-amber-50"><UserMinus className="h-4 w-4" />{u.actif === false ? "Activer" : "Désactiver"}</button>
                             <div className="my-1 border-t border-slate-100" />
                             <button type="button" role="menuitem" onClick={() => { setUserToDelete(u); setOpenActionMenu(null); }} disabled={deletingUserId === u.id || u.id === currentUser?.id} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-rose-700 hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-50"><FaTrashAlt />Supprimer</button>
                           </div>

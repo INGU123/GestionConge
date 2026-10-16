@@ -189,6 +189,12 @@ public class UtilisateurService {
                 return user;
         }
 
+        private String normalizeOptional(String value) {
+                if (value == null) return null;
+                String normalized = value.trim();
+                return normalized.isEmpty() ? null : normalized;
+        }
+
         // =========================================================
         // CREATION UTILISATEUR
         // =========================================================
@@ -225,6 +231,11 @@ public class UtilisateurService {
                         throw new IllegalArgumentException("L'adresse e-mail " + email + " existe déjà.");
                 }
 
+                String numeroCin = normalizeOptional(request.getNumeroCin());
+                if (numeroCin != null && utilisateurRepository.existsByNumeroCinIgnoreCase(numeroCin)) {
+                        throw new IllegalArgumentException("Le numéro CIN est déjà utilisé.");
+                }
+
                 Role assignedRole = request.getRole() != null ? request.getRole() : Role.EMPLOYE;
 
                 if (assignedRole == Role.ADMIN) {
@@ -253,6 +264,12 @@ public class UtilisateurService {
                 Utilisateur newUser = Utilisateur.builder().matricule(matricule)
                                 .nom(request.getNom() != null ? request.getNom().trim() : "")
                                 .prenom(request.getPrenom() != null ? request.getPrenom().trim() : "").email(email)
+                                .numeroCin(numeroCin)
+                                .dateNaissance(request.getDateNaissance())
+                                .telephone(normalizeOptional(request.getTelephone()))
+                                .adresse(normalizeOptional(request.getAdresse()))
+                                .fonction(normalizeOptional(request.getFonction()))
+                                .typeContrat(normalizeOptional(request.getTypeContrat()))
                                 .password(passwordEncoder.encode(rawPassword)).role(assignedRole)
                                 .service_id(request.getService_id()).manager_id(request.getManager_id())
                                 .date_embauche(request.getDate_embauche() != null ? request.getDate_embauche()

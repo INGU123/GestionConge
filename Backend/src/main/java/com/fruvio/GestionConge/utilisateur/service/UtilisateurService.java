@@ -394,6 +394,31 @@ public class UtilisateurService {
                         }
                 }
 
+                // Informations personnelles et professionnelles complémentaires
+                if (request.getNumeroCin() != null) {
+                        String newCin = normalizeOptional(request.getNumeroCin());
+                        if (newCin != null && !newCin.equalsIgnoreCase(targetUser.getNumeroCin())
+                                        && utilisateurRepository.existsByNumeroCinIgnoreCase(newCin)) {
+                                throw new IllegalArgumentException("Le numéro CIN est déjà utilisé.");
+                        }
+                        targetUser.setNumeroCin(newCin);
+                }
+                if (request.getDateNaissance() != null) {
+                        targetUser.setDateNaissance(request.getDateNaissance());
+                }
+                if (request.getTelephone() != null) {
+                        targetUser.setTelephone(normalizeOptional(request.getTelephone()));
+                }
+                if (request.getAdresse() != null) {
+                        targetUser.setAdresse(normalizeOptional(request.getAdresse()));
+                }
+                if (request.getFonction() != null) {
+                        targetUser.setFonction(normalizeOptional(request.getFonction()));
+                }
+                if (request.getTypeContrat() != null) {
+                        targetUser.setTypeContrat(normalizeOptional(request.getTypeContrat()));
+                }
+
                 // 2. Modification du mot de passe
                 if (request.getPassword() != null && !request.getPassword().trim().isEmpty()) {
 

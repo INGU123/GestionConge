@@ -36,6 +36,24 @@ public class Utilisateur implements UserDetails {
 
     private String prenom;
 
+    @Column(name = "numero_cin", unique = true, length = 30)
+    private String numeroCin;
+
+    @Column(name = "date_naissance")
+    private LocalDate dateNaissance;
+
+    @Column(length = 30)
+    private String telephone;
+
+    @Column(length = 500)
+    private String adresse;
+
+    @Column(length = 100)
+    private String fonction;
+
+    @Column(name = "type_contrat", length = 80)
+    private String typeContrat;
+
     @Column(unique = true, nullable = false)
     @Pattern(
         regexp = "^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$",

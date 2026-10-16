@@ -1,0 +1,1199 @@
+[1mdiff --git a/Frontend/my-app/app/dashboard/utilisateurs/page.js b/Frontend/my-app/app/dashboard/utilisateurs/page.js[m
+[1mindex 0bbcc590..b7ce1197 100644[m
+[1m--- a/Frontend/my-app/app/dashboard/utilisateurs/page.js[m
+[1m+++ b/Frontend/my-app/app/dashboard/utilisateurs/page.js[m
+[36m@@ -16,65 +16,215 @@[m [mimport {[m
+   Mail,[m
+   ShieldCheck,[m
+   X,[m
+[31m-  User[m
+[32m+[m[32m  User,[m
+[32m+[m[32m  BriefcaseBusiness,[m
+[32m+[m[32m  MoreVertical,[m
+[32m+[m[32m  Eye,[m
+ } from "lucide-react";[m
+ import { FaEdit, FaTrashAlt } from "react-icons/fa";[m
+ [m
+[32m+[m[32mconst API_URL = "http://localhost:8080";[m
+[32m+[m
+[32m+[m[32mconst getToday = () => {[m
+[32m+[m[32m  const date = new Date();[m
+[32m+[m[32m  const year = date.getFullYear();[m
+[32m+[m[32m  const month = String(date.getMonth() + 1).padStart(2, "0");[m
+[32m+[m[32m  const day = String(date.getDate()).padStart(2, "0");[m
+[32m+[m[32m  return `${year}-${month}-${day}`;[m
+[32m+[m[32m};[m
+[32m+[m
+[32m+[m[32mconst createEmptyUser = () => ({[m
+[32m+[m[32m  matricule: "",[m
+[32m+[m[32m  nom: "",[m
+[32m+[m[32m  prenom: "",[m
+[32m+[m[32m  email: "",[m
+[32m+[m[32m  mot_de_pass: "",[m
+[32m+[m[32m  role: "EMPLOYE",[m
+[32m+[m[32m  service_id: "",[m
+[32m+[m[32m  date_embauche: getToday(),[m
+[32m+[m[32m  actif: true,[m
+[32m+[m[32m});[m
+[32m+[m
+[32m+[m[32mconst readResponse = async (response) => {[m
+[32m+[m[32m  const text = await response.text();[m
+[32m+[m
+[32m+[m[32m  if (!text) return {};[m
+[32m+[m
+[32m+[m[32m  try {[m
+[32m+[m[32m    return JSON.parse(text);[m
+[32m+[m[32m  } catch {[m
+[32m+[m[32m    return { message: text };[m
+[32m+[m[32m  }[m
+[32m+[m[32m};[m
+[32m+[m
+ export default function UtilisateursPage() {[m
+   const [currentUser] = useState(() => getCurrentUser());[m
+   const [users, setUsers] = useState([]);[m
+[32m+[m[32m  const [services, setServices] = useState([]);[m
+   const [loading, setLoading] = useState(true);[m
+[32m+[m[32m  const [servicesLoading, setServicesLoading] = useState(false);[m
+   const [search, setSearch] = useState("");[m
+   const [showModal, setShowModal] = useState(false);[m
+[32m+[m[32m  const [showDetailsModal, setShowDetailsModal] = useState(false);[m
+[32m+[m[32m  const [selectedUser, setSelectedUser] = useState(null);[m
+[32m+[m[32m  const [saving, setSaving] = useState(false);[m
+   const [editingUser, setEditingUser] = useState(null);[m
+   const [deletingUserId, setDeletingUserId] = useState(null);[m
+   const [userToDelete, setUserToDelete] = useState(null);[m
+[31m-  const [newUser, setNewUser] = useState({[m
+[31m-    matricule: "",[m
+[31m-    nom: "",[m
+[31m-    prenom: "",[m
+[31m-    email: "",[m
+[31m-    mot_de_pass: "",[m
+[31m-    role: "EMPLOYE",[m
+[31m-    date_embauche: new Date().toISOString().split("T")[0],[m
+[31m-    actif: true,[m
+[31m-  });[m
+[32m+[m[32m  const [newUser, setNewUser] = useState(createEmptyUser);[m
+[32m+[m[32m  const [activeMenuId, setActiveMenuId] = useState(null);[m
+[32m+[m
+   const showToast = useToast();[m
+[32m+[m[32m  const isAdmin = currentUser?.role?.toUpperCase() === "ADMIN";[m
+[32m+[m
+[32m+[m[32m  // Fermeture des menus au clic à l'extérieur[m
+[32m+[m[32m  useEffect(() => {[m
+[32m+[m[32m    const handleClickOutside = (event) => {[m
+[32m+[m[32m      if (!event.target.closest(".action-menu-dropdown")) {[m
+[32m+[m[32m        setActiveMenuId(null);[m
+[32m+[m[32m      }[m
+[32m+[m[32m    };[m
+[32m+[m[32m    document.addEventListener("mousedown", handleClickOutside);[m
+[32m+[m[32m    return () => {[m
+[32m+[m[32m      document.removeEventListener("mousedown", handleClickOutside);[m
+[32m+[m[32m    };[m
+[32m+[m[32m  }, []);[m
+ [m
+   useEffect(() => {[m
+     let isMounted = true;[m
+ [m
+[31m-    const loadUsers = async () => {[m
+[32m+[m[32m    const loadData = async () => {[m
+[32m+[m[32m      setLoading(true);[m
+[32m+[m[32m      setServicesLoading(true);[m
+[32m+[m
+       try {[m
+[31m-        setLoading(true);[m
+[31m-        const res = await authFetch("http://localhost:8080/utilisateur/all");[m
+[31m-        if (res.ok) {[m
+[31m-          const data = await res.json();[m
+[32m+[m[32m        const [usersResponse, servicesResponse] = await Promise.all([[m
+[32m+[m[32m          authFetch(`${API_URL}/utilisateur/all`),[m
+[32m+[m[32m          authFetch(`${API_URL}/services`),[m
+[32m+[m[32m        ]);[m
+[32m+[m
+[32m+[m[32m        if (!usersResponse.ok) {[m
+[32m+[m[32m          const error = await readResponse(usersResponse);[m
+[32m+[m[32m          throw new Error([m
+[32m+[m[32m            error.message || "Impossible de charger les collaborateurs."[m
+[32m+[m[32m          );[m
+[32m+[m[32m        }[m
+[32m+[m
+[32m+[m[32m        const usersData = await readResponse(usersResponse);[m
+[32m+[m
+[32m+[m[32m        if (isMounted) {[m
+[32m+[m[32m          setUsers(Array.isArray(usersData) ? usersData : []);[m
+[32m+[m[32m        }[m
+[32m+[m
+[32m+[m[32m        if (servicesResponse.ok) {[m
+[32m+[m[32m          const servicesData = await readResponse(servicesResponse);[m
+[32m+[m
+           if (isMounted) {[m
+[31m-            setUsers(Array.isArray(data) ? data : []);[m
+[32m+[m[32m            setServices(Array.isArray(servicesData) ? servicesData : []);[m
+           }[m
+         } else {[m
+[31m-          const errorMsg = await res.text();[m
+[31m-          console.error("Erreur serveur:", errorMsg);[m
+[31m-          if (isMounted) showToast(errorMsg || "Impossible de charger la liste des collaborateurs.", "error");[m
+[32m+[m[32m          if (isMounted) setServices([]);[m
+[32m+[m[32m        }[m
+[32m+[m[32m      } catch (error) {[m
+[32m+[m[32m        console.error("Erreur de chargement :", error);[m
+[32m+[m
+[32m+[m[32m        if (isMounted) {[m
+[32m+[m[32m          showToast([m
+[32m+[m[32m            error.message || "Impossible de charger les données.",[m
+[32m+[m[32m            "error"[m
+[32m+[m[32m          );[m
+         }[m
+[31m-      } catch (err) {[m
+[31m-        console.error("Erreur chargement utilisateurs:", err);[m
+[31m-        if (isMounted) showToast("Impossible de charger la liste des collaborateurs.", "error");[m
+       } finally {[m
+[31m-        if (isMounted) setLoading(false);[m
+[32m+[m[32m        if (isMounted) {[m
+[32m+[m[32m          setLoading(false);[m
+[32m+[m[32m          setServicesLoading(false);[m
+[32m+[m[32m        }[m
+       }[m
+     };[m
+ [m
+[31m-    loadUsers();[m
+[32m+[m[32m    loadData();[m
+ [m
+     return () => {[m
+       isMounted = false;[m
+     };[m
+   }, [showToast]);[m
+ [m
+[31m-  const handleSubmit = async (e) => {[m
+[31m-    e.preventDefault();[m
+[32m+[m[32m  const getServiceName = (serviceId) => {[m
+[32m+[m[32m    if (serviceId === null || serviceId === undefined || serviceId === "") {[m
+[32m+[m[32m      return "Non attribué";[m
+[32m+[m[32m    }[m
+[32m+[m
+[32m+[m[32m    const service = services.find([m
+[32m+[m[32m      (item) => String(item.id) === String(serviceId)[m
+[32m+[m[32m    );[m
+[32m+[m
+[32m+[m[32m    return service?.nom || `Service #${serviceId}`;[m
+[32m+[m[32m  };[m
+[32m+[m
+[32m+[m[32m  const closeModal = () => {[m
+[32m+[m[32m    if (saving) return;[m
+[32m+[m
+[32m+[m[32m    setShowModal(false);[m
+[32m+[m[32m    setEditingUser(null);[m
+[32m+[m[32m    setNewUser(createEmptyUser());[m
+[32m+[m[32m  };[m
+[32m+[m
+[32m+[m[32m  const startCreate = () => {[m
+[32m+[m[32m    setEditingUser(null);[m
+[32m+[m[32m    setNewUser(createEmptyUser());[m
+[32m+[m[32m    setShowModal(true);[m
+[32m+[m[32m  };[m
+[32m+[m
+[32m+[m[32m  const startEdit = (user) => {[m
+[32m+[m[32m    setActiveMenuId(null);[m
+[32m+[m[32m    setEditingUser(user);[m
+[32m+[m
+[32m+[m[32m    setNewUser({[m
+[32m+[m[32m      matricule: user.matricule || "",[m
+[32m+[m[32m      nom: user.nom || "",[m
+[32m+[m[32m      prenom: user.prenom || "",[m
+[32m+[m[32m      email: user.email || "",[m
+[32m+[m[32m      mot_de_pass: "",[m
+[32m+[m[32m      role: user.role || "EMPLOYE",[m
+[32m+[m[32m      service_id: user.service_id ?? "",[m
+[32m+[m[32m      date_embauche: user.date_embauche || "",[m
+[32m+[m[32m      actif: user.actif !== false,[m
+[32m+[m[32m    });[m
+[32m+[m
+[32m+[m[32m    setShowModal(true);[m
+[32m+[m[32m  };[m
+[32m+[m
+[32m+[m[32m  const startDetails = (user) => {[m
+[32m+[m[32m    setActiveMenuId(null);[m
+[32m+[m[32m    setSelectedUser(user);[m
+[32m+[m[32m    setShowDetailsModal(true);[m
+[32m+[m[32m  };[m
+[32m+[m
+[32m+[m[32m  const startDeletePrompt = (user) => {[m
+[32m+[m[32m    setActiveMenuId(null);[m
+[32m+[m[32m    setUserToDelete(user);[m
+[32m+[m[32m  };[m
+[32m+[m
+[32m+[m[32m  const handleSubmit = async (event) => {[m
+[32m+[m[32m    event.preventDefault();[m
+[32m+[m
+[32m+[m[32m    if (saving) return;[m
+[32m+[m
+[32m+[m[32m    if (!newUser.matricule.trim() ||[m
+[32m+[m[32m        !newUser.nom.trim() ||[m
+[32m+[m[32m        !newUser.prenom.trim() ||[m
+[32m+[m[32m        !newUser.email.trim()) {[m
+[32m+[m[32m      showToast("Veuillez remplir tous les champs obligatoires.", "error");[m
+[32m+[m[32m      return;[m
+[32m+[m[32m    }[m
+[32m+[m
+[32m+[m[32m    if (!editingUser && !newUser.date_embauche) {[m
+[32m+[m[32m      showToast("La date d'embauche est obligatoire.", "error");[m
+[32m+[m[32m      return;[m
+[32m+[m[32m    }[m
+[32m+[m
+[32m+[m[32m    setSaving(true);[m
+[32m+[m
+     try {[m
+       const payload = {[m
+         ...(editingUser ? { id: editingUser.id } : {}),[m
+[36m@@ -83,287 +233,372 @@[m [mexport default function UtilisateursPage() {[m
+         prenom: newUser.prenom.trim(),[m
+         email: newUser.email.trim(),[m
+         role: newUser.role,[m
+[31m-        actif: editingUser ? newUser.actif : true,[m
+[31m-        ...(!editingUser ? { date_embauche: newUser.date_embauche } : {}),[m
+[31m-        ...(newUser.mot_de_pass?.trim() ? { password: newUser.mot_de_pass.trim() } : {}),[m
+[32m+[m[32m        service_id: newUser.service_id[m
+[32m+[m[32m          ? Number(newUser.service_id)[m
+[32m+[m[32m          : null,[m
+[32m+[m[32m        ...(editingUser[m
+[32m+[m[32m          ? { actif: newUser.actif }[m
+[32m+[m[32m          : {[m
+[32m+[m[32m              actif: true,[m
+[32m+[m[32m              date_embauche: newUser.date_embauche,[m
+[32m+[m[32m            }),[m
+[32m+[m[32m        ...(newUser.mot_de_pass.trim()[m
+[32m+[m[32m          ? { password: newUser.mot_de_pass.trim() }[m
+[32m+[m[32m          : {}),[m
+       };[m
+ [m
+[31m-      const res = await authFetch([m
+[31m-        `http://localhost:8080/utilisateur/${editingUser ? "update" : "create"}`,[m
+[32m+[m[32m      const response = await authFetch([m
+[32m+[m[32m        `${API_URL}/utilisateur/${editingUser ? "update" : "create"}`,[m
+         {[m
+           method: editingUser ? "PUT" : "POST",[m
+[32m+[m[32m          headers: {[m
+[32m+[m[32m            "Content-Type": "application/json",[m
+[32m+[m[32m          },[m
+           body: JSON.stringify(payload),[m
+         }[m
+       );[m
+ [m
+[31m-      if (res.ok) {[m
+[31m-        const responseData = await res.json();[m
+[31m-        const createdUser = responseData.utilisateur || responseData;[m
+[31m-        setUsers((prev) => editingUser[m
+[31m-          ? prev.map((user) => user.id === createdUser.id ? createdUser : user)[m
+[31m-          : [...prev, createdUser][m
+[32m+[m[32m      const responseData = await readResponse(response);[m
+[32m+[m
+[32m+[m[32m      if (!response.ok) {[m
+[32m+[m[32m        throw new Error([m
+[32m+[m[32m          responseData.message ||[m
+[32m+[m[32m          responseData.error ||[m
+[32m+[m[32m          "Erreur lors de l'enregistrement du collaborateur."[m
+         );[m
+[31m-        setShowModal(false);[m
+[31m-        setEditingUser(null);[m
+[31m-        setNewUser({[m
+[31m-          matricule: "",[m
+[31m-          nom: "",[m
+[31m-          prenom: "",[m
+[31m-          email: "",[m
+[31m-          mot_de_pass: "",[m
+[31m-          role: "EMPLOYE",[m
+[31m-          date_embauche: new Date().toISOString().split("T")[0],[m
+[31m-          actif: true,[m
+[31m-        });[m
+[32m+[m[32m      }[m
+ [m
+[31m-        const successText = responseData.message || (editingUser[m
+[31m-          ? "Collaborateur modifié avec succès."[m
+[31m-          : "Collaborateur créé avec succès. Ses identifiants ont été envoyés par e-mail.");[m
+[31m-        showToast(successText, "success");[m
+[32m+[m[32m      const savedUser = responseData.utilisateur || responseData;[m
+[32m+[m
+[32m+[m[32m      if (!savedUser.id) {[m
+[32m+[m[32m        const refreshResponse = await authFetch(`${API_URL}/utilisateur/all`);[m
+[32m+[m
+[32m+[m[32m        if (refreshResponse.ok) {[m
+[32m+[m[32m          const refreshedUsers = await readResponse(refreshResponse);[m
+[32m+[m[32m          setUsers(Array.isArray(refreshedUsers) ? refreshedUsers : []);[m
+[32m+[m[32m        }[m
+       } else {[m
+[31m-        const txt = await res.text();[m
+[31m-        let errMsg = txt;[m
+[31m-        try {[m
+[31m-          const parsed = JSON.parse(txt);[m
+[31m-          if (parsed && parsed.message) errMsg = parsed.message;[m
+[31m-        } catch { }[m
+[31m-        showToast(errMsg || "Erreur lors de l'enregistrement du collaborateur.", "error");[m
+[32m+[m[32m        setUsers((previousUsers) => {[m
+[32m+[m[32m          if (editingUser) {[m
+[32m+[m[32m            return previousUsers.map((user) =>[m
+[32m+[m[32m              user.id === savedUser.id ? savedUser : user[m
+[32m+[m[32m            );[m
+[32m+[m[32m          }[m
+[32m+[m
+[32m+[m[32m          return [[m
+[32m+[m[32m            ...previousUsers.filter((user) => user.id !== savedUser.id),[m
+[32m+[m[32m            savedUser,[m
+[32m+[m[32m          ];[m
+[32m+[m[32m        });[m
+       }[m
+[31m-    } catch (err) {[m
+[31m-      showToast(`Erreur : ${err.message}`, "error");[m
+[32m+[m
+[32m+[m[32m      setShowModal(false);[m
+[32m+[m[32m      setEditingUser(null);[m
+[32m+[m[32m      setNewUser(createEmptyUser());[m
+[32m+[m
+[32m+[m[32m      showToast([m
+[32m+[m[32m        responseData.message ||[m
+[32m+[m[32m          (editingUser[m
+[32m+[m[32m            ? "Collaborateur modifié avec succès."[m
+[32m+[m[32m            : "Collaborateur créé avec succès."),[m
+[32m+[m[32m        "success"[m
+[32m+[m[32m      );[m
+[32m+[m[32m    } catch (error) {[m
+[32m+[m[32m      console.error("Erreur d'enregistrement :", error);[m
+[32m+[m[32m      showToast([m
+[32m+[m[32m        error.message || "Impossible d'enregistrer le collaborateur.",[m
+[32m+[m[32m        "error"[m
+[32m+[m[32m      );[m
+[32m+[m[32m    } finally {[m
+[32m+[m[32m      setSaving(false);[m
+     }[m
+   };[m
+ [m
+   const handleDelete = async () => {[m
+[31m-    if (!userToDelete) return;[m
+[32m+[m[32m    if (!userToDelete || deletingUserId !== null) return;[m
+[32m+[m
+     const user = userToDelete;[m
+     setDeletingUserId(user.id);[m
+[32m+[m
+     try {[m
+[31m-      const res = await authFetch(`http://localhost:8080/utilisateur/${user.id}`, {[m
+[31m-        method: "DELETE",[m
+[31m-      });[m
+[31m-      if (!res.ok) {[m
+[31m-        const text = await res.text();[m
+[31m-        let errorMessage = text;[m
+[31m-        try {[m
+[31m-          const parsed = JSON.parse(text);[m
+[31m-          errorMessage = parsed.message || errorMessage;[m
+[31m-        } catch { }[m
+[31m-        showToast(errorMessage || "Erreur lors de la suppression du collaborateur.", "error");[m
+[31m-        return;[m
+[32m+[m[32m      const response = await authFetch([m
+[32m+[m[32m        `${API_URL}/utilisateur/${user.id}`,[m
+[32m+[m[32m        { method: "DELETE" }[m
+[32m+[m[32m      );[m
+[32m+[m
+[32m+[m[32m      if (!response.ok) {[m
+[32m+[m[32m        const error = await readResponse(response);[m
+[32m+[m
+[32m+[m[32m        throw new Error([m
+[32m+[m[32m          error.message ||[m
+[32m+[m[32m          error.error ||[m
+[32m+[m[32m          "Erreur lors de la suppression du collaborateur."[m
+[32m+[m[32m        );[m
+       }[m
+ [m
+[31m-      setUsers((prev) => prev.filter((item) => item.id !== user.id));[m
+[32m+[m[32m      setUsers((previousUsers) =>[m
+[32m+[m[32m        previousUsers.filter((item) => item.id !== user.id)[m
+[32m+[m[32m      );[m
+[32m+[m
+       setUserToDelete(null);[m
+       showToast("Collaborateur supprimé avec succès.", "success");[m
+[31m-    } catch (err) {[m
+[31m-      showToast(`Erreur : ${err.message}`, "error");[m
+[32m+[m[32m    } catch (error) {[m
+[32m+[m[32m      console.error("Erreur de suppression :", error);[m
+[32m+[m[32m      showToast([m
+[32m+[m[32m        error.message || "Impossible de supprimer le collaborateur.",[m
+[32m+[m[32m        "error"[m
+[32m+[m[32m      );[m
+     } finally {[m
+       setDeletingUserId(null);[m
+     }[m
+   };[m
+ [m
+[31m-  const startCreate = () => {[m
+[31m-    setEditingUser(null);[m
+[31m-    setNewUser({[m
+[31m-      matricule: "", nom: "", prenom: "", email: "", mot_de_pass: "",[m
+[31m-      role: "EMPLOYE", date_embauche: new Date().toISOString().split("T")[0], actif: true,[m
+[31m-    });[m
+[31m-    setShowModal(true);[m
+[31m-  };[m
+[31m-[m
+[31m-  const startEdit = (user) => {[m
+[31m-    setEditingUser(user);[m
+[31m-    setNewUser({ ...user, mot_de_pass: "", date_embauche: user.date_embauche || "" });[m
+[31m-    setShowModal(true);[m
+[31m-  };[m
+[31m-[m
+[31m-  const isAdmin = currentUser?.role?.toUpperCase() === "ADMIN";[m
+[32m+[m[32m  const filteredUsers = users.filter((user) => {[m
+[32m+[m[32m    const term = search.trim().toLowerCase();[m
+ [m
+[31m-  if (!loading && !isAdmin) {[m
+[31m-    return ([m
+[31m-      <div className="bg-amber-50 border-l-4 border-amber-500 rounded-2xl p-6 shadow-sm flex items-start gap-4">[m
+[31m-        <ShieldAlert className="w-6 h-6 text-amber-600 shrink-0 mt-0.5" />[m
+[31m-        <div>[m
+[31m-          <h3 className="text-base font-bold text-amber-900">Accès Restreint — SPAT</h3>[m
+[31m-          <p className="text-sm text-amber-700 mt-1">[m
+[31m-            {"Seuls les Administrateurs RH de la SPAT sont habilités à gérer l'annuaire et les comptes collaborateurs."}[m
+[31m-          </p>[m
+[31m-        </div>[m
+[31m-      </div>[m
+[31m-    );[m
+[31m-  }[m
+[32m+[m[32m    if (!term) return true;[m
+ [m
+[31m-  const filteredUsers = users.filter((u) => {[m
+[31m-    const term = search.toLowerCase();[m
+[31m-    return ([m
+[31m-      (u.matricule && u.matricule.toLowerCase().includes(term)) ||[m
+[31m-      (u.nom && u.nom.toLowerCase().includes(term)) ||[m
+[31m-      (u.prenom && u.prenom.toLowerCase().includes(term)) ||[m
+[31m-      (u.email && u.email.toLowerCase().includes(term)) ||[m
+[31m-      (u.role && u.role.toLowerCase().includes(term))[m
+[31m-    );[m
+[32m+[m[32m    return [[m
+[32m+[m[32m      user.matricule,[m
+[32m+[m[32m      user.nom,[m
+[32m+[m[32m      user.prenom,[m
+[32m+[m[32m      user.email,[m
+[32m+[m[32m      user.role,[m
+[32m+[m[32m      getServiceName(user.service_id),[m
+[32m+[m[32m    ].some((value) => String(value || "").toLowerCase().includes(term));[m
+   });[m
+ [m
+   const getRoleBadge = (role) => {[m
+     switch (role?.toUpperCase()) {[m
+       case "ADMIN":[m
+         return ([m
+[31m-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200">[m
+[31m-            <ShieldCheck className="w-3.5 h-3.5" />[m
+[31m-            ADMINISTRATEUR[m
+[32m+[m[32m          <span className="inline-flex items-center gap-1 rounded-md border border-blue-200 bg-blue-50 px-2.5 py-0.5 text-xs font-bold text-blue-700 whitespace-nowrap">[m
+[32m+[m[32m            <ShieldCheck className="h-3.5 w-3.5 shrink-0" />[m
+[32m+[m[32m            ADMIN[m
+           </span>[m
+         );[m
+[32m+[m
+       case "MANAGER":[m
+         return ([m
+[31m-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-xs font-bold bg-purple-50 text-purple-700 border border-purple-200">[m
+[31m-            <BadgeCheck className="w-3.5 h-3.5" />[m
+[32m+[m[32m          <span className="inline-flex items-center gap-1 rounded-md border border-purple-200 bg-purple-50 px-2.5 py-0.5 text-xs font-bold text-purple-700 whitespace-nowrap">[m
+[32m+[m[32m            <BadgeCheck className="h-3.5 w-3.5 shrink-0" />[m
+             MANAGER[m
+           </span>[m
+         );[m
+[31m-      case "EMPLOYE":[m
+[32m+[m
+       default:[m
+         return ([m
+[31m-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-xs font-bold bg-slate-100 text-slate-700 border border-slate-200">[m
+[31m-            <User className="w-3.5 h-3.5" />[m
+[32m+[m[32m          <span className="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-slate-100 px-2.5 py-0.5 text-xs font-bold text-slate-700 whitespace-nowrap">[m
+[32m+[m[32m            <User className="h-3.5 w-3.5 shrink-0" />[m
+             EMPLOYÉ[m
+           </span>[m
+         );[m
+     }[m
+   };[m
+ [m
+[32m+[m[32m  if (!loading && !isAdmin) {[m
+[32m+[m[32m    return ([m
+[32m+[m[32m      <div className="flex items-start gap-4 rounded-2xl border-l-4 border-amber-500 bg-amber-50 p-6 shadow-sm">[m
+[32m+[m[32m        <ShieldAlert className="mt-0.5 h-6 w-6 shrink-0 text-amber-600" />[m
+[32m+[m[32m        <div>[m
+[32m+[m[32m          <h3 className="text-base font-bold text-amber-900">[m
+[32m+[m[32m            Accès restreint — SPAT[m
+[32m+[m[32m          </h3>[m
+[32m+[m[32m          <p className="mt-1 text-sm text-amber-700">[m
+[32m+[m[32m            Seuls les administrateurs autorisés peuvent gérer les comptes[m
+[32m+[m[32m            des collaborateurs.[m
+[32m+[m[32m          </p>[m
+[32m+[m[32m        </div>[m
+[32m+[m[32m      </div>[m
+[32m+[m[32m    );[m
+[32m+[m[32m  }[m
+[32m+[m
+   return ([m
+     <div className="space-y-6">[m
+[31m-      {/* Banner Institutionnelle SPAT */}[m
+[31m-      <div className="bg-slate-900 text-white rounded-2xl p-6 shadow-md border-l-4 border-blue-600 flex justify-between items-center flex-wrap gap-4">[m
+[32m+[m[32m      <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border-l-4 border-blue-600 bg-slate-900 p-6 text-white shadow-md">[m
+         <div>[m
+[31m-          <div className="text-xs font-semibold uppercase tracking-widest text-blue-400 mb-1">[m
+[32m+[m[32m          <div className="mb-1 text-xs font-semibold uppercase tracking-widest text-blue-400">[m
+             SPAT — Société du Port à Gestion Autonome de Toamasina[m
+           </div>[m
+[31m-          <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">[m
+[31m-            <Users className="w-6 h-6 text-blue-400" />[m
+[31m-            Gestion des Collaborateurs & Accès[m
+[32m+[m
+[32m+[m[32m          <h1 className="flex items-center gap-2 text-2xl font-bold tracking-tight">[m
+[32m+[m[32m            <Users className="h-6 w-6 text-blue-400" />[m
+[32m+[m[32m            Gestion des collaborateurs[m
+           </h1>[m
+[31m-          <p className="text-slate-400 text-sm mt-1">[m
+[31m-            {`Création de comptes, attribution des privilèges et consultation de l'annuaire du personnel.`}[m
+[32m+[m
+[32m+[m[32m          <p className="mt-1 text-sm text-slate-400">[m
+[32m+[m[32m            Création des comptes, attribution des rôles et gestion du personnel.[m
+           </p>[m
+         </div>[m
+ [m
+         <button[m
+[32m+[m[32m          type="button"[m
+           onClick={startCreate}[m
+[31m-          className="btn btn-primary text-white font-semibold gap-2 shadow-xs"[m
+[32m+[m[32m          className="btn btn-primary gap-2 font-semibold text-white shadow-xs"[m
+         >[m
+[31m-          <UserPlus className="w-4 h-4" />[m
+[31m-          Nouveau Collaborateur[m
+[32m+[m[32m          <UserPlus className="h-4 w-4" />[m
+[32m+[m[32m          Nouveau collaborateur[m
+         </button>[m
+       </div>[m
+ [m
+[31m-      {/* Main Table Container */}[m
+[31m-      <div className="bg-white shadow-sm border border-slate-200 rounded-2xl p-6">[m
+[31m-        <div className="flex justify-between items-center mb-4 gap-4 flex-wrap">[m
+[31m-          <div className="relative w-full max-w-xs">[m
+[31m-            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />[m
+[32m+[m[32m      <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">[m
+[32m+[m[32m        <div className="mb-4 flex flex-wrap items-center justify-between gap-4">[m
+[32m+[m[32m          <div className="relative w-full max-w-sm">[m
+[32m+[m[32m            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />[m
+             <input[m
+[31m-              type="text"[m
+[31m-              placeholder="Rechercher matricule, nom, rôle..."[m
+[32m+[m[32m              type="search"[m
+[32m+[m[32m              placeholder="Rechercher matricule, nom, email, service..."[m
+               value={search}[m
+[31m-              onChange={(e) => setSearch(e.target.value)}[m
+[31m-              className="input input-bordered input-sm w-full pl-9 text-xs text-slate-800 bg-white focus:outline-hidden"[m
+[32m+[m[32m              onChange={(event) => setSearch(event.target.value)}[m
+[32m+[m[32m              className="input input-bordered input-sm w-full bg-white pl-9 text-xs text-slate-800"[m
+             />[m
+           </div>[m
+[31m-          <span className="text-xs text-slate-500 font-medium bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200">[m
+[31m-            Total : <strong className="text-slate-800">{filteredUsers.length}</strong> collaborateur(s)[m
+[32m+[m
+[32m+[m[32m          <span className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-500">[m
+[32m+[m[32m            Total :{" "}[m
+[32m+[m[32m            <strong className="text-slate-800">[m
+[32m+[m[32m              {filteredUsers.length}[m
+[32m+[m[32m            </strong>{" "}[m
+[32m+[m[32m            collaborateur(s)[m
+           </span>[m
+         </div>[m
+ [m
+         {loading ? ([m
+[31m-          <div className="flex justify-center items-center py-16">[m
+[31m-            <span className="loading loading-spinner loading-lg text-primary"></span>[m
+[32m+[m[32m          <div className="flex items-center justify-center py-16">[m
+[32m+[m[32m            <span className="loading loading-spinner loading-lg text-primary" />[m
+           </div>[m
+         ) : filteredUsers.length === 0 ? ([m
+[31m-          <div className="text-center py-16 text-slate-400">[m
+[31m-            <Users className="w-12 h-12 mx-auto mb-2 text-slate-300" />[m
+[31m-            <p className="font-semibold text-slate-600">Aucun utilisateur trouvé.</p>[m
+[32m+[m[32m          <div className="py-16 text-center text-slate-400">[m
+[32m+[m[32m            <Users className="mx-auto mb-2 h-12 w-12 text-slate-300" />[m
+[32m+[m[32m            <p className="font-semibold text-slate-600">[m
+[32m+[m[32m              Aucun collaborateur trouvé.[m
+[32m+[m[32m            </p>[m
+           </div>[m
+         ) : ([m
+[31m-          <div className="overflow-x-auto">[m
+[31m-            <table className="table w-full">[m
+[32m+[m[32m          <div className="w-full overflow-x-auto rounded-xl">[m
+[32m+[m[32m            <table className="table w-full border-collapse text-left">[m
+               <thead>[m
+[31m-                <tr className="bg-slate-50 text-slate-600 text-xs uppercase tracking-wider border-b border-slate-200">[m
+[31m-                  <th className="py-3">Matricule</th>[m
+[31m-                  <th className="py-3">Collaborateur</th>[m
+[31m-                  <th className="py-3">Email</th>[m
+[31m-                  <th className="py-3">Rôle & Privilèges</th>[m
+[31m-                  <th className="py-3">{`Date d'embauche`}</th>[m
+[31m-                  <th className="py-3">Statut</th>[m
+[31m-                  <th className="py-3 text-right">Actions</th>[m
+[32m+[m[32m                <tr className="border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-wider text-slate-600">[m
+[32m+[m[32m                  <th className="py-3 px-3 whitespace-nowrap">Matricule</th>[m
+[32m+[m[32m                  <th className="py-3 px-3 whitespace-nowrap">Collaborateur</th>[m
+[32m+[m[32m                  <th className="py-3 px-3 whitespace-nowrap">Email</th>[m
+[32m+[m[32m                  <th className="py-3 px-3 whitespace-nowrap">Service</th>[m
+[32m+[m[32m                  <th className="py-3 px-3 whitespace-nowrap">Rôle</th>[m
+[32m+[m[32m                  <th className="py-3 px-3 whitespace-nowrap">Date d'embauche</th>[m
+[32m+[m[32m                  <th className="py-3 px-3 whitespace-nowrap">Statut</th>[m
+[32m+[m[32m                  <th className="py-3 px-3 text-right whitespace-nowrap">Actions</th>[m
+                 </tr>[m
+               </thead>[m
+[32m+[m
+               <tbody>[m
+[31m-                {filteredUsers.map((u) => ([m
+[31m-                  <tr key={u.id} className="hover:bg-slate-50/80 transition-colors border-b border-slate-100">[m
+[31m-                    <td className="py-3.5">[m
+[31m-                      <span className="font-mono text-xs font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded border border-blue-100">[m
+[31m-                        {u.matricule || `-`}[m
+[32m+[m[32m                {filteredUsers.map((user) => ([m
+[32m+[m[32m                  <tr[m
+[32m+[m[32m                    key={user.id}[m
+[32m+[m[32m                    className="border-b border-slate-100 transition-colors hover:bg-slate-50/80"[m
+[32m+[m[32m                  >[m
+[32m+[m[32m                    <td className="py-3.5 px-3 whitespace-nowrap">[m
+[32m+[m[32m                      <span className="rounded border border-blue-100 bg-blue-50 px-2 py-1 font-mono text-xs font-bold text-blue-600">[m
+[32m+[m[32m                        {user.matricule || "-"}[m
+                       </span>[m
+                     </td>[m
+[31m-                    <td className="py-3.5">[m
+[31m-                      <div className="flex items-center gap-2.5">[m
+[31m-                        <div className="w-8 h-8 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center font-bold text-xs border border-slate-200">[m
+[31m-                          {u.prenom ? u.prenom[0].toUpperCase() : "U"}[m
+[32m+[m
+[32m+[m[32m                    <td className="py-3.5 px-3 whitespace-nowrap">[m
+[32m+[m[32m                      <div className="flex items-center gap-2">[m
+[32m+[m[32m                        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-slate-100 text-xs font-bold text-slate-600">[m
+[32m+[m[32m                          {user.prenom?.[0]?.toUpperCase() || "U"}[m
+                         </div>[m
+[31m-                        <span className="font-bold text-slate-800 text-sm">[m
+[31m-                          {u.prenom} {u.nom}[m
+[32m+[m[32m                        <span className="text-sm font-bold text-slate-800 truncate max-w-[150px]">[m
+[32m+[m[32m                          {user.prenom} {user.nom}[m
+                         </span>[m
+                       </div>[m
+                     </td>[m
+[31m-                    <td className="py-3.5 text-xs text-slate-600 font-medium">[m
+[32m+[m
+[32m+[m[32m                    <td className="py-3.5 px-3 text-xs font-medium text-slate-600 whitespace-nowrap">[m
+[32m+[m[32m                      <div className="flex items-center gap-1.5">[m
+[32m+[m[32m                        <Mail className="h-3.5 w-3.5 shrink-0 text-slate-400" />[m
+[32m+[m[32m                        <span className="truncate max-w-[180px]">{user.email || "-"}</span>[m
+[32m+[m[32m                      </div>[m
+[32m+[m[32m                    </td>[m
+[32m+[m
+[32m+[m[32m                    <td className="py-3.5 px-3 text-xs text-slate-600 whitespace-nowrap">[m
+                       <div className="flex items-center gap-1.5">[m
+[31m-                        <Mail className="w-3.5 h-3.5 text-slate-400" />[m
+[31m-                        {u.email}[m
+[32m+[m[32m                        <BriefcaseBusiness className="h-3.5 w-3.5 shrink-0 text-slate-400" />[m
+[32m+[m[32m                        <span className="truncate max-w-[130px]">{getServiceName(user.service_id)}</span>[m
+                       </div>[m
+                     </td>[m
+[31m-                    <td className="py-3.5">{getRoleBadge(u.role)}</td>[m
+[31m-                    <td className="py-3.5 text-xs text-slate-600">[m
+[32m+[m
+[32m+[m[32m                    <td className="py-3.5 px-3 whitespace-nowrap">{getRoleBadge(user.role)}</td>[m
+[32m+[m
+[32m+[m[32m                    <td className="py-3.5 px-3 text-xs text-slate-600 whitespace-nowrap">[m
+                       <div className="flex items-center gap-1.5 font-medium">[m
+[31m-                        <Calendar className="w-3.5 h-3.5 text-slate-400" />[m
+[31m-                        {u.date_embauche || "-"}[m
+[32m+[m[32m                        <Calendar className="h-3.5 w-3.5 shrink-0 text-slate-400" />[m
+[32m+[m[32m                        {user.date_embauche || "-"}[m
+                       </div>[m
+                     </td>[m
+[31m-                    <td className="py-3.5">[m
+[31m-                      {u.actif !== false ? ([m
+[31m-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">[m
+[31m-                          <CheckCircle2 className="w-3 h-3" />[m
+[32m+[m
+[32m+[m[32m                    <td className="py-3.5 px-3 whitespace-nowrap">[m
+[32m+[m[32m                      {user.actif !== false ? ([m
+[32m+[m[32m                        <span className="inline-flex items-center gap-1 rounded border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-xs font-bold text-emerald-700">[m
+[32m+[m[32m                          <CheckCircle2 className="h-3 w-3 shrink-0" />[m
+                           Actif[m
+                         </span>[m
+                       ) : ([m
+[31m-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-bold bg-rose-50 text-rose-700 border border-rose-200">[m
+[31m-                          <UserX className="w-3 h-3" />[m
+[32m+[m[32m                        <span className="inline-flex items-center gap-1 rounded border border-rose-200 bg-rose-50 px-2 py-0.5 text-xs font-bold text-rose-700">[m
+[32m+[m[32m                          <UserX className="h-3 w-3 shrink-0" />[m
+                           Inactif[m
+                         </span>[m
+                       )}[m
+                     </td>[m
+[31m-                    <td className="py-3.5">[m
+[31m-                      <div className="flex justify-end gap-2">[m
+[31m-                        <button[m
+[31m-                          type="button"[m
+[31m-                          onClick={() => startEdit(u)}[m
+[31m-                          className="btn btn-ghost btn-sm btn-square text-blue-700"[m
+[31m-                          title="Modifier le collaborateur"[m
+[31m-                          aria-label={`Modifier ${u.prenom} ${u.nom}`}[m
+[31m-                        >[m
+[31m-                          <FaEdit />[m
+[31m-                        </button>[m
+[32m+[m
+[32m+[m[32m                    <td className="py-3.5 px-3 text-right whitespace-nowrap">[m
+[32m+[m[32m                      <div className="action-menu-dropdown relative inline-block text-left">[m
+                         <button[m
+                           type="button"[m
+[31m-                          onClick={() => setUserToDelete(u)}[m
+[31m-                          disabled={deletingUserId === u.id || u.id === currentUser?.id}[m
+[31m-                          className="btn btn-ghost btn-sm btn-square text-rose-700"[m
+[31m-                          title={u.id === currentUser?.id ? "Impossible de supprimer votre compte" : "Supprimer le collaborateur"}[m
+[31m-                          aria-label={`Supprimer ${u.prenom} ${u.nom}`}[m
+[32m+[m[32m                          onClick={() =>[m
+[32m+[m[32m                            setActiveMenuId(activeMenuId === user.id ? null : user.id)[m
+[32m+[m[32m                          }[m
+[32m+[m[32m                          className="btn btn-ghost btn-sm btn-square rounded-full border border-slate-200 hover:bg-slate-100"[m
+[32m+[m[32m                          title="Actions"[m
+[32m+[m[32m                          aria-label="Actions"[m
+                         >[m
+[31m-                          <FaTrashAlt />[m
+[32m+[m[32m                          <MoreVertical className="h-4 w-4 text-slate-600" />[m
+                         </button>[m
+[32m+[m
+[32m+[m[32m                        {activeMenuId === user.id && ([m
+[32m+[m[32m                          <div className="absolute right-0 top-full z-50 mt-1 w-44 rounded-xl border border-slate-200 bg-white p-1 shadow-xl">[m
+[32m+[m[32m                            <button[m
+[32m+[m[32m                              type="button"[m
+[32m+[m[32m                              onClick={() => startDetails(user)}[m
+[32m+[m[32m                              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-100 text-left"[m
+[32m+[m[32m                            >[m
+[32m+[m[32m                              <Eye className="h-4 w-4 text-slate-500" />[m
+[32m+[m[32m                              Voir détails[m
+[32m+[m[32m                            </button>[m
+[32m+[m
+[32m+[m[32m                            <button[m
+[32m+[m[32m                              type="button"[m
+[32m+[m[32m                              onClick={() => startEdit(user)}[m
+[32m+[m[32m                              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium text-blue-700 hover:bg-blue-50 text-left"[m
+[32m+[m[32m                            >[m
+[32m+[m[32m                              <FaEdit className="h-3.5 w-3.5" />[m
+[32m+[m[32m                              Modifier[m
+[32m+[m[32m                            </button>[m
+[32m+[m
+[32m+[m[32m                            <button[m
+[32m+[m[32m                              type="button"[m
+[32m+[m[32m                              onClick={() => startDeletePrompt(user)}[m
+[32m+[m[32m                              disabled={user.id === currentUser?.id}[m
+[32m+[m[32m                              className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium text-left ${[m
+[32m+[m[32m                                user.id === currentUser?.id[m
+[32m+[m[32m                                  ? "cursor-not-allowed opacity-50 text-slate-400"[m
+[32m+[m[32m                                  : "text-rose-700 hover:bg-rose-50"[m
+[32m+[m[32m                              }`}[m
+[32m+[m[32m                            >[m
+[32m+[m[32m                              <FaTrashAlt className="h-3.5 w-3.5" />[m
+[32m+[m[32m                              Supprimer[m
+[32m+[m[32m                            </button>[m
+[32m+[m[32m                          </div>[m
+[32m+[m[32m                        )}[m
+                       </div>[m
+                     </td>[m
+                   </tr>[m
+[36m@@ -374,153 +609,345 @@[m [mexport default function UtilisateursPage() {[m
+         )}[m
+       </div>[m
+ [m
+[31m-      {/* Formulaire partagé de création et modification */}[m
+[32m+[m[32m      {/* MODALE DE DÉTAILS */}[m
+[32m+[m[32m      {showDetailsModal && selectedUser && ([m
+[32m+[m[32m        <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-slate-900/40 p-4 backdrop-blur-xs">[m
+[32m+[m[32m          <div className="my-auto w-full max-w-md space-y-4 rounded-2xl border border-slate-100 bg-white p-6 text-slate-800 shadow-xl">[m
+[32m+[m[32m            <div className="flex items-center justify-between border-b border-slate-100 pb-3">[m
+[32m+[m[32m              <h3 className="flex items-center gap-2 text-lg font-bold text-slate-800">[m
+[32m+[m[32m                <Users className="h-5 w-5 text-blue-600" />[m
+[32m+[m[32m                Détails du collaborateur[m
+[32m+[m[32m              </h3>[m
+[32m+[m[32m              <button[m
+[32m+[m[32m                type="button"[m
+[32m+[m[32m                onClick={() => {[m
+[32m+[m[32m                  setShowDetailsModal(false);[m
+[32m+[m[32m                  setSelectedUser(null);[m
+[32m+[m[32m                }}[m
+[32m+[m[32m                className="text-slate-400 transition-colors hover:text-slate-600"[m
+[32m+[m[32m              >[m
+[32m+[m[32m                <X className="h-5 w-5" />[m
+[32m+[m[32m              </button>[m
+[32m+[m[32m            </div>[m
+[32m+[m
+[32m+[m[32m            <div className="space-y-3 text-sm">[m
+[32m+[m[32m              <div className="flex justify-between border-b border-slate-100 pb-2">[m
+[32m+[m[32m                <span className="text-slate-500">Matricule :</span>[m
+[32m+[m[32m                <span className="font-bold text-slate-800">[m
+[32m+[m[32m                  {selectedUser.matricule || "-"}[m
+[32m+[m[32m                </span>[m
+[32m+[m[32m              </div>[m
+[32m+[m[32m              <div className="flex justify-between border-b border-slate-100 pb-2">[m
+[32m+[m[32m                <span className="text-slate-500">Nom & Prénom :</span>[m
+[32m+[m[32m                <span className="font-bold text-slate-800">[m
+[32m+[m[32m                  {selectedUser.prenom} {selectedUser.nom}[m
+[32m+[m[32m                </span>[m
+[32m+[m[32m              </div>[m
+[32m+[m[32m              <div className="flex justify-between border-b border-slate-100 pb-2">[m
+[32m+[m[32m                <span className="text-slate-500">Email :</span>[m
+[32m+[m[32m                <span className="font-medium text-slate-800">[m
+[32m+[m[32m                  {selectedUser.email || "-"}[m
+[32m+[m[32m                </span>[m
+[32m+[m[32m              </div>[m
+[32m+[m[32m              <div className="flex justify-between border-b border-slate-100 pb-2">[m
+[32m+[m[32m                <span className="text-slate-500">Service :</span>[m
+[32m+[m[32m                <span className="font-medium text-slate-800">[m
+[32m+[m[32m                  {getServiceName(selectedUser.service_id)}[m
+[32m+[m[32m                </span>[m
+[32m+[m[32m              </div>[m
+[32m+[m[32m              <div className="flex justify-between border-b border-slate-100 pb-2">[m
+[32m+[m[32m                <span className="text-slate-500">Rôle :</span>[m
+[32m+[m[32m                <div>{getRoleBadge(selectedUser.role)}</div>[m
+[32m+[m[32m              </div>[m
+[32m+[m[32m              <div className="flex justify-between border-b border-slate-100 pb-2">[m
+[32m+[m[32m                <span className="text-slate-500">Date d'embauche :</span>[m
+[32m+[m[32m                <span className="font-medium text-slate-800">[m
+[32m+[m[32m                  {selectedUser.date_embauche || "-"}[m
+[32m+[m[32m                </span>[m
+[32m+[m[32m              </div>[m
+[32m+[m[32m              <div className="flex justify-between pb-1">[m
+[32m+[m[32m                <span className="text-slate-500">Statut :</span>[m
+[32m+[m[32m                <span>[m
+[32m+[m[32m                  {selectedUser.actif !== false ? ([m
+[32m+[m[32m                    <span className="inline-flex items-center gap-1 rounded border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-xs font-bold text-emerald-700">[m
+[32m+[m[32m                      <CheckCircle2 className="h-3 w-3" />[m
+[32m+[m[32m                      Actif[m
+[32m+[m[32m                    </span>[m
+[32m+[m[32m                  ) : ([m
+[32m+[m[32m                    <span className="inline-flex items-center gap-1 rounded border border-rose-200 bg-rose-50 px-2 py-0.5 text-xs font-bold text-rose-700">[m
+[32m+[m[32m                      <UserX className="h-3 w-3" />[m
+[32m+[m[32m                      Inactif[m
+[32m+[m[32m                    </span>[m
+[32m+[m[32m                  )}[m
+[32m+[m[32m                </span>[m
+[32m+[m[32m              </div>[m
+[32m+[m[32m            </div>[m
+[32m+[m
+[32m+[m[32m            <div className="flex justify-end border-t border-slate-100 pt-3">[m
+[32m+[m[32m              <button[m
+[32m+[m[32m                type="button"[m
+[32m+[m[32m                onClick={() => {[m
+[32m+[m[32m                  setShowDetailsModal(false);[m
+[32m+[m[32m                  setSelectedUser(null);[m
+[32m+[m[32m                }}[m
+[32m+[m[32m                className="btn btn-primary btn-sm px-6 font-semibold text-white"[m
+[32m+[m[32m              >[m
+[32m+[m[32m                Fermer[m
+[32m+[m[32m              </button>[m
+[32m+[m[32m            </div>[m
+[32m+[m[32m          </div>[m
+[32m+[m[32m        </div>[m
+[32m+[m[32m      )}[m
+[32m+[m
+       {showModal && ([m
+[31m-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center z-50 p-4">[m
+[31m-          <div className="bg-white rounded-2xl shadow-xl max-w-lg w-full p-6 space-y-4 text-slate-800 border border-slate-100">[m
+[31m-            <div className="flex justify-between items-center pb-3 border-b border-slate-100">[m
+[31m-              <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">[m
+[31m-                <UserPlus className="w-5 h-5 text-blue-600" />[m
+[31m-                {editingUser ? "Modifier le collaborateur" : "Ajouter un Collaborateur SPAT"}[m
+[32m+[m[32m        <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-slate-900/40 p-4 backdrop-blur-xs">[m
+[32m+[m[32m          <div className="my-auto w-full max-w-2xl space-y-4 rounded-2xl border border-slate-100 bg-white p-6 text-slate-800 shadow-xl">[m
+[32m+[m[32m            <div className="flex items-center justify-between border-b border-slate-100 pb-3">[m
+[32m+[m[32m              <h3 className="flex items-center gap-2 text-lg font-bold text-slate-800">[m
+[32m+[m[32m                <UserPlus className="h-5 w-5 text-blue-600" />[m
+[32m+[m[32m                {editingUser[m
+[32m+[m[32m                  ? "Modifier le collaborateur"[m
+[32m+[m[32m                  : "Ajouter un collaborateur SPAT"}[m
+               </h3>[m
+[32m+[m
+               <button[m
+[31m-                onClick={() => setShowModal(false)}[m
+[31m-                className="text-slate-400 hover:text-slate-600 transition-colors"[m
+[32m+[m[32m                type="button"[m
+[32m+[m[32m                onClick={closeModal}[m
+[32m+[m[32m                disabled={saving}[m
+[32m+[m[32m                className="text-slate-400 transition-colors hover:text-slate-600"[m
+[32m+[m[32m                aria-label="Fermer le formulaire"[m
+               >[m
+[31m-                <X className="w-5 h-5" />[m
+[32m+[m[32m                <X className="h-5 w-5" />[m
+               </button>[m
+             </div>[m
+ [m
+[31m-            <form onSubmit={handleSubmit} className="space-y-3">[m
+[32m+[m[32m            <form onSubmit={handleSubmit} className="space-y-4">[m
+               <div>[m
+[31m-                <label className="block text-xs font-bold uppercase text-slate-600 mb-1">[m
+[31m-                  Matricule[m
+[32m+[m[32m                <label className="mb-1 block text-xs font-bold uppercase text-slate-600">[m
+[32m+[m[32m                  Matricule *[m
+                 </label>[m
+                 <input[m
+                   type="text"[m
+                   required[m
+[31m-                  placeholder="Ex: MTR-001"[m
+[32m+[m[32m                  maxLength={50}[m
+[32m+[m[32m                  placeholder="Ex. : MTR-001"[m
+                   value={newUser.matricule}[m
+[31m-                  onChange={(e) => setNewUser({ ...newUser, matricule: e.target.value })}[m
+[31m-                  className="input input-bordered input-sm w-full bg-white text-slate-800 focus:outline-hidden"[m
+[32m+[m[32m                  onChange={(event) =>[m
+[32m+[m[32m                    setNewUser({[m
+[32m+[m[32m                      ...newUser,[m
+[32m+[m[32m                      matricule: event.target.value,[m
+[32m+[m[32m                    })[m
+[32m+[m[32m                  }[m
+[32m+[m[32m                  className="input input-bordered input-sm w-full bg-white text-slate-800"[m
+                 />[m
+               </div>[m
+ [m
+[31m-              <div className="grid grid-cols-2 gap-3">[m
+[32m+[m[32m              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">[m
+                 <div>[m
+[31m-                  <label className="block text-xs font-bold uppercase text-slate-600 mb-1">[m
+[31m-                    Nom[m
+[32m+[m[32m                  <label className="mb-1 block text-xs font-bold uppercase text-slate-600">[m
+[32m+[m[32m                    Nom *[m
+                   </label>[m
+                   <input[m
+                     type="text"[m
+                     required[m
+[32m+[m[32m                    maxLength={100}[m
+                     value={newUser.nom}[m
+[31m-                    onChange={(e) => setNewUser({ ...newUser, nom: e.target.value })}[m
+[31m-                    className="input input-bordered input-sm w-full bg-white text-slate-800 focus:outline-hidden"[m
+[32m+[m[32m                    onChange={(event) =>[m
+[32m+[m[32m                      setNewUser({ ...newUser, nom: event.target.value })[m
+[32m+[m[32m                    }[m
+[32m+[m[32m                    className="input input-bordered input-sm w-full bg-white text-slate-800"[m
+                   />[m
+                 </div>[m
+[32m+[m
+                 <div>[m
+[31m-                  <label className="block text-xs font-bold uppercase text-slate-600 mb-1">[m
+[31m-                    Prénom[m
+[32m+[m[32m                  <label className="mb-1 block text-xs font-bold uppercase text-slate-600">[m
+[32m+[m[32m                    Prénom *[m
+                   </label>[m
+                   <input[m
+                     type="text"[m
+                     required[m
+[32m+[m[32m                    maxLength={100}[m
+                     value={newUser.prenom}[m
+[31m-                    onChange={(e) => setNewUser({ ...newUser, prenom: e.target.value })}[m
+[31m-                    className="input input-bordered input-sm w-full bg-white text-slate-800 focus:outline-hidden"[m
+[32m+[m[32m                    onChange={(event) =>[m
+[32m+[m[32m                      setNewUser({ ...newUser, prenom: event.target.value })[m
+[32m+[m[32m                    }[m
+[32m+[m[32m                    className="input input-bordered input-sm w-full bg-white text-slate-800"[m
+                   />[m
+                 </div>[m
+               </div>[m
+ [m
+               <div>[m
+[31m-                <label className="block text-xs font-bold uppercase text-slate-600 mb-1">[m
+[31m-                  Email Institutionnel[m
+[32m+[m[32m                <label className="mb-1 block text-xs font-bold uppercase text-slate-600">[m
+[32m+[m[32m                  Email institutionnel *[m
+                 </label>[m
+                 <input[m
+                   type="email"[m
+                   required[m
+[32m+[m[32m                  maxLength={254}[m
+                   placeholder="agent@port-toamasina.mg"[m
+                   value={newUser.email}[m
+[31m-                  onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}[m
+[31m-                  className="input input-bordered input-sm w-full bg-white text-slate-800 focus:outline-hidden"[m
+[32m+[m[32m                  onChange={(event) =>[m
+[32m+[m[32m                    setNewUser({ ...newUser, email: event.target.value })[m
+[32m+[m[32m                  }[m
+[32m+[m[32m                  className="input input-bordered input-sm w-full bg-white text-slate-800"[m
+                 />[m
+               </div>[m
+ [m
+[31m-              <div className="grid grid-cols-2 gap-3">[m
+[32m+[m[32m              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">[m
+                 <div>[m
+[31m-                  <label className="block text-xs font-bold uppercase text-slate-600 mb-1">[m
+[31m-                    Mot de passe (optionnel)[m
+[32m+[m[32m                  <label className="mb-1 block text-xs font-bold uppercase text-slate-600">[m
+[32m+[m[32m                    Service[m
+                   </label>[m
+[31m-                  <input[m
+[31m-                    type="password"[m
+[31m-                    placeholder="Laisser vide pour auto"[m
+[31m-                    value={newUser.mot_de_pass}[m
+[31m-                    onChange={(e) => setNewUser({ ...newUser, mot_de_pass: e.target.value })}[m
+[31m-                    className="input input-bordered input-sm w-full bg-white text-slate-800 focus:outline-hidden"[m
+[31m-                  />[m
+[32m+[m[32m                  <select[m
+[32m+[m[32m                    value={newUser.service_id}[m
+[32m+[m[32m                    onChange={(event) =>[m
+[32m+[m[32m                      setNewUser({[m
+[32m+[m[32m                        ...newUser,[m
+[32m+[m[32m                        service_id: event.target.value,[m
+[32m+[m[32m                      })[m
+[32m+[m[32m                    }[m
+[32m+[m[32m                    disabled={servicesLoading}[m
+[32m+[m[32m                    className="select select-bordered select-sm w-full bg-white text-slate-800"[m
+[32m+[m[32m                  >[m
+[32m+[m[32m                    <option value="">[m
+[32m+[m[32m                      {servicesLoading[m
+[32m+[m[32m                        ? "Chargement des services..."[m
+[32m+[m[32m                        : "Aucun service"}[m
+[32m+[m[32m                    </option>[m
+[32m+[m
+[32m+[m[32m                    {services.map((service) => ([m
+[32m+[m[32m                      <option key={service.id} value={service.id}>[m
+[32m+[m[32m                        {service.nom}[m
+[32m+[m[32m                      </option>[m
+[32m+[m[32m                    ))}[m
+[32m+[m[32m                  </select>[m
+[32m+[m
+[32m+[m[32m                  {!servicesLoading && services.length === 0 && ([m
+[32m+[m[32m                    <p className="mt-1 text-xs text-amber-700">[m
+[32m+[m[32m                      Aucun service disponible. Vérifie la gestion des services.[m
+[32m+[m[32m                    </p>[m
+[32m+[m[32m                  )}[m
+                 </div>[m
+ [m
+                 <div>[m
+[31m-                  <label className="block text-xs font-bold uppercase text-slate-600 mb-1">[m
+[32m+[m[32m                  <label className="mb-1 block text-xs font-bold uppercase text-slate-600">[m
+                     Rôle[m
+                   </label>[m
+                   <select[m
+                     value={newUser.role}[m
+[31m-                    onChange={(e) => setNewUser({ ...newUser, role: e.target.value })}[m
+[31m-                    className="select select-bordered select-sm w-full bg-white text-slate-800 focus:outline-hidden"[m
+[32m+[m[32m                    onChange={(event) =>[m
+[32m+[m[32m                      setNewUser({ ...newUser, role: event.target.value })[m
+[32m+[m[32m                    }[m
+[32m+[m[32m                    className="select select-bordered select-sm w-full bg-white text-slate-800"[m
+                   >[m
+                     <option value="EMPLOYE">Employé</option>[m
+                     <option value="MANAGER">Manager</option>[m
+[31m-                    {editingUser?.role === "ADMIN" && <option value="ADMIN">Administrateur</option>}[m
+[32m+[m
+[32m+[m[32m                    {editingUser?.role?.toUpperCase() === "ADMIN" && ([m
+[32m+[m[32m                      <option value="ADMIN">Administrateur</option>[m
+[32m+[m[32m                    )}[m
+                   </select>[m
+                 </div>[m
+               </div>[m
+ [m
+[31m-              {!editingUser && <div>[m
+[31m-                <label className="block text-xs font-bold uppercase text-slate-600 mb-1">[m
+[31m-                  {`Date d'embauche`}[m
+[32m+[m[32m              {!editingUser && ([m
+[32m+[m[32m                <div>[m
+[32m+[m[32m                  <label className="mb-1 block text-xs font-bold uppercase text-slate-600">[m
+[32m+[m[32m                    Date d'embauche *[m
+[32m+[m[32m                  </label>[m
+[32m+[m[32m                  <input[m
+[32m+[m[32m                    type="date"[m
+[32m+[m[32m                    required[m
+[32m+[m[32m                    max={getToday()}[m
+[32m+[m[32m                    value={newUser.date_embauche}[m
+[32m+[m[32m                    onChange={(event) =>[m
+[32m+[m[32m                      setNewUser({[m
+[32m+[m[32m                        ...newUser,[m
+[32m+[m[32m                        date_embauche: event.target.value,[m
+[32m+[m[32m                      })[m
+[32m+[m[32m                    }[m
+[32m+[m[32m                    className="input input-bordered input-sm w-full bg-white text-slate-800"[m
+[32m+[m[32m                  />[m
+[32m+[m[32m                </div>[m
+[32m+[m[32m              )}[m
+[32m+[m
+[32m+[m[32m              <div>[m
+[32m+[m[32m                <label className="mb-1 block text-xs font-bold uppercase text-slate-600">[m
+[32m+[m[32m                  Mot de passe {editingUser ? "(facultatif)" : "(facultatif)"}[m
+                 </label>[m
+                 <input[m
+[31m-                  type="date"[m
+[31m-                  value={newUser.date_embauche}[m
+[31m-                  onChange={(e) => setNewUser({ ...newUser, date_embauche: e.target.value })}[m
+[31m-                  className="input input-bordered input-sm w-full bg-white text-slate-800 focus:outline-hidden"[m
+[32m+[m[32m                  type="password"[m
+[32m+[m[32m                  autoComplete="new-password"[m
+[32m+[m[32m                  minLength={6}[m
+[32m+[m[32m                  placeholder={[m
+[32m+[m[32m                    editingUser[m
+[32m+[m[32m                      ? "Laisser vide pour conserver le mot de passe"[m
+[32m+[m[32m                      : "Laisser vide si le backend génère le mot de passe"[m
+[32m+[m[32m                  }[m
+[32m+[m[32m                  value={newUser.mot_de_pass}[m
+[32m+[m[32m                  onChange={(event) =>[m
+[32m+[m[32m                    setNewUser({[m
+[32m+[m[32m                      ...newUser,[m
+[32m+[m[32m                      mot_de_pass: event.target.value,[m
+[32m+[m[32m                    })[m
+[32m+[m[32m                  }[m
+[32m+[m[32m                  className="input input-bordered input-sm w-full bg-white text-slate-800"[m
+                 />[m
+[31m-              </div>}[m
+[32m+[m[32m              </div>[m
+ [m
+               {editingUser && ([m
+                 <label className="flex items-center gap-2 text-sm font-medium text-slate-700">[m
+                   <input[m
+                     type="checkbox"[m
+                     checked={newUser.actif !== false}[m
+[31m-                    onChange={(e) => setNewUser({ ...newUser, actif: e.target.checked })}[m
+[32m+[m[32m                    onChange={(event) =>[m
+[32m+[m[32m                      setNewUser({[m
+[32m+[m[32m                        ...newUser,[m
+[32m+[m[32m                        actif: event.target.checked,[m
+[32m+[m[32m                      })[m
+[32m+[m[32m                    }[m
+                     className="checkbox checkbox-sm"[m
+                   />[m
+                   Compte actif[m
+                 </label>[m
+               )}[m
+ [m
+[31m-              <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">[m
+[32m+[m[32m              <div className="flex justify-end gap-2 border-t border-slate-100 pt-3">[m
+                 <button[m
+                   type="button"[m
+[31m-                  onClick={() => { setShowModal(false); setEditingUser(null); }}[m
+[32m+[m[32m                  onClick={closeModal}[m
+[32m+[m[32m                  disabled={saving}[m
+                   className="btn btn-ghost btn-sm font-semibold"[m
+                 >[m
+                   Annuler[m
+                 </button>[m
+[31m-                <button type="submit" className="btn btn-primary btn-sm text-white font-semibold">[m
+[31m-                  {editingUser ? "Enregistrer" : "Créer le compte"}[m
+[32m+[m
+[32m+[m[32m                <button[m
+[32m+[m[32m                  type="submit"[m
+[32m+[m[32m                  disabled={saving}[m
+[32m+[m[32m                  className="btn btn-primary btn-sm min-w-32 font-semibold text-white"[m
+[32m+[m[32m                >[m
+[32m+[m[32m                  {saving ? ([m
+[32m+[m[32m                    <>[m
+[32m+[m[32m                      <span className="loading loading-spinner loading-xs" />[m
+[32m+[m[32m                      Enregistrement...[m
+[32m+[m[32m                    </>[m
+[32m+[m[32m                  ) : editingUser ? ([m
+[32m+[m[32m                    "Enregistrer"[m
+[32m+[m[32m                  ) : ([m
+[32m+[m[32m                    "Créer le compte"[m
+[32m+[m[32m                  )}[m
+                 </button>[m
+               </div>[m
+             </form>[m
+           </div>[m
+         </div>[m
+       )}[m
+[32m+[m
+       {userToDelete && ([m
+         <ConfirmDialog[m
+           title="Supprimer ce collaborateur ?"[m
+[31m-          message={`Le compte de ${userToDelete.prenom} ${userToDelete.nom} sera supprimé. Cette action ne peut pas être annulée.`}[m
+[32m+[m[32m          message={`Le compte de ${userToDelete.prenom} ${userToDelete.nom} sera supprimé. Cette action peut être irréversible.`}[m
+           pending={deletingUserId === userToDelete.id}[m
+           onCancel={() => {[m
+             if (deletingUserId === null) setUserToDelete(null);[m

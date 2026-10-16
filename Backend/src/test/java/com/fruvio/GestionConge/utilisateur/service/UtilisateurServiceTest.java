@@ -97,7 +97,12 @@ class UtilisateurServiceTest {
     @Test
     void resetPasswordEndpointAcceptsTokenAndNewPassword() {
         PasswordResetController controller = new PasswordResetController(
-                new PasswordResetService(utilisateurRepository, emailService, passwordEncoder));
+                new PasswordResetService(utilisateurRepository, emailService, passwordEncoder),
+                utilisateurRepository,
+                org.mockito.Mockito.mock(
+                        com.fruvio.GestionConge.utilisateur.repository.PasswordResetRequestRepository.class),
+                emailService,
+                passwordEncoder);
         ResetPasswordRequest request = ResetPasswordRequest.builder().token("tok-123")
                 .newPassword("NouveauMotDePasse123!").build();
 

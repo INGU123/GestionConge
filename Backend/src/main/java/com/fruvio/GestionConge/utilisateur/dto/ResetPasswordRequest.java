@@ -1,3 +1,4 @@
+
 package com.fruvio.GestionConge.utilisateur.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -20,7 +21,10 @@ public class ResetPasswordRequest {
     private String token;
 
     @NotBlank(message = "Le nouveau mot de passe est obligatoire.")
-    @Size(min = 6, message = "Le mot de passe doit comporter au moins 6 caractères.")
+    @Size(
+        min = 6,
+        message = "Le mot de passe doit comporter au moins 6 caractères."
+    )
     private String newPassword;
 
     @JsonProperty("nouveauMotDePasse")

@@ -50,8 +50,8 @@ public class PasswordResetController {
     @PostMapping("/forgot-password")
     @Transactional
     public ResponseEntity<Map<String, Object>> forgotPassword(@Valid @RequestBody ForgotPasswordRequest body) {
-        String matricule = body.getMatricule().trim();
-        Utilisateur user = utilisateurRepository.findByMatricule(matricule).orElse(null);
+        String email = body.getEmail().trim();
+        Utilisateur user = utilisateurRepository.findByEmail(email).orElse(null);
 
         // Réponse uniforme : ne pas révéler si un matricule existe.
         if (user != null && user.isActif()) {

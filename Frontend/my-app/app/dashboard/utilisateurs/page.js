@@ -122,7 +122,7 @@ export default function UtilisateursPage() {
         manager_id: newUser.manager_id ? Number(newUser.manager_id) : null,
         role: newUser.role,
         actif: editingUser ? newUser.actif : true,
-        ...(!editingUser ? { date_embauche: newUser.date_embauche } : {}),
+        ...(newUser.date_embauche ? { date_embauche: newUser.date_embauche } : {}),
         ...(newUser.mot_de_pass?.trim() ? { password: newUser.mot_de_pass.trim() } : {}),
       };
 
@@ -575,75 +575,16 @@ export default function UtilisateursPage() {
                 </div>
               </div>
 
-              {!editingUser && <div>
+                            <div>
                 <label className="block text-xs font-bold uppercase text-slate-600 mb-1">
                   {`Date d'embauche`}
                 </label>
                 <input
                   type="date"
-                  value={newUser.date_embauche}
+                  value={newUser.date_embauche || ""}
                   onChange={(e) => setNewUser({ ...newUser, date_embauche: e.target.value })}
                   className="input input-bordered input-sm w-full bg-white text-slate-800 focus:outline-hidden"
                 />
-              </div>}
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-bold uppercase text-slate-600 mb-1">Fonction / Poste</label>
-                  <input
-                    type="text"
-                    maxLength={100}
-                    placeholder="Ex. Agent administratif"
-                    value={newUser.fonction || ""}
-                    onChange={(e) => setNewUser({ ...newUser, fonction: e.target.value })}
-                    className="input input-bordered input-sm w-full bg-white text-slate-800 focus:outline-hidden"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold uppercase text-slate-600 mb-1">Type de contrat</label>
-                  <select
-                    value={newUser.type_contrat || ""}
-                    onChange={(e) => setNewUser({ ...newUser, type_contrat: e.target.value })}
-                    className="select select-bordered select-sm w-full bg-white text-slate-800 focus:outline-hidden"
-                  >
-                    <option value="">Non renseigné</option>
-                    <option value="CDI">CDI</option>
-                    <option value="CDD">CDD</option>
-                    <option value="Stage">Stage</option>
-                    <option value="Intérim">Intérim</option>
-                    <option value="Autre">Autre</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-bold uppercase text-slate-600 mb-1">Service</label>
-                  <select
-                    value={newUser.service_id == null ? "" : String(newUser.service_id)}
-                    onChange={(e) => setNewUser({ ...newUser, service_id: e.target.value })}
-                    disabled={servicesLoading}
-                    className="select select-bordered select-sm w-full bg-white text-slate-800 focus:outline-hidden"
-                  >
-                    <option value="">{servicesLoading ? "Chargement des services..." : "Aucun service"}</option>
-                    {services.map((service) => (
-                      <option key={service.id} value={service.id}>{service.nom}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-bold uppercase text-slate-600 mb-1">Responsable hiérarchique</label>
-                  <select
-                    value={newUser.manager_id == null ? "" : String(newUser.manager_id)}
-                    onChange={(e) => setNewUser({ ...newUser, manager_id: e.target.value })}
-                    className="select select-bordered select-sm w-full bg-white text-slate-800 focus:outline-hidden"
-                  >
-                    <option value="">Aucun responsable</option>
-                    {users.filter((user) => user.role?.toUpperCase() === "MANAGER" && user.id !== editingUser?.id).map((manager) => (
-                      <option key={manager.id} value={manager.id}>{manager.prenom} {manager.nom} — {manager.matricule}</option>
-                    ))}
-                  </select>
-                </div>
               </div>
 
               {editingUser && (

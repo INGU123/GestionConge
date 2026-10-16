@@ -16,7 +16,11 @@ import {
   Mail,
   ShieldCheck,
   X,
-  User
+  User,
+  MoreHorizontal,
+  Eye,
+  UserCheck,
+  UserMinus
 } from "lucide-react";
 import { FaEdit, FaTrashAlt } from "react-icons/fa";
 
@@ -30,7 +34,7 @@ export default function UtilisateursPage() {
   const [showModal, setShowModal] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
   const [deletingUserId, setDeletingUserId] = useState(null);
-  const [userToDelete, setUserToDelete] = useState(null);
+  const [userToDelete, setUserToDelete] = useState(null);\n  const [detailUser, setDetailUser] = useState(null);\n  const [openActionMenu, setOpenActionMenu] = useState(null);
   const [newUser, setNewUser] = useState({
     matricule: "",
     nom: "",
@@ -392,26 +396,27 @@ export default function UtilisateursPage() {
                       )}
                     </td>
                     <td className="py-3.5">
-                      <div className="flex justify-end gap-2">
+                      <div className="relative flex justify-end">
                         <button
                           type="button"
-                          onClick={() => startEdit(u)}
-                          className="btn btn-ghost btn-sm btn-square text-blue-700"
-                          title="Modifier le collaborateur"
-                          aria-label={`Modifier ${u.prenom} ${u.nom}`}
+                          onClick={() => setOpenActionMenu(openActionMenu === u.id ? null : u.id)}
+                          className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:border-blue-200 hover:bg-blue-50 hover:text-[#023E8A] focus:outline-none focus:ring-2 focus:ring-blue-200"
+                          title="Actions du collaborateur"
+                          aria-label={`Actions pour ${u.prenom} ${u.nom}`}
+                          aria-haspopup="menu"
+                          aria-expanded={openActionMenu === u.id}
                         >
-                          <FaEdit />
+                          <MoreHorizontal className="h-5 w-5" />
                         </button>
-                        <button
-                          type="button"
-                          onClick={() => setUserToDelete(u)}
-                          disabled={deletingUserId === u.id || u.id === currentUser?.id}
-                          className="btn btn-ghost btn-sm btn-square text-rose-700"
-                          title={u.id === currentUser?.id ? "Impossible de supprimer votre compte" : "Supprimer le collaborateur"}
-                          aria-label={`Supprimer ${u.prenom} ${u.nom}`}
-                        >
-                          <FaTrashAlt />
-                        </button>
+                        {openActionMenu === u.id && (
+                          <div role="menu" className="absolute right-0 top-10 z-30 min-w-48 rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl">
+                            <button type="button" role="menuitem" onClick={() => { setDetailUser(u); setOpenActionMenu(null); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"><Eye className="h-4 w-4" />Voir détail</button>
+                            <button type="button" role="menuitem" onClick={() => { startEdit(u); setOpenActionMenu(null); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"><FaEdit />Modifier</button>
+                            <button type="button" role="menuitem" onClick={() => { startEdit(u); setOpenActionMenu(null); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-amber-700 hover:bg-amber-50"><UserMinus className="h-4 w-4" />Désactiver / activer</button>
+                            <div className="my-1 border-t border-slate-100" />
+                            <button type="button" role="menuitem" onClick={() => { setUserToDelete(u); setOpenActionMenu(null); }} disabled={deletingUserId === u.id || u.id === currentUser?.id} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-rose-700 hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-50"><FaTrashAlt />Supprimer</button>
+                          </div>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -672,6 +677,27 @@ export default function UtilisateursPage() {
               </div>
             </form>
           </div>
+        </div>
+      )}
+      {detailUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4" onClick={() => setDetailUser(null)}>
+          <section role="dialog" aria-modal="true" aria-labelledby="collaborateur-detail-title" className="w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-6 text-slate-800 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="mb-5 flex items-start justify-between border-b border-slate-100 pb-4">
+              <div><p className="text-xs font-bold uppercase tracking-widest text-[#023E8A]">Fiche collaborateur</p><h2 id="collaborateur-detail-title" className="mt-1 text-xl font-bold">{detailUser.prenom} {detailUser.nom}</h2></div>
+              <button type="button" onClick={() => setDetailUser(null)} className="btn btn-ghost btn-sm btn-square" aria-label="Fermer le détail"><X className="h-4 w-4" /></button>
+            </div>
+            <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div><dt className="text-xs font-semibold uppercase text-slate-500">Matricule</dt><dd className="mt-1 text-sm font-medium">{detailUser.matricule || "—"}</dd></div>
+              <div><dt className="text-xs font-semibold uppercase text-slate-500">Rôle</dt><dd className="mt-1 text-sm font-medium">{detailUser.role || "—"}</dd></div>
+              <div><dt className="text-xs font-semibold uppercase text-slate-500">E-mail</dt><dd className="mt-1 break-all text-sm font-medium">{detailUser.email || "—"}</dd></div>
+              <div><dt className="text-xs font-semibold uppercase text-slate-500">Téléphone</dt><dd className="mt-1 text-sm font-medium">{detailUser.telephone || "—"}</dd></div>
+              <div><dt className="text-xs font-semibold uppercase text-slate-500">Fonction</dt><dd className="mt-1 text-sm font-medium">{detailUser.fonction || "—"}</dd></div>
+              <div><dt className="text-xs font-semibold uppercase text-slate-500">Date d'embauche</dt><dd className="mt-1 text-sm font-medium">{detailUser.date_embauche || "—"}</dd></div>
+              <div><dt className="text-xs font-semibold uppercase text-slate-500">Service</dt><dd className="mt-1 text-sm font-medium">{services.find((s) => String(s.id) === String(detailUser.service_id))?.nom || detailUser.service?.nom || "—"}</dd></div>
+              <div><dt className="text-xs font-semibold uppercase text-slate-500">Statut</dt><dd className={`mt-1 text-sm font-semibold ${detailUser.actif === false ? "text-rose-600" : "text-emerald-600"}`}>{detailUser.actif === false ? "Désactivé" : "Actif"}</dd></div>
+            </dl>
+            <div className="mt-6 flex justify-end gap-2 border-t border-slate-100 pt-4"><button type="button" onClick={() => setDetailUser(null)} className="btn btn-ghost btn-sm">Fermer</button><button type="button" onClick={() => { startEdit(detailUser); setDetailUser(null); }} className="btn btn-primary btn-sm text-white"><FaEdit /> Modifier</button></div>
+          </section>
         </div>
       )}
       {userToDelete && (

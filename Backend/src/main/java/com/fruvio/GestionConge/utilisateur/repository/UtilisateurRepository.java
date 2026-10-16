@@ -23,6 +23,8 @@ public interface UtilisateurRepository extends JpaRepository<Utilisateur, Long> 
 
     boolean existsByEmail(String email);
 
+    boolean existsByNumeroCinIgnoreCase(String numeroCin);
+
     @Query("SELECT u FROM Utilisateur u WHERE u.manager_id = :managerId")
     List<Utilisateur> findByManagerId(@Param("managerId") Long managerId);
 

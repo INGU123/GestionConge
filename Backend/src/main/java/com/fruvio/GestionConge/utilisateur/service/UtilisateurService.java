@@ -361,7 +361,7 @@ public class UtilisateurService {
 
                 if (!isAdmin && (request.getRole() != null || request.getActif() != null
                                 || request.getMatricule() != null || request.getService_id() != null
-                                || request.getManager_id() != null)) {
+                                || request.getManager_id() != null || request.getDateEmbauche() != null)) {
 
                         throw new AccessDeniedException(
                                         "Seul un administrateur peut modifier les informations administratives d'un compte.");
@@ -449,6 +449,14 @@ public class UtilisateurService {
                         }
 
                         targetUser.setActif(request.getActif());
+                }
+
+                // Date d'embauche : modification réservée à l'administrateur
+                if (request.getDateEmbauche() != null) {
+                        if (!isAdmin) {
+                                throw new AccessDeniedException("Seul un administrateur peut modifier la date d'embauche.");
+                        }
+                        targetUser.setDate_embauche(request.getDateEmbauche());
                 }
 
                 // Matricule

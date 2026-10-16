@@ -23,6 +23,8 @@ import { FaEdit, FaTrashAlt } from "react-icons/fa";
 export default function UtilisateursPage() {
   const [currentUser] = useState(() => getCurrentUser());
   const [users, setUsers] = useState([]);
+  const [services, setServices] = useState([]);
+  const [servicesLoading, setServicesLoading] = useState(false);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [showModal, setShowModal] = useState(false);
@@ -33,9 +35,17 @@ export default function UtilisateursPage() {
     matricule: "",
     nom: "",
     prenom: "",
+    numero_cin: "",
+    date_naissance: "",
+    telephone: "",
+    adresse: "",
+    fonction: "",
+    type_contrat: "",
     email: "",
     mot_de_pass: "",
     role: "EMPLOYE",
+    service_id: "",
+    manager_id: "",
     date_embauche: new Date().toISOString().split("T")[0],
     actif: true,
   });
@@ -73,6 +83,26 @@ export default function UtilisateursPage() {
     };
   }, [showToast]);
 
+  useEffect(() => {
+    let isMounted = true;
+    const loadServices = async () => {
+      try {
+        setServicesLoading(true);
+        const res = await authFetch("http://localhost:8080/services");
+        if (!res.ok) throw new Error("Impossible de charger les services.");
+        const data = await res.json();
+        if (isMounted) setServices(Array.isArray(data) ? data : []);
+      } catch (err) {
+        console.error("Erreur chargement services:", err);
+        if (isMounted) showToast("Impossible de charger les services.", "error");
+      } finally {
+        if (isMounted) setServicesLoading(false);
+      }
+    };
+    loadServices();
+    return () => { isMounted = false; };
+  }, [showToast]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
@@ -82,6 +112,14 @@ export default function UtilisateursPage() {
         nom: newUser.nom.trim(),
         prenom: newUser.prenom.trim(),
         email: newUser.email.trim(),
+        numero_cin: newUser.numero_cin?.trim() || "",
+        date_naissance: newUser.date_naissance || null,
+        telephone: newUser.telephone?.trim() || "",
+        adresse: newUser.adresse?.trim() || "",
+        fonction: newUser.fonction?.trim() || "",
+        type_contrat: newUser.type_contrat || "",
+        service_id: newUser.service_id ? Number(newUser.service_id) : null,
+        manager_id: newUser.manager_id ? Number(newUser.manager_id) : null,
         role: newUser.role,
         actif: editingUser ? newUser.actif : true,
         ...(!editingUser ? { date_embauche: newUser.date_embauche } : {}),
@@ -106,14 +144,10 @@ export default function UtilisateursPage() {
         setShowModal(false);
         setEditingUser(null);
         setNewUser({
-          matricule: "",
-          nom: "",
-          prenom: "",
-          email: "",
-          mot_de_pass: "",
-          role: "EMPLOYE",
-          date_embauche: new Date().toISOString().split("T")[0],
-          actif: true,
+          matricule: "", nom: "", prenom: "", numero_cin: "", date_naissance: "",
+          telephone: "", adresse: "", fonction: "", type_contrat: "", email: "",
+          mot_de_pass: "", role: "EMPLOYE", service_id: "", manager_id: "",
+          date_embauche: new Date().toISOString().split("T")[0], actif: true,
         });
 
         const successText = responseData.message || (editingUser
@@ -166,15 +200,29 @@ export default function UtilisateursPage() {
   const startCreate = () => {
     setEditingUser(null);
     setNewUser({
-      matricule: "", nom: "", prenom: "", email: "", mot_de_pass: "",
-      role: "EMPLOYE", date_embauche: new Date().toISOString().split("T")[0], actif: true,
+      matricule: "", nom: "", prenom: "", numero_cin: "", date_naissance: "",
+      telephone: "", adresse: "", fonction: "", type_contrat: "", email: "", mot_de_pass: "",
+      role: "EMPLOYE", service_id: "", manager_id: "",
+      date_embauche: new Date().toISOString().split("T")[0], actif: true,
     });
     setShowModal(true);
   };
 
   const startEdit = (user) => {
     setEditingUser(user);
-    setNewUser({ ...user, mot_de_pass: "", date_embauche: user.date_embauche || "" });
+    setNewUser({
+      ...user,
+      numero_cin: user.numero_cin || "",
+      date_naissance: user.date_naissance || "",
+      telephone: user.telephone || "",
+      adresse: user.adresse || "",
+      fonction: user.fonction || "",
+      type_contrat: user.type_contrat || "",
+      service_id: user.service_id == null ? "" : String(user.service_id),
+      manager_id: user.manager_id == null ? "" : String(user.manager_id),
+      mot_de_pass: "",
+      date_embauche: user.date_embauche || "",
+    });
     setShowModal(true);
   };
 
@@ -377,7 +425,7 @@ export default function UtilisateursPage() {
       {/* Formulaire partagé de création et modification */}
       {showModal && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-xl max-w-lg w-full p-6 space-y-4 text-slate-800 border border-slate-100">
+          <div className="bg-white rounded-2xl shadow-xl max-w-2xl max-h-[90vh] overflow-y-auto w-full p-6 space-y-4 text-slate-800 border border-slate-100">
             <div className="flex justify-between items-center pb-3 border-b border-slate-100">
               <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
                 <UserPlus className="w-5 h-5 text-blue-600" />
@@ -433,6 +481,31 @@ export default function UtilisateursPage() {
                 </div>
               </div>
 
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold uppercase text-slate-600 mb-1">Numéro CIN</label>
+                  <input
+                    type="text"
+                    maxLength={30}
+                    autoComplete="off"
+                    placeholder="Numéro de carte d'identité"
+                    value={newUser.numero_cin || ""}
+                    onChange={(e) => setNewUser({ ...newUser, numero_cin: e.target.value })}
+                    className="input input-bordered input-sm w-full bg-white text-slate-800 focus:outline-hidden"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold uppercase text-slate-600 mb-1">Date de naissance</label>
+                  <input
+                    type="date"
+                    value={newUser.date_naissance || ""}
+                    max={new Date().toISOString().split("T")[0]}
+                    onChange={(e) => setNewUser({ ...newUser, date_naissance: e.target.value })}
+                    className="input input-bordered input-sm w-full bg-white text-slate-800 focus:outline-hidden"
+                  />
+                </div>
+              </div>
+
               <div>
                 <label className="block text-xs font-bold uppercase text-slate-600 mb-1">
                   Email Institutionnel
@@ -445,6 +518,31 @@ export default function UtilisateursPage() {
                   onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
                   className="input input-bordered input-sm w-full bg-white text-slate-800 focus:outline-hidden"
                 />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold uppercase text-slate-600 mb-1">Téléphone</label>
+                  <input
+                    type="tel"
+                    maxLength={30}
+                    autoComplete="tel"
+                    value={newUser.telephone || ""}
+                    onChange={(e) => setNewUser({ ...newUser, telephone: e.target.value })}
+                    className="input input-bordered input-sm w-full bg-white text-slate-800 focus:outline-hidden"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold uppercase text-slate-600 mb-1">Adresse</label>
+                  <input
+                    type="text"
+                    maxLength={500}
+                    autoComplete="street-address"
+                    value={newUser.adresse || ""}
+                    onChange={(e) => setNewUser({ ...newUser, adresse: e.target.value })}
+                    className="input input-bordered input-sm w-full bg-white text-slate-800 focus:outline-hidden"
+                  />
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
@@ -488,6 +586,65 @@ export default function UtilisateursPage() {
                   className="input input-bordered input-sm w-full bg-white text-slate-800 focus:outline-hidden"
                 />
               </div>}
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold uppercase text-slate-600 mb-1">Fonction / Poste</label>
+                  <input
+                    type="text"
+                    maxLength={100}
+                    placeholder="Ex. Agent administratif"
+                    value={newUser.fonction || ""}
+                    onChange={(e) => setNewUser({ ...newUser, fonction: e.target.value })}
+                    className="input input-bordered input-sm w-full bg-white text-slate-800 focus:outline-hidden"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold uppercase text-slate-600 mb-1">Type de contrat</label>
+                  <select
+                    value={newUser.type_contrat || ""}
+                    onChange={(e) => setNewUser({ ...newUser, type_contrat: e.target.value })}
+                    className="select select-bordered select-sm w-full bg-white text-slate-800 focus:outline-hidden"
+                  >
+                    <option value="">Non renseigné</option>
+                    <option value="CDI">CDI</option>
+                    <option value="CDD">CDD</option>
+                    <option value="Stage">Stage</option>
+                    <option value="Intérim">Intérim</option>
+                    <option value="Autre">Autre</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold uppercase text-slate-600 mb-1">Service</label>
+                  <select
+                    value={newUser.service_id == null ? "" : String(newUser.service_id)}
+                    onChange={(e) => setNewUser({ ...newUser, service_id: e.target.value })}
+                    disabled={servicesLoading}
+                    className="select select-bordered select-sm w-full bg-white text-slate-800 focus:outline-hidden"
+                  >
+                    <option value="">{servicesLoading ? "Chargement des services..." : "Aucun service"}</option>
+                    {services.map((service) => (
+                      <option key={service.id} value={service.id}>{service.nom}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold uppercase text-slate-600 mb-1">Responsable hiérarchique</label>
+                  <select
+                    value={newUser.manager_id == null ? "" : String(newUser.manager_id)}
+                    onChange={(e) => setNewUser({ ...newUser, manager_id: e.target.value })}
+                    className="select select-bordered select-sm w-full bg-white text-slate-800 focus:outline-hidden"
+                  >
+                    <option value="">Aucun responsable</option>
+                    {users.filter((user) => user.role?.toUpperCase() === "MANAGER" && user.id !== editingUser?.id).map((manager) => (
+                      <option key={manager.id} value={manager.id}>{manager.prenom} {manager.nom} — {manager.matricule}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
 
               {editingUser && (
                 <label className="flex items-center gap-2 text-sm font-medium text-slate-700">

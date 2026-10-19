@@ -4,7 +4,7 @@ import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter, usePathname } from "next/navigation";
-import { FiMoon, FiSun } from "react-icons/fi";
+import { FiMoon, FiSun, FiChevronLeft, FiChevronRight } from "react-icons/fi";
 import { getCurrentUser, clearAuthSession } from "@/lib/apiClient";
 import NotificationHeaderMenu from "./notifications/page";
 import { ToastProvider } from "../components/ToastProvider";
@@ -26,6 +26,10 @@ export default function DashboardLayout({
 }) {
   const [user, setUser] = useState<DashboardUser | null>(null);
   const [loading, setLoading] = useState(true);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return localStorage.getItem("dashboard-sidebar-collapsed") === "true";
+  });
 
   const [theme, setTheme] = useState<ThemeMode>(() => {
     if (typeof window === "undefined") return "day";
@@ -37,6 +41,10 @@ export default function DashboardLayout({
 
   const router = useRouter();
   const pathname = usePathname();
+
+  useEffect(() => {
+    localStorage.setItem("dashboard-sidebar-collapsed", String(sidebarCollapsed));
+  }, [sidebarCollapsed]);
 
   useEffect(() => {
     localStorage.setItem("dashboard-theme", theme);
@@ -430,17 +438,17 @@ export default function DashboardLayout({
 
           {/* SIDEBAR */}
           <aside
-            className="w-64 flex flex-col p-4 shadow-lg shrink-0 h-[calc(100vh-4rem)] sticky top-16 overflow-y-auto"
+            className={`${sidebarCollapsed ? "w-20 px-2" : "w-64 px-4"} spat-sidebar flex flex-col py-4 shadow-lg shrink-0 h-[calc(100vh-4rem)] sticky top-16 overflow-y-auto transition-[width,padding] duration-200`}
             style={{
               background: "var(--sidebar-bg)",
               color: "var(--sidebar-text)",
             }}
           >
-            <div
-              className="text-xs uppercase tracking-wider font-bold px-3 mb-3"
-              style={{ color: "var(--text-muted)" }}
-            >
-              Menu ({userRoleClean || "EMPLOYE"})
+            <div className={`flex items-center mb-4 ${sidebarCollapsed ? "justify-center" : "justify-between px-2"}`}>
+              {!sidebarCollapsed && <div className="text-xs uppercase tracking-wider font-bold" style={{ color: "var(--sidebar-text)", opacity: 0.72 }}>Menu ({userRoleClean || "EMPLOYE"})</div>}
+              <button type="button" onClick={() => setSidebarCollapsed((value) => !value)} className="spat-sidebar-toggle inline-flex h-9 w-9 items-center justify-center rounded-lg transition-colors" title={sidebarCollapsed ? "Déployer le menu" : "Rétracter le menu"} aria-label={sidebarCollapsed ? "Déployer le menu" : "Rétracter le menu"}>
+                {sidebarCollapsed ? <FiChevronRight className="h-5 w-5" /> : <FiChevronLeft className="h-5 w-5" />}
+              </button>
             </div>
 
             <nav className="flex flex-col space-y-1">
@@ -451,9 +459,9 @@ export default function DashboardLayout({
                   <Link
                     key={item.href}
                     href={item.href}
-                    className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-                      isActive ? "shadow" : ""
-                    }`}
+                    className={`spat-nav-link flex items-center ${sidebarCollapsed ? "justify-center px-0" : "gap-3 px-3"} py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ${isActive ? "shadow" : ""}`}
+                    title={sidebarCollapsed ? item.label : undefined}
+                    aria-label={item.label}
                     style={
                       isActive
                         ? {
@@ -470,7 +478,7 @@ export default function DashboardLayout({
                       {item.icon}
                     </span>
 
-                    <span>{item.label}</span>
+                    {!sidebarCollapsed && <span className="truncate">{item.label}</span>}
                   </Link>
                 );
               })}

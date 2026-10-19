@@ -1,7 +1,18 @@
-'use client';
+"use client";
 
 import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
+import {
+  FiArrowLeft,
+  FiArrowRight,
+  FiCheckCircle,
+  FiKey,
+  FiLock,
+  FiShield,
+  FiUser,
+  FiAlertCircle,
+} from "react-icons/fi";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
@@ -13,6 +24,7 @@ export default function ForgotPassword() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     const value = matricule.trim();
+
     if (!value) {
       setMessage({ text: "Veuillez saisir votre numéro matricule.", type: "error" });
       return;
@@ -20,6 +32,7 @@ export default function ForgotPassword() {
 
     setLoading(true);
     setMessage({ text: "", type: "" });
+
     try {
       const res = await fetch(`${API_URL}/auth/forgot-password`, {
         method: "POST",
@@ -27,6 +40,7 @@ export default function ForgotPassword() {
         body: JSON.stringify({ matricule: value }),
       });
       const data = await res.json().catch(() => ({}));
+
       if (res.ok) {
         setMessage({
           text: data.message || "Votre demande a été transmise à l'administrateur. Vous recevrez un e-mail après validation.",
@@ -34,60 +48,154 @@ export default function ForgotPassword() {
         });
         setMatricule("");
       } else {
-        setMessage({ text: data.message || "La demande n'a pas pu être envoyée. Vérifiez votre matricule.", type: "error" });
+        setMessage({
+          text: data.message || "La demande n'a pas pu être envoyée. Vérifiez votre matricule.",
+          type: "error",
+        });
       }
     } catch {
-      setMessage({ text: "Impossible de contacter le serveur. Veuillez réessayer plus tard.", type: "error" });
+      setMessage({
+        text: "Impossible de contacter le serveur. Veuillez réessayer plus tard.",
+        type: "error",
+      });
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50 px-4 py-12">
-      <div className="w-full max-w-md bg-white rounded-2xl shadow-xl border border-slate-100 p-8 space-y-6">
-        <div className="text-center space-y-2">
-          <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-blue-50 text-blue-600 mb-2">
-            <svg xmlns="http://www.w3.org/2000/svg" className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
-            </svg>
+    <main className="login-page">
+      <div className="login-frame">
+        <section className="login-brand-panel" aria-label="Présentation du Port de Toamasina">
+          <div className="login-brand-top">
+            <div className="login-logo-wrap">
+              <Image
+                src="/SpatLogo.png"
+                alt="Logo SPAT"
+                width={58}
+                height={58}
+                priority
+                className="login-logo"
+              />
+            </div>
+            <div>
+              <p className="login-brand-kicker">SOCIÉTÉ PORTUAIRE</p>
+              <p className="login-brand-name">Port de Toamasina</p>
+            </div>
           </div>
-          <h2 className="text-2xl font-bold text-slate-900">Mot de passe oublié ?</h2>
-          <p className="text-sm text-slate-500">
-            Saisissez votre numéro matricule pour demander à l'administrateur la réinitialisation de votre mot de passe.
-          </p>
-        </div>
 
-        {message.text && (
-          <div className={`p-4 rounded-xl text-sm font-medium ${message.type === "success" ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-rose-50 text-rose-700 border border-rose-200"}`}>
-            {message.text}
+          <div className="login-brand-copy">
+            <span className="login-eyebrow"><span /> ASSISTANCE AU PERSONNEL</span>
+            <h1>Retrouvez votre accès, <em>en toute sécurité.</em></h1>
+            <p>
+              Une difficulté pour vous connecter ? Envoyez une demande à
+              l’administrateur à l’aide de votre matricule professionnel.
+            </p>
           </div>
-        )}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label htmlFor="matricule" className="block text-sm font-semibold text-slate-700 mb-1">Numéro matricule</label>
-            <input
-              id="matricule"
-              type="text"
-              autoComplete="username"
-              placeholder="Ex. SPAT-001"
-              value={matricule}
-              onChange={(e) => setMatricule(e.target.value)}
-              required
-              disabled={loading}
-              className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-800 placeholder-slate-400 text-sm disabled:opacity-50"
-            />
+          <div className="login-brand-visual" aria-hidden="true">
+            <div className="login-orbit login-orbit-one" />
+            <div className="login-orbit login-orbit-two" />
+            <div className="login-visual-card">
+              <div className="login-visual-icon"><FiShield /></div>
+              <div>
+                <strong>Une procédure sécurisée</strong>
+                <span>Votre demande est traitée par l’administration</span>
+              </div>
+              <span className="login-visual-check">✓</span>
+            </div>
           </div>
-          <button type="submit" disabled={loading} className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl shadow-md transition disabled:opacity-50 flex items-center justify-center text-sm">
-            {loading ? "Envoi en cours..." : "Contacter l'administrateur"}
-          </button>
-        </form>
 
-        <div className="text-center pt-2">
-          <Link href="/" className="text-sm font-medium text-blue-600 hover:text-blue-700">← Retour à la connexion</Link>
-        </div>
+          <div className="login-brand-footer">
+            <span>SPAT · Madagascar</span>
+            <span className="login-footer-dot" />
+            <span>Portail interne du personnel</span>
+          </div>
+        </section>
+
+        <section className="login-form-panel">
+          <div className="login-form-topline">
+            <span className="login-secure-label"><FiShield /> RÉCUPÉRATION SÉCURISÉE</span>
+            <span className="login-language">FR <span>⌄</span></span>
+          </div>
+
+          <div className="login-form-content">
+            <div className="login-form-heading">
+              <span className="login-heading-mark" />
+              <p className="login-overline">RÉCUPÉRATION DU COMPTE</p>
+              <h2>Mot de passe oublié ?</h2>
+              <p>
+                Saisissez votre matricule pour transmettre une demande de
+                réinitialisation à l’administrateur.
+              </p>
+            </div>
+
+            {message.text && (
+              <div
+                role={message.type === "error" ? "alert" : "status"}
+                style={{
+                  display: "flex",
+                  alignItems: "flex-start",
+                  gap: "10px",
+                  marginBottom: "22px",
+                  padding: "13px 14px",
+                  borderRadius: "11px",
+                  border: message.type === "success" ? "1px solid #a7f3d0" : "1px solid #fecdd3",
+                  background: message.type === "success" ? "#ecfdf5" : "#fff1f2",
+                  color: message.type === "success" ? "#047857" : "#a51d37",
+                  fontSize: "12px",
+                  lineHeight: 1.6,
+                }}
+              >
+                {message.type === "success" ? <FiCheckCircle size={18} /> : <FiAlertCircle size={18} />}
+                <span>{message.text}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleSubmit} className="login-form">
+              <div className="login-field">
+                <label htmlFor="matricule">Matricule professionnel</label>
+                <div className="login-input-wrap">
+                  <FiUser className="login-input-icon" aria-hidden="true" />
+                  <input
+                    id="matricule"
+                    type="text"
+                    placeholder="Ex. SPAT-001"
+                    value={matricule}
+                    onChange={(e) => setMatricule(e.target.value)}
+                    autoComplete="username"
+                    required
+                    disabled={loading}
+                  />
+                </div>
+              </div>
+
+              <button type="submit" className="login-submit" disabled={loading}>
+                <span>{loading ? "Envoi de la demande..." : "Envoyer ma demande"}</span>
+                <span className="login-submit-icon">
+                  {loading ? <FiKey /> : <FiArrowRight />}
+                </span>
+              </button>
+            </form>
+
+            <div className="login-security-note">
+              <FiLock aria-hidden="true" />
+              <span>Après validation, les informations de réinitialisation seront envoyées selon la procédure SPAT.</span>
+            </div>
+
+            <div className="login-forgot-row" style={{ justifyContent: "flex-start", marginTop: "24px" }}>
+              <Link href="/" style={{ display: "inline-flex", alignItems: "center", gap: "8px" }}>
+                <FiArrowLeft aria-hidden="true" /> Retour à la connexion
+              </Link>
+            </div>
+          </div>
+
+          <footer className="login-form-footer">
+            <span>© {new Date().getFullYear()} SPAT Madagascar</span>
+            <span>Tous droits réservés</span>
+          </footer>
+        </section>
       </div>
-    </div>
+    </main>
   );
 }

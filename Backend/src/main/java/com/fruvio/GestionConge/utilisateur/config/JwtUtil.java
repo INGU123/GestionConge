@@ -22,12 +22,13 @@ public class JwtUtil {
     private static final long EXPIRATION_MS = 1000L * 60 * 60 * 8; // 8 heures
 
     private SecretKey getSigningKey() {
-        if (secret == null || secret.isBlank()) {
+        if (secret == null || secret.isBlank() || secret.trim().startsWith("REMPLACER_")
+                || "change-me-in-production".equalsIgnoreCase(secret.trim())) {
             throw new IllegalStateException(
-                    "JWT_SECRET est obligatoire. Définissez une clé secrète d'au moins 32 octets dans .env.");
+                    "JWT_SECRET doit être défini avec une valeur privée aléatoire d'au moins 32 octets dans .env.");
         }
 
-        byte[] keyBytes = secret.getBytes(StandardCharsets.UTF_8);
+        byte[] keyBytes = secret.trim().getBytes(StandardCharsets.UTF_8);
         if (keyBytes.length < 32) {
             throw new IllegalStateException(
                     "JWT_SECRET doit contenir au moins 32 octets UTF-8. Aucune clé de secours n'est autorisée.");

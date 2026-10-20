@@ -12,7 +12,6 @@ import org.springframework.lang.Nullable;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
-import org.springframework.web.util.UriComponentsBuilder;
 
 import jakarta.mail.internet.MimeMessage;
 
@@ -87,35 +86,6 @@ public class EmailService {
 
                         throw new IllegalStateException("Impossible d'envoyer l'e-mail.", e);
                 }
-        }
-
-        // =========================================================
-        // REINITIALISATION DU MOT DE PASSE
-        // =========================================================
-
-        public void sendResetPasswordEmail(String toEmail, String token) {
-
-                if (toEmail == null || toEmail.isBlank()) {
-                        throw new IllegalArgumentException("L'adresse e-mail est obligatoire.");
-                }
-
-                if (token == null || token.isBlank()) {
-                        throw new IllegalArgumentException("Le token de réinitialisation est obligatoire.");
-                }
-
-                String resetUrl = UriComponentsBuilder.fromUriString(frontendUrl).path("/Components/mdpReset")
-                                .queryParam("token", token).build().encode().toUriString();
-
-                String subject = "Réinitialisation de votre mot de passe";
-
-                String text = "Bonjour,\n\n" + "Vous avez demandé la réinitialisation de votre mot de passe.\n\n"
-                                + "Veuillez cliquer sur le lien ci-dessous pour créer un nouveau mot de passe :\n\n"
-                                + resetUrl + "\n\n"
-                                + "Ce lien est temporaire et doit être utilisé dans les 30 minutes.\n\n"
-                                + "Si vous n'êtes pas à l'origine de cette demande, veuillez ignorer cet e-mail.\n\n"
-                                + "Cordialement,\n" + "L'équipe RH";
-
-                sendEmail(toEmail, subject, text);
         }
 
         // =========================================================

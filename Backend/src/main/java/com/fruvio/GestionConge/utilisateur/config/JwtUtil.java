@@ -1,7 +1,6 @@
 package com.fruvio.GestionConge.utilisateur.config;
 
 import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
 import java.util.Date;
 
 import javax.crypto.SecretKey;
@@ -23,15 +22,17 @@ public class JwtUtil {
     private static final long EXPIRATION_MS = 1000L * 60 * 60 * 8; // 8 heures
 
     private SecretKey getSigningKey() {
-        byte[] keyBytes = (secret != null ? secret.trim() : "").getBytes(StandardCharsets.UTF_8);
-        if (keyBytes.length < 32) {
-            try {
-                MessageDigest md = MessageDigest.getInstance("SHA-256");
-                keyBytes = md.digest(keyBytes);
-            } catch (Exception e) {
-                throw new IllegalStateException("Erreur d'initialisation de la clé JWT", e);
-            }
+        if (secret == null || secret.isBlank()) {
+            throw new IllegalStateException(
+                    "JWT_SECRET est obligatoire. Définissez une clé secrète d'au moins 32 octets dans .env.");
         }
+
+        byte[] keyBytes = secret.getBytes(StandardCharsets.UTF_8);
+        if (keyBytes.length < 32) {
+            throw new IllegalStateException(
+                    "JWT_SECRET doit contenir au moins 32 octets UTF-8. Aucune clé de secours n'est autorisée.");
+        }
+
         return Keys.hmacShaKeyFor(keyBytes);
     }
 

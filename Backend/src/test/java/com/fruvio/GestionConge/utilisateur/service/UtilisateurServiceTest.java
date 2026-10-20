@@ -24,7 +24,11 @@ import com.fruvio.GestionConge.notifications_conge.repository.NotificationReposi
 import com.fruvio.GestionConge.service_conge.repository.Service_congeRepository;
 import com.fruvio.GestionConge.solde_conge.repository.Solde_congeRepository;
 import com.fruvio.GestionConge.solde_conge.service.Solde_congeService;
+import com.fruvio.GestionConge.utilisateur.dto.ForgotPasswordRequest;
 import com.fruvio.GestionConge.utilisateur.dto.UtilisateurCreateRequest;
+import com.fruvio.GestionConge.utilisateur.controller.PasswordResetController;
+import com.fruvio.GestionConge.utilisateur.entity.PasswordResetRequestEntity;
+import com.fruvio.GestionConge.utilisateur.repository.PasswordResetRequestRepository;
 import com.fruvio.GestionConge.utilisateur.entity.Role;
 import com.fruvio.GestionConge.utilisateur.entity.Utilisateur;
 import com.fruvio.GestionConge.utilisateur.repository.UtilisateurRepository;
@@ -86,6 +90,29 @@ class UtilisateurServiceTest {
         assertNull(utilisateurService.login("employee@example.com", "any-password"));
 
         verify(utilisateurRepository, never()).findByEmail("employee@example.com");
+    }
+
+    @Test
+    void forgotPasswordRequestLooksUpMatriculeAndNotEmail() {
+        PasswordResetRequestRepository requestRepository = org.mockito.Mockito.mock(PasswordResetRequestRepository.class);
+        PasswordResetController controller = new PasswordResetController(
+                utilisateurRepository, requestRepository, emailService, passwordEncoder);
+        Utilisateur employee = Utilisateur.builder()
+                .id(10L).matricule("EMP-001").email("employee@example.com")
+                .nom("Test").prenom("Agent").actif(true).build();
+
+        when(utilisateurRepository.findByMatricule("EMP-001")).thenReturn(Optional.of(employee));
+        when(requestRepository.findByStatutOrderByDateDemandeDesc("EN_ATTENTE")).thenReturn(java.util.List.of());
+        when(requestRepository.save(any(PasswordResetRequestEntity.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+        when(utilisateurRepository.findAll()).thenReturn(java.util.List.of());
+
+        var response = controller.forgotPassword(ForgotPasswordRequest.builder().matricule("EMP-001").build());
+
+        assertEquals(200, response.getStatusCode().value());
+        verify(utilisateurRepository).findByMatricule("EMP-001");
+        verify(utilisateurRepository, never()).findByEmail("employee@example.com");
+        verify(requestRepository).save(any(PasswordResetRequestEntity.class));
     }
 
     @Test

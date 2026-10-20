@@ -5,6 +5,8 @@ import java.util.Date;
 
 import javax.crypto.SecretKey;
 
+import jakarta.annotation.PostConstruct;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -20,6 +22,11 @@ public class JwtUtil {
     private String secret;
 
     private static final long EXPIRATION_MS = 1000L * 60 * 60 * 8; // 8 heures
+
+    @PostConstruct
+    private void validateSigningKeyAtStartup() {
+        getSigningKey();
+    }
 
     private SecretKey getSigningKey() {
         if (secret == null || secret.isBlank() || secret.trim().startsWith("REMPLACER_")

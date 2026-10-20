@@ -28,8 +28,28 @@ export const creerDemandeConge = async (utilisateurId, demandeData) => {
 
     if (!response.ok) {
       const details = await response.text();
+      let message = "";
+
+      if (details) {
+        try {
+          const parsed = JSON.parse(details);
+          message =
+            parsed?.message ||
+            parsed?.detail ||
+            parsed?.error?.message ||
+            (typeof parsed?.error === "string" ? parsed.error : "") ||
+            parsed?.title ||
+            "";
+        } catch {
+          // Réponse en texte brut : conserver le message du backend.
+          message = details;
+        }
+      }
+
+      if (!message && details) message = details;
+
       throw new Error(
-        details || `Erreur lors de la création de la demande (${response.status})`
+        message || `Erreur lors de la création de la demande (${response.status})`
       );
     }
     return await response.json();

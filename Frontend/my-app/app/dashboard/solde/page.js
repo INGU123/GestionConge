@@ -232,7 +232,9 @@ export default function SoldeConge() {
    * INFORMATIONS TYPE DE CONGE
    */
   const getTypeInfo = (typeCongeId) => {
-    const found = typesConge.find((t) => t.id === typeCongeId);
+    const found = typesConge.find(
+    (t) => String(t.id) === String(typeCongeId)
+  );
 
     return {
       libelle: found?.libelle || found?.code || `Type #${typeCongeId}`,

@@ -9,8 +9,6 @@ import {
   FiShield,
 } from "react-icons/fi";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
-
 export default function ResetPasswordPage() {
   return (
     <Suspense

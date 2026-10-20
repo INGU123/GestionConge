@@ -15,22 +15,18 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.fruvio.GestionConge.utilisateur.config.CustomUserDetails;
 import com.fruvio.GestionConge.utilisateur.config.JwtUtil;
 import com.fruvio.GestionConge.utilisateur.dto.ChangePasswordRequest;
-import com.fruvio.GestionConge.utilisateur.dto.ForgotPasswordRequest;
 import com.fruvio.GestionConge.utilisateur.dto.LoginRequest;
 import com.fruvio.GestionConge.utilisateur.dto.LoginResponse;
-import com.fruvio.GestionConge.utilisateur.dto.ResetPasswordRequest;
 import com.fruvio.GestionConge.utilisateur.dto.UtilisateurCreateRequest;
 import com.fruvio.GestionConge.utilisateur.dto.UtilisateurResponse;
 import com.fruvio.GestionConge.utilisateur.dto.UtilisateurUpdateRequest;
 import com.fruvio.GestionConge.utilisateur.entity.Role;
 import com.fruvio.GestionConge.utilisateur.entity.Utilisateur;
-import com.fruvio.GestionConge.utilisateur.service.PasswordResetService;
 import com.fruvio.GestionConge.utilisateur.service.UtilisateurService;
 
 import jakarta.validation.Valid;
@@ -41,13 +37,10 @@ public class UtilisateurController {
 
     private final UtilisateurService utilisateurService;
     private final JwtUtil jwtUtil;
-    private final PasswordResetService passwordResetService;
 
-    public UtilisateurController(UtilisateurService utilisateurService, JwtUtil jwtUtil,
-            PasswordResetService passwordResetService) {
+    public UtilisateurController(UtilisateurService utilisateurService, JwtUtil jwtUtil) {
         this.utilisateurService = utilisateurService;
         this.jwtUtil = jwtUtil;
-        this.passwordResetService = passwordResetService;
     }
 
     // =========================================================
@@ -77,55 +70,6 @@ public class UtilisateurController {
         LoginResponse loginResponse = LoginResponse.builder().token(token).utilisateur(userResponse).build();
 
         return ResponseEntity.ok(loginResponse);
-    }
-
-    // =========================================================
-    // MOT DE PASSE OUBLIE
-    // =========================================================
-
-    @PostMapping("/forgot-password")
-    public ResponseEntity<?> forgotPassword(@RequestBody(required = false) ForgotPasswordRequest body,
-            @RequestParam(value = "email", required = false) String paramEmail) {
-
-        String email = null;
-        if (body != null && body.getEmail() != null) {
-            email = body.getEmail();
-        } else if (paramEmail != null) {
-            email = paramEmail;
-        }
-
-        if (email == null || email.trim().isEmpty()) {
-            return ResponseEntity.badRequest().body("L'adresse e-mail est obligatoire.");
-        }
-
-        passwordResetService.createPasswordResetToken(email.trim());
-
-        // Réponse générique constante pour prévenir l'énumération des utilisateurs
-        return ResponseEntity.ok("Si un compte correspond à cette adresse, un lien de réinitialisation sera envoyé.");
-    }
-
-    @PostMapping("/reset-password")
-    public ResponseEntity<?> resetPassword(@Valid @RequestBody(required = false) ResetPasswordRequest body,
-            @RequestParam(value = "token", required = false) String paramToken,
-            @RequestParam(value = "newPassword", required = false) String paramNewPassword) {
-
-        String resetToken = body != null && body.getToken() != null ? body.getToken() : paramToken;
-        String newPassword = body != null && body.getNewPassword() != null ? body.getNewPassword() : paramNewPassword;
-
-        if (resetToken == null || resetToken.trim().isEmpty()) {
-            return ResponseEntity.badRequest().body("Le jeton de réinitialisation est obligatoire.");
-        }
-
-        if (newPassword == null || newPassword.trim().isEmpty()) {
-            return ResponseEntity.badRequest().body("Le nouveau mot de passe est obligatoire.");
-        }
-
-        try {
-            passwordResetService.resetPassword(resetToken.trim(), newPassword);
-            return ResponseEntity.ok("Mot de passe réinitialisé avec succès.");
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
-        }
     }
 
     // =========================================================

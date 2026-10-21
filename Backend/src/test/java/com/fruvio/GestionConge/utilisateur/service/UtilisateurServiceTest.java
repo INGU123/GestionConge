@@ -1,5 +1,7 @@
 package com.fruvio.GestionConge.utilisateur.service;
 
+import com.fruvio.GestionConge.utilisateur.config.JwtUtil;
+
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -90,6 +92,72 @@ class UtilisateurServiceTest {
         assertNull(utilisateurService.login("employee@example.com", "any-password"));
 
         verify(utilisateurRepository, never()).findByEmail("employee@example.com");
+    }
+
+    @Test
+    void loginSucceedsWithValidMatriculeAndPassword() {
+        String hash = "$2a$10$mockedBcryptHash";
+        Utilisateur employee = Utilisateur.builder()
+                .id(11L).matricule("EMP-LOGIN-01")
+                .actif(true).password(hash).build();
+
+        when(utilisateurRepository.findByMatricule("EMP-LOGIN-01"))
+                .thenReturn(Optional.of(employee));
+        when(passwordEncoder.matches("Valid123!", hash)).thenReturn(true);
+
+        assertEquals(employee, utilisateurService.login("EMP-LOGIN-01", "Valid123!"));
+        verify(passwordEncoder).matches("Valid123!", hash);
+    }
+
+    @Test
+    void loginRejectsIncorrectPassword() {
+        String hash = "$2a$10$mockedBcryptHash";
+        Utilisateur employee = Utilisateur.builder()
+                .id(12L).matricule("EMP-LOGIN-02")
+                .actif(true).password(hash).build();
+
+        when(utilisateurRepository.findByMatricule("EMP-LOGIN-02"))
+                .thenReturn(Optional.of(employee));
+        when(passwordEncoder.matches("Wrong123!", hash)).thenReturn(false);
+
+        assertNull(utilisateurService.login("EMP-LOGIN-02", "Wrong123!"));
+        verify(passwordEncoder).matches("Wrong123!", hash);
+    }
+
+    @Test
+    void loginRejectsInactiveAccount() {
+        String hash = "$2a$10$mockedBcryptHash";
+        Utilisateur employee = Utilisateur.builder()
+                .id(13L).matricule("EMP-LOGIN-03")
+                .actif(false).password(hash).build();
+
+        when(utilisateurRepository.findByMatricule("EMP-LOGIN-03"))
+                .thenReturn(Optional.of(employee));
+
+        assertNull(utilisateurService.login("EMP-LOGIN-03", "Valid123!"));
+        verify(passwordEncoder, never()).matches("Valid123!", hash);
+    }
+
+    @Test
+    void loginRejectsUnknownMatricule() {
+        when(utilisateurRepository.findByMatricule("EMP-UNKNOWN"))
+                .thenReturn(Optional.empty());
+
+        assertNull(utilisateurService.login("EMP-UNKNOWN", "Valid123!"));
+        verify(passwordEncoder, never()).matches(any(), any());
+    }
+
+    @Test
+    void loginRejectsNonBcryptPassword() {
+        Utilisateur employee = Utilisateur.builder()
+                .id(14L).matricule("EMP-LOGIN-04")
+                .actif(true).password("plain-text-password").build();
+
+        when(utilisateurRepository.findByMatricule("EMP-LOGIN-04"))
+                .thenReturn(Optional.of(employee));
+
+        assertNull(utilisateurService.login("EMP-LOGIN-04", "plain-text-password"));
+        verify(passwordEncoder, never()).matches("plain-text-password", "plain-text-password");
     }
 
     @Test

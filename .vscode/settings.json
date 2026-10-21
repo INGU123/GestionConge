@@ -1,5 +1,17 @@
 {
     "java.format.settings.url": ".vscode/java-formatter.xml",
-    "java.compile.nullAnalysis.mode": "automatic",
-    "java.configuration.updateBuildConfiguration": "automatic"
+    "java.compile.nullAnalysis.mode": "disabled",
+    "java.configuration.updateBuildConfiguration": "automatic",
+    "java.configuration.runtimes": [
+        {
+            "name": "JavaSE-17",
+            "path": "/usr/lib/jvm/java-17-temurin-jdk",
+            "default": true
+        }
+    ],
+    "java.import.exclusions": [
+        "**/bin/**",
+        "**/target/**",
+        "**/node_modules/**"
+    ]
 }

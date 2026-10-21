@@ -55,13 +55,9 @@ public class Solde_congeService {
             }
         }
 
-        List<Solde_conge> soldes = soldeCongeRepository.findByUtilisateurId(utilisateurId);
-        if (soldes.isEmpty()) {
-            int annee = java.time.LocalDate.now().getYear();
-            initialiserSoldesPourUtilisateur(utilisateurId, annee);
-            soldes = soldeCongeRepository.findByUtilisateurId(utilisateurId);
-        }
-        return soldes;
+        int annee = java.time.LocalDate.now().getYear();
+        initialiserSoldesPourUtilisateur(utilisateurId, annee);
+        return soldeCongeRepository.findByUtilisateurId(utilisateurId);
     }
 
     // Récupérer tous les soldes selon le rôle

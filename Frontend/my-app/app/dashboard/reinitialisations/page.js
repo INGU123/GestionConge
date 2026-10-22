@@ -71,7 +71,7 @@ export default function ReinitialisationsPage() {
               <td>{new Date(request.dateDemande).toLocaleString("fr-FR")}</td>
               <td><div className="flex gap-2">
                 <button className="btn btn-success btn-sm" disabled={busyIds.has(request.id)} title="Accepter et envoyer un mot de passe temporaire" onClick={() => handleDecision(request.id, "approve")}>{busyIds.has(request.id) ? <span className="loading loading-spinner loading-xs" /> : <Check className="w-4 h-4" />} Accepter</button>
-                <button className="btn btn-outline btn-error btn-sm" disabled={busyId !== null} title="Refuser la demande" onClick={() => handleDecision(request.id, "reject")}>{busyIds.has(request.id) ? <span className="loading loading-spinner loading-xs" /> : <X className="w-4 h-4" />} Refuser</button>
+                <button className="btn btn-outline btn-error btn-sm" disabled={busyIds.has(request.id)} title="Refuser la demande" onClick={() => handleDecision(request.id, "reject")}>{busyIds.has(request.id) ? <span className="loading loading-spinner loading-xs" /> : <X className="w-4 h-4" />} Refuser</button>
               </div></td>
             </tr>)}</tbody>
           </table></div>}

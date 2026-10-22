@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import {
   getAllHistorique,
-  getHistoriquePdf,
   getHistoriqueUtilisateur,
 } from "../../api/historiqueMouvements/historiqueMouvement";
 import { getAllTypeConge } from "../../api/typeConge/typeConge";
@@ -19,7 +18,6 @@ import {
   Layers,
   ShieldCheck,
   Download,
-  Printer,
 } from "lucide-react";
 import { useToast } from "../../components/ToastProvider";
 
@@ -101,11 +99,158 @@ export default function HistoriquePage() {
 
   const isManager = currentUser?.role === "ADMIN" || currentUser?.role === "MANAGER";
 
-  const handleExportPdf = async () => {
+  const handleExportExcel = async () => {
     setExporting(true);
     try {
-      const blob = await getHistoriquePdf(viewAll && isManager ? "all" : "mine");
-      const url = URL.createObjectURL(blob);
+      const dateCell = (value) =>
+        value ? new Date(value).toLocaleDateString("fr-FR") : "-";
+      const headers = [
+        "Date",
+        "Collaborateur",
+        "Type de mouvement",
+        "Type de congé",
+        "Quantité (jours)",
+        "Commentaire",
+        "Effectué par",
+      ];
+      const dataRows = mouvements.slice().reverse().map((m) => {
+        const isDebit = m.typeMouvement === "DEBIT_CONGE";
+        const quantity = Number(m.quantite);
+        return [
+          dateCell(m.date),
+          getUserName(m.utilisateurId),
+          isDebit ? "DÉBIT" : "CRÉDIT",
+          getTypeLabel(m.type_conge_id),
+          Number.isFinite(quantity) ? (isDebit ? -quantity : quantity) : String(m.quantite ?? ""),
+          m.commentaire || "",
+          m.effectue_par ? getUserName(m.effectue_par) : "Système",
+        ];
+      });
+
+      const xmlEscape = (value) => String(value ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&apos;");
+      const columnName = (number) => {
+        let name = "";
+        while (number > 0) {
+          const remainder = (number - 1) % 26;
+          name = String.fromCharCode(65 + remainder) + name;
+          number = Math.floor((number - 1) / 26);
+        }
+        return name;
+      };
+      const makeCell = (value, row, column) => {
+        const ref = columnName(column) + row;
+        if (typeof value === "number" && Number.isFinite(value)) {
+          return `<c r="${ref}"><v>${value}</v></c>`;
+        }
+        const text = xmlEscape(value);
+        const preserve = /^\s|\s$/.test(String(value ?? "")) ? ' xml:space="preserve"' : "";
+        return `<c r="${ref}" t="inlineStr"><is><t${preserve}>${text}</t></is></c>`;
+      };
+      const worksheetRows = [headers, ...dataRows].map((row, rowIndex) => {
+        const rowNumber = rowIndex + 1;
+        return `<row r="${rowNumber}">${row.map((value, columnIndex) => makeCell(value, rowNumber, columnIndex + 1)).join("")}</row>`;
+      }).join("");
+      const worksheet = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>${worksheetRows}</sheetData><autoFilter ref="A1:G${dataRows.length + 1}"/></worksheet>`;
+      const files = [
+        {
+          name: "[Content_Types].xml",
+          content: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/></Types>',
+        },
+        {
+          name: "_rels/.rels",
+          content: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>',
+        },
+        {
+          name: "xl/workbook.xml",
+          content: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="Historique" sheetId="1" r:id="rId1"/></sheets></workbook>',
+        },
+        {
+          name: "xl/_rels/workbook.xml.rels",
+          content: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/></Relationships>',
+        },
+        { name: "xl/worksheets/sheet1.xml", content: worksheet },
+      ];
+
+      const encoder = new TextEncoder();
+      const crc32 = (bytes) => {
+        let crc = 0xffffffff;
+        for (const byte of bytes) {
+          crc ^= byte;
+          for (let bit = 0; bit < 8; bit++) {
+            crc = (crc >>> 1) ^ ((crc & 1) ? 0xedb88320 : 0);
+          }
+        }
+        return (crc ^ 0xffffffff) >>> 0;
+      };
+      const write16 = (view, offset, value) => view.setUint16(offset, value, true);
+      const write32 = (view, offset, value) => view.setUint32(offset, value >>> 0, true);
+      const localParts = [];
+      const centralParts = [];
+      let localOffset = 0;
+      for (const file of files) {
+        const nameBytes = encoder.encode(file.name);
+        const contentBytes = encoder.encode(file.content);
+        const crc = crc32(contentBytes);
+        const localHeader = new Uint8Array(30 + nameBytes.length);
+        const localView = new DataView(localHeader.buffer);
+        write32(localView, 0, 0x04034b50);
+        write16(localView, 4, 20);
+        write16(localView, 6, 0);
+        write16(localView, 8, 0);
+        write16(localView, 10, 0);
+        write16(localView, 12, 0);
+        write32(localView, 14, crc);
+        write32(localView, 18, contentBytes.length);
+        write32(localView, 22, contentBytes.length);
+        write16(localView, 26, nameBytes.length);
+        write16(localView, 28, 0);
+        localHeader.set(nameBytes, 30);
+        localParts.push(localHeader, contentBytes);
+
+        const centralHeader = new Uint8Array(46 + nameBytes.length);
+        const centralView = new DataView(centralHeader.buffer);
+        write32(centralView, 0, 0x02014b50);
+        write16(centralView, 4, 20);
+        write16(centralView, 6, 20);
+        write16(centralView, 8, 0);
+        write16(centralView, 10, 0);
+        write16(centralView, 12, 0);
+        write16(centralView, 14, 0);
+        write32(centralView, 16, crc);
+        write32(centralView, 20, contentBytes.length);
+        write32(centralView, 24, contentBytes.length);
+        write16(centralView, 28, nameBytes.length);
+        write16(centralView, 30, 0);
+        write16(centralView, 32, 0);
+        write16(centralView, 34, 0);
+        write16(centralView, 36, 0);
+        write32(centralView, 38, 0);
+        write32(centralView, 42, localOffset);
+        centralHeader.set(nameBytes, 46);
+        centralParts.push(centralHeader);
+        localOffset += localHeader.length + contentBytes.length;
+      }
+      const centralSize = centralParts.reduce((sum, part) => sum + part.length, 0);
+      const end = new Uint8Array(22);
+      const endView = new DataView(end.buffer);
+      write32(endView, 0, 0x06054b50);
+      write16(endView, 4, 0);
+      write16(endView, 6, 0);
+      write16(endView, 8, files.length);
+      write16(endView, 10, files.length);
+      write32(endView, 12, centralSize);
+      write32(endView, 16, localOffset);
+      write16(endView, 20, 0);
+
+      const workbookBlob = new Blob([...localParts, ...centralParts, end], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+      const url = URL.createObjectURL(workbookBlob);
       const link = document.createElement("a");
       const today = new Date();
       const date = [
@@ -114,52 +259,15 @@ export default function HistoriquePage() {
         String(today.getDate()).padStart(2, "0"),
       ].join("-");
       link.href = url;
-      link.download = `historique_conges_${date}.pdf`;
+      link.download = `historique_conges_${date}.xlsx`;
       document.body.appendChild(link);
       link.click();
       link.remove();
       window.setTimeout(() => URL.revokeObjectURL(url), 1000);
-      showToast("L'historique a été exporté en PDF.", "success");
+      showToast("L'historique a été exporté au format Excel.", "success");
     } catch (error) {
-      console.error("Erreur lors de l'export PDF de l'historique :", error);
-      showToast(error.message || "Impossible d'exporter l'historique en PDF.", "error");
-    } finally {
-      setExporting(false);
-    }
-  };
-
-  const handlePrintPdf = async () => {
-    // Ouvrir la fenêtre immédiatement pour éviter le blocage des pop-ups après l'appel réseau.
-    const printWindow = window.open("", "_blank");
-    if (!printWindow) {
-      showToast("Autorise les fenêtres pop-up pour imprimer l'historique.", "error");
-      return;
-    }
-
-    setExporting(true);
-    try {
-      const blob = await getHistoriquePdf(viewAll && isManager ? "all" : "mine");
-      const url = URL.createObjectURL(blob);
-      printWindow.location.href = url;
-      printWindow.focus();
-
-      // Laisser le temps au lecteur PDF du navigateur de charger le document.
-      window.setTimeout(() => {
-        try {
-          printWindow.focus();
-          printWindow.print();
-        } catch (error) {
-          console.warn("L'impression automatique n'a pas pu démarrer :", error);
-          showToast("Le PDF est ouvert. Lance l'impression avec Ctrl+P.", "info");
-        }
-      }, 1200);
-
-      // Conserver l'URL assez longtemps pour que le lecteur PDF puisse l'utiliser.
-      window.setTimeout(() => URL.revokeObjectURL(url), 60000);
-    } catch (error) {
-      printWindow.close();
-      console.error("Erreur lors de la préparation de l'impression PDF :", error);
-      showToast(error.message || "Impossible de préparer l'impression de l'historique.", "error");
+      console.error("Erreur lors de l'export Excel de l'historique :", error);
+      showToast(error.message || "Impossible d'exporter l'historique au format Excel.", "error");
     } finally {
       setExporting(false);
     }
@@ -211,8 +319,8 @@ export default function HistoriquePage() {
           )}
           <button
             type="button"
-            onClick={handleExportPdf}
-            disabled={exporting || loading}
+            onClick={handleExportExcel}
+            disabled={exporting || loading || mouvements.length === 0}
             className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {exporting ? (
@@ -220,16 +328,7 @@ export default function HistoriquePage() {
             ) : (
               <Download className="h-4 w-4" />
             )}
-            {exporting ? "Export en cours..." : "Exporter en PDF"}
-          </button>
-          <button
-            type="button"
-            onClick={handlePrintPdf}
-            disabled={exporting || loading || mouvements.length === 0}
-            className="inline-flex items-center gap-2 rounded-xl border border-slate-600 bg-slate-800 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            <Printer className="h-4 w-4" />
-            Imprimer en PDF
+            {exporting ? "Export en cours..." : "Exportation Excel"}
           </button>
         </div>
       </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   getNotificationNonLues,
   getToutesLesNotifications,
@@ -26,37 +26,50 @@ export default function NotificationHeaderMenu() {
 
   // State pour la notification Toast éphémère
   const [activeToast, setActiveToast] = useState(null);
+  const knownNotificationIds = useRef(new Set());
 
-  // 2. Charger uniquement les notifications du compte courant
+  // Charger les notifications au montage puis les actualiser périodiquement pour recevoir les nouvelles alertes.
   useEffect(() => {
     if (!user?.id) return;
 
     let cancelled = false;
-    const request = filterNonLues
-      ? getNotificationNonLues(user.id)
-      : getToutesLesNotifications(user.id);
+    let firstLoad = true;
 
-    request
-      .then((data) => {
+    const loadNotifications = async () => {
+      try {
+        const data = filterNonLues
+          ? await getNotificationNonLues(user.id)
+          : await getToutesLesNotifications(user.id);
         if (cancelled) return;
 
         const notifsList = Array.isArray(data) ? data : [];
-        setNotifications(notifsList);
+        const newUnread = notifsList.find(
+          (notification) => !notification.lue && !knownNotificationIds.current.has(notification.id)
+        );
 
-        const derniereNonLue = notifsList.find((notification) => !notification.lue);
-        if (derniereNonLue) {
-          setActiveToast(derniereNonLue);
+        setNotifications(notifsList);
+        if (firstLoad) {
+          const derniereNonLue = notifsList.find((notification) => !notification.lue);
+          if (derniereNonLue) setActiveToast(derniereNonLue);
+        } else if (newUnread) {
+          setActiveToast(newUnread);
         }
-      })
-      .catch((err) => {
+
+        knownNotificationIds.current = new Set(notifsList.map((notification) => notification.id));
+        firstLoad = false;
+      } catch (err) {
         console.error("Erreur chargement notifications:", err);
-      })
-      .finally(() => {
+      } finally {
         if (!cancelled) setLoading(false);
-      });
+      }
+    };
+
+    loadNotifications();
+    const intervalId = setInterval(loadNotifications, 30000);
 
     return () => {
       cancelled = true;
+      clearInterval(intervalId);
     };
   }, [user?.id, filterNonLues]);
 

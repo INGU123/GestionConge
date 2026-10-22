@@ -163,9 +163,8 @@ public class PasswordResetController {
         try {
             emailService.sendEmail(user.getEmail(), "Demande acceptée : réinitialisation de mot de passe - SPAT", emailText);
         } catch (Exception ex) {
-            log.error("Le mot de passe temporaire de la demande {} a été enregistré, mais l'e-mail à l'agent a échoué.", id, ex);
-            return ResponseEntity.internalServerError().body(Map.of("success", false,
-                    "message", "La demande a été acceptée, mais l'e-mail n'a pas pu être envoyé. Contactez le support technique."));
+            log.error("L'e-mail d'acceptation de la demande {} a échoué ; la transaction doit être annulée.", id, ex);
+            throw new IllegalStateException("L'e-mail contenant le mot de passe temporaire n'a pas pu être envoyé.", ex);
         }
 
         return ResponseEntity.ok(Map.of("success", true,
@@ -196,9 +195,8 @@ public class PasswordResetController {
         try {
             emailService.sendEmail(user.getEmail(), "Demande refusée : réinitialisation de mot de passe - SPAT", emailText);
         } catch (Exception ex) {
-            log.error("La demande {} a été refusée, mais l'e-mail d'information à l'agent a échoué.", id, ex);
-            return ResponseEntity.internalServerError().body(Map.of("success", false,
-                    "message", "La demande a été refusée, mais l'e-mail de notification n'a pas pu être envoyé."));
+            log.error("L'e-mail de refus de la demande {} a échoué ; la transaction doit être annulée.", id, ex);
+            throw new IllegalStateException("L'e-mail de notification du refus n'a pas pu être envoyé.", ex);
         }
 
         return ResponseEntity.ok(Map.of("success", true,

@@ -10,6 +10,7 @@ import { getCurrentUser } from "@/lib/apiClient";
 import {
   Bell,
   Check,
+  CheckCheck,
   CheckCircle2,
   XCircle,
   Info,
@@ -23,6 +24,8 @@ export default function NotificationHeaderMenu() {
   const [loading, setLoading] = useState(false);
   const [filterNonLues, setFilterNonLues] = useState(true);
   const [isOpen, setIsOpen] = useState(false);
+  const [showAllNotifications, setShowAllNotifications] = useState(false);
+  const [markingAllRead, setMarkingAllRead] = useState(false);
 
   // State pour la notification Toast éphémère
   const [activeToast, setActiveToast] = useState(null);
@@ -98,6 +101,40 @@ export default function NotificationHeaderMenu() {
   };
 
   const nonLuesCount = notifications.filter((n) => !n.lue).length;
+  const badgeCount = nonLuesCount > 999 ? "999+" : String(nonLuesCount);
+  const displayedNotifications = showAllNotifications
+    ? notifications
+    : notifications.slice(0, 5);
+
+  const handleToutMarquerCommeLu = async () => {
+    const unread = notifications.filter((notification) => !notification.lue);
+    if (unread.length === 0 || markingAllRead) return;
+
+    setMarkingAllRead(true);
+    try {
+      const results = await Promise.all(
+        unread.map(async (notification) => ({
+          id: notification.id,
+          success: await marquerNotificationLue(notification.id),
+        }))
+      );
+      const successfulIds = new Set(
+        results.filter((result) => result.success).map((result) => result.id)
+      );
+      if (successfulIds.size > 0) {
+        setNotifications((prev) =>
+          prev.map((notification) =>
+            successfulIds.has(notification.id)
+              ? { ...notification, lue: true }
+              : notification
+          )
+        );
+        if (activeToast && successfulIds.has(activeToast.id)) setActiveToast(null);
+      }
+    } finally {
+      setMarkingAllRead(false);
+    }
+  };
 
   const getNotificationIcon = (type) => {
     switch (type) {
@@ -121,7 +158,7 @@ export default function NotificationHeaderMenu() {
         <Bell className="w-5 h-5" />
         {nonLuesCount > 0 && (
           <span className="absolute top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-rose-600 text-[10px] font-bold text-white ring-2 ring-slate-900">
-            {nonLuesCount > 9 ? "9+" : nonLuesCount}
+            {badgeCount}
           </span>
         )}
       </button>
@@ -139,6 +176,7 @@ export default function NotificationHeaderMenu() {
             <button
               onClick={() => {
                 setLoading(true);
+                setShowAllNotifications(false);
                 setFilterNonLues(!filterNonLues);
               }}
               className="text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1 bg-slate-800 px-2 py-1 rounded-lg"
@@ -158,7 +196,7 @@ export default function NotificationHeaderMenu() {
                 Aucune notification.
               </div>
             ) : (
-              notifications.slice(0, 5).map((n) => (
+              displayedNotifications.map((n) => (
                 <div
                   key={n.id}
                   className={`p-3 text-xs flex items-start gap-3 transition-colors ${n.lue ? "bg-white" : "bg-blue-50/50"
@@ -186,6 +224,35 @@ export default function NotificationHeaderMenu() {
               ))
             )}
           </div>
+
+          {notifications.length > 0 && (
+            <div className="p-2 border-t border-slate-200 bg-slate-50 flex items-center justify-between gap-2">
+              {notifications.length > 5 ? (
+                <button
+                  type="button"
+                  onClick={() => setShowAllNotifications((value) => !value)}
+                  className="text-xs font-medium text-blue-700 hover:text-blue-900 px-2 py-1 rounded-md hover:bg-blue-50"
+                >
+                  {showAllNotifications ? "Réduire la liste" : `Voir plus (${notifications.length})`}
+                </button>
+              ) : (
+                <span className="text-[11px] text-slate-400">
+                  {notifications.length} notification{notifications.length > 1 ? "s" : ""}
+                </span>
+              )}
+              {nonLuesCount > 0 && (
+                <button
+                  type="button"
+                  onClick={handleToutMarquerCommeLu}
+                  disabled={markingAllRead}
+                  className="text-xs font-medium text-blue-700 hover:text-blue-900 disabled:opacity-50 px-2 py-1 rounded-md hover:bg-blue-50 inline-flex items-center gap-1"
+                >
+                  <CheckCheck className="w-3.5 h-3.5" />
+                  {markingAllRead ? "Mise à jour..." : "Tout lire"}
+                </button>
+              )}
+            </div>
+          )}
         </div>
       )}
 

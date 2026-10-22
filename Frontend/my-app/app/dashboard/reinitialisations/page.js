@@ -9,14 +9,14 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 export default function ReinitialisationsPage() {
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [busyId, setBusyId] = useState(null);
+  const [busyIds, setBusyIds] = useState(() => new Set());
   const [message, setMessage] = useState("");
   const user = getCurrentUser();
   const isAdmin = ["ADMIN", "ROLE_ADMIN"].includes(String(user?.role || "").toUpperCase());
 
-  const loadRequests = useCallback(async () => {
+  const loadRequests = useCallback(async (showSpinner = false) => {
     if (!isAdmin) { setLoading(false); return; }
-    setLoading(true);
+    if (showSpinner) setLoading(true);
     try {
       const response = await authFetch(`${API_URL}/auth/admin/password-reset-requests`);
       if (!response.ok) throw new Error("Impossible de charger les demandes.");
@@ -24,25 +24,25 @@ export default function ReinitialisationsPage() {
     } catch (error) {
       setMessage(error.message || "Erreur de connexion au serveur.");
     } finally {
-      setLoading(false);
+      if (showSpinner) setLoading(false);
     }
   }, [isAdmin]);
 
-  useEffect(() => { loadRequests(); }, [loadRequests]);
+  useEffect(() => { loadRequests(true); }, [loadRequests]);
 
   const handleDecision = async (id, decision) => {
-    setBusyId(id);
+    setBusyIds((previous) => new Set(previous).add(id));
     setMessage("");
     try {
       const response = await authFetch(`${API_URL}/auth/admin/password-reset-requests/${id}/${decision}`, { method: "POST" });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(data.message || "La décision n'a pas pu être enregistrée.");
       setMessage(data.message || "Opération terminée.");
-      await loadRequests();
+      await loadRequests(false);
     } catch (error) {
       setMessage(error.message || "Erreur de connexion au serveur.");
     } finally {
-      setBusyId(null);
+      setBusyIds((previous) => { const next = new Set(previous); next.delete(id); return next; });
     }
   };
 
@@ -58,7 +58,7 @@ export default function ReinitialisationsPage() {
       <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-5">
         <div className="flex items-center justify-between gap-3 mb-4">
           <h2 className="font-bold text-slate-800">Demandes en attente ({requests.length})</h2>
-          <button onClick={loadRequests} className="btn btn-sm btn-outline" disabled={loading}><RefreshCw className="w-4 h-4" /> Actualiser</button>
+          <button onClick={() => loadRequests(true)} className="btn btn-sm btn-outline" disabled={loading}><RefreshCw className="w-4 h-4" /> Actualiser</button>
         </div>
         {loading ? <div className="flex justify-center py-10"><span className="loading loading-spinner loading-lg" /></div> :
           requests.length === 0 ? <p className="text-sm text-slate-500 py-8 text-center">Aucune demande en attente.</p> :
@@ -70,8 +70,8 @@ export default function ReinitialisationsPage() {
               <td>{request.email}</td>
               <td>{new Date(request.dateDemande).toLocaleString("fr-FR")}</td>
               <td><div className="flex gap-2">
-                <button className="btn btn-success btn-sm" disabled={busyId !== null} title="Accepter et envoyer un mot de passe temporaire" onClick={() => handleDecision(request.id, "approve")}><Check className="w-4 h-4" /> Accepter</button>
-                <button className="btn btn-outline btn-error btn-sm" disabled={busyId !== null} title="Refuser la demande" onClick={() => handleDecision(request.id, "reject")}><X className="w-4 h-4" /> Refuser</button>
+                <button className="btn btn-success btn-sm" disabled={busyIds.has(request.id)} title="Accepter et envoyer un mot de passe temporaire" onClick={() => handleDecision(request.id, "approve")}>{busyIds.has(request.id) ? <span className="loading loading-spinner loading-xs" /> : <Check className="w-4 h-4" />} Accepter</button>
+                <button className="btn btn-outline btn-error btn-sm" disabled={busyId !== null} title="Refuser la demande" onClick={() => handleDecision(request.id, "reject")}>{busyIds.has(request.id) ? <span className="loading loading-spinner loading-xs" /> : <X className="w-4 h-4" />} Refuser</button>
               </div></td>
             </tr>)}</tbody>
           </table></div>}

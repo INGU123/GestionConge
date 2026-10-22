@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   getAllHistorique,
   getHistoriqueUtilisateur,
@@ -20,7 +20,6 @@ import {
   Download,
   FileText,
   FileSpreadsheet,
-  ChevronDown,
 } from "lucide-react";
 import { useToast } from "../../components/ToastProvider";
 
@@ -32,27 +31,9 @@ export default function HistoriquePage() {
   const [loading, setLoading] = useState(true);
   const [viewAll, setViewAll] = useState(false);
   const [exporting, setExporting] = useState(false);
-  const [exportMenuOpen, setExportMenuOpen] = useState(false);
-  const exportMenuRef = useRef(null);
   const showToast = useToast();
 
-  useEffect(() => {
-    if (!exportMenuOpen) return;
-    const handleOutsideClick = (event) => {
-      if (exportMenuRef.current && !exportMenuRef.current.contains(event.target)) {
-        setExportMenuOpen(false);
-      }
-    };
-    const handleEscape = (event) => {
-      if (event.key === "Escape") setExportMenuOpen(false);
-    };
-    document.addEventListener("mousedown", handleOutsideClick);
-    document.addEventListener("keydown", handleEscape);
-    return () => {
-      document.removeEventListener("mousedown", handleOutsideClick);
-      document.removeEventListener("keydown", handleEscape);
-    };
-  }, [exportMenuOpen]);
+
 
   useEffect(() => {
     let isMounted = true;
@@ -123,7 +104,6 @@ export default function HistoriquePage() {
   const isManager = currentUser?.role === "ADMIN" || currentUser?.role === "MANAGER";
 
   const handleExportPdf = () => {
-    setExportMenuOpen(false);
     try {
       const popup = window.open("", "_blank", "width=1100,height=800");
       if (!popup) {
@@ -200,7 +180,6 @@ export default function HistoriquePage() {
   };
 
   const handleExportExcel = async () => {
-    setExportMenuOpen(false);
     setExporting(true);
     try {
       const dateCell = (value) =>
@@ -418,50 +397,28 @@ export default function HistoriquePage() {
               </button>
             </div>
           )}
-          <div className="relative" ref={exportMenuRef}>
-            <button
-              type="button"
-              onClick={() => setExportMenuOpen((open) => !open)}
-              disabled={loading || mouvements.length === 0}
-              aria-haspopup="menu"
-              aria-expanded={exportMenuOpen}
-              className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              <Download className="h-4 w-4" />
-              Exportation fichier
-              <ChevronDown className={`h-4 w-4 transition-transform ${exportMenuOpen ? "rotate-180" : ""}`} />
-            </button>
-            {exportMenuOpen && (
-              <div
-                role="menu"
-                className="absolute right-0 top-full z-50 mt-2 w-56 overflow-hidden rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl"
-              >
-                <button
-                  type="button"
-                  role="menuitem"
-                  onClick={handleExportPdf}
-                  className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-medium text-slate-700 transition hover:bg-slate-100"
-                >
-                  <FileText className="h-4 w-4 text-rose-600" />
-                  Exporter en PDF
-                </button>
-                <button
-                  type="button"
-                  role="menuitem"
-                  onClick={handleExportExcel}
-                  disabled={exporting}
-                  className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-medium text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  {exporting ? (
-                    <span className="loading loading-spinner loading-xs" />
-                  ) : (
-                    <FileSpreadsheet className="h-4 w-4 text-emerald-600" />
-                  )}
-                  Exporter en Excel
-                </button>
-              </div>
+          <button
+            type="button"
+            onClick={handleExportPdf}
+            disabled={loading || mouvements.length === 0}
+            className="inline-flex items-center gap-2 rounded-xl bg-rose-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            <FileText className="h-4 w-4" />
+            Exportation PDF
+          </button>
+          <button
+            type="button"
+            onClick={handleExportExcel}
+            disabled={loading || mouvements.length === 0 || exporting}
+            className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {exporting ? (
+              <span className="loading loading-spinner loading-xs" />
+            ) : (
+              <FileSpreadsheet className="h-4 w-4" />
             )}
-          </div>
+            Exportation Excel
+          </button>
         </div>
       </div>
 

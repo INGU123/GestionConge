@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   getAllHistorique,
   getHistoriqueUtilisateur,
@@ -18,6 +18,9 @@ import {
   Layers,
   ShieldCheck,
   Download,
+  FileText,
+  FileSpreadsheet,
+  ChevronDown,
 } from "lucide-react";
 import { useToast } from "../../components/ToastProvider";
 
@@ -29,7 +32,27 @@ export default function HistoriquePage() {
   const [loading, setLoading] = useState(true);
   const [viewAll, setViewAll] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [exportMenuOpen, setExportMenuOpen] = useState(false);
+  const exportMenuRef = useRef(null);
   const showToast = useToast();
+
+  useEffect(() => {
+    if (!exportMenuOpen) return;
+    const handleOutsideClick = (event) => {
+      if (exportMenuRef.current && !exportMenuRef.current.contains(event.target)) {
+        setExportMenuOpen(false);
+      }
+    };
+    const handleEscape = (event) => {
+      if (event.key === "Escape") setExportMenuOpen(false);
+    };
+    document.addEventListener("mousedown", handleOutsideClick);
+    document.addEventListener("keydown", handleEscape);
+    return () => {
+      document.removeEventListener("mousedown", handleOutsideClick);
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, [exportMenuOpen]);
 
   useEffect(() => {
     let isMounted = true;
@@ -99,7 +122,85 @@ export default function HistoriquePage() {
 
   const isManager = currentUser?.role === "ADMIN" || currentUser?.role === "MANAGER";
 
+  const handleExportPdf = () => {
+    setExportMenuOpen(false);
+    try {
+      const popup = window.open("", "_blank", "width=1100,height=800");
+      if (!popup) {
+        showToast("Autorise les fenêtres pop-up pour exporter le PDF.", "error");
+        return;
+      }
+
+      const escapeHtml = (value) => String(value ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+      const dateCell = (value) =>
+        value ? new Date(value).toLocaleDateString("fr-FR") : "-";
+      const rows = mouvements.slice().reverse().map((m) => {
+        const isDebit = m.typeMouvement === "DEBIT_CONGE";
+        const quantity = Number(m.quantite);
+        const displayedQuantity = Number.isFinite(quantity)
+          ? (isDebit ? -quantity : quantity)
+          : (m.quantite ?? "");
+        return [
+          dateCell(m.date),
+          getUserName(m.utilisateurId),
+          isDebit ? "DÉBIT" : "CRÉDIT",
+          getTypeLabel(m.type_conge_id),
+          displayedQuantity,
+          m.commentaire || "",
+          m.effectue_par ? getUserName(m.effectue_par) : "Système",
+        ];
+      });
+
+      const headers = [
+        "Date", "Collaborateur", "Type de mouvement", "Type de congé",
+        "Quantité (jours)", "Commentaire", "Effectué par",
+      ];
+      const today = new Date().toLocaleDateString("fr-FR");
+      popup.document.write(`<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <title>Historique des mouvements de congés</title>
+  <style>
+    @page { size: A4 landscape; margin: 12mm; }
+    body { font-family: Arial, sans-serif; color: #1e293b; margin: 0; }
+    h1 { font-size: 20px; margin: 0 0 6px; }
+    p { font-size: 11px; color: #475569; margin: 0 0 16px; }
+    table { width: 100%; border-collapse: collapse; font-size: 9px; }
+    thead { display: table-header-group; }
+    tr { break-inside: avoid; }
+    th, td { border: 1px solid #cbd5e1; padding: 6px; text-align: left; vertical-align: top; overflow-wrap: anywhere; }
+    th { background: #e2e8f0; font-weight: 700; }
+    @media screen { body { padding: 24px; } .hint { margin-top: 16px; } }
+    @media print { .hint { display: none; } }
+  </style>
+</head>
+<body>
+  <h1>SPAT — Historique des mouvements de congés</h1>
+  <p>Exporté le ${escapeHtml(today)} · ${rows.length} mouvement(s)</p>
+  <table>
+    <thead><tr>${headers.map((header) => `<th>${escapeHtml(header)}</th>`).join("")}</tr></thead>
+    <tbody>${rows.map((row) => `<tr>${row.map((cell) => `<td>${escapeHtml(cell)}</td>`).join("")}</tr>`).join("")}</tbody>
+  </table>
+  <p class="hint">Dans la fenêtre d'impression, choisissez « Enregistrer au format PDF ».</p>
+  <script>window.onload = () => { window.focus(); window.print(); };</script>
+</body>
+</html>`);
+      popup.document.close();
+      showToast("Préparation de l'impression PDF. Choisis « Enregistrer au format PDF ».", "success");
+    } catch (error) {
+      console.error("Erreur lors de l'export PDF de l'historique :", error);
+      showToast("Impossible de préparer l'export PDF.", "error");
+    }
+  };
+
   const handleExportExcel = async () => {
+    setExportMenuOpen(false);
     setExporting(true);
     try {
       const dateCell = (value) =>
@@ -317,19 +418,50 @@ export default function HistoriquePage() {
               </button>
             </div>
           )}
-          <button
-            type="button"
-            onClick={handleExportExcel}
-            disabled={exporting || loading || mouvements.length === 0}
-            className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {exporting ? (
-              <span className="loading loading-spinner loading-xs" />
-            ) : (
+          <div className="relative" ref={exportMenuRef}>
+            <button
+              type="button"
+              onClick={() => setExportMenuOpen((open) => !open)}
+              disabled={loading || mouvements.length === 0}
+              aria-haspopup="menu"
+              aria-expanded={exportMenuOpen}
+              className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+            >
               <Download className="h-4 w-4" />
+              Exportation fichier
+              <ChevronDown className={`h-4 w-4 transition-transform ${exportMenuOpen ? "rotate-180" : ""}`} />
+            </button>
+            {exportMenuOpen && (
+              <div
+                role="menu"
+                className="absolute right-0 top-full z-50 mt-2 w-56 overflow-hidden rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl"
+              >
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={handleExportPdf}
+                  className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-medium text-slate-700 transition hover:bg-slate-100"
+                >
+                  <FileText className="h-4 w-4 text-rose-600" />
+                  Exporter en PDF
+                </button>
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={handleExportExcel}
+                  disabled={exporting}
+                  className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-medium text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {exporting ? (
+                    <span className="loading loading-spinner loading-xs" />
+                  ) : (
+                    <FileSpreadsheet className="h-4 w-4 text-emerald-600" />
+                  )}
+                  Exporter en Excel
+                </button>
+              </div>
             )}
-            {exporting ? "Export en cours..." : "Exportation Excel"}
-          </button>
+          </div>
         </div>
       </div>
 

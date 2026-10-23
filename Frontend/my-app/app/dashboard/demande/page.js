@@ -21,6 +21,43 @@ const toLocalDateKey = (date) => {
   return `${year}-${month}-${day}`;
 };
 
+const isAnnualLeaveType = (type) => {
+  if (!type) return false;
+  const code = String(type.code || "").trim().toUpperCase().replace(/[ -]+/g, "_");
+  const label = String(type.libelle || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  const rule = String(type.regle_acquisition || "").trim().toUpperCase();
+  return ["CA", "ANNUEL", "CONGE_ANNUEL", "CONGE_ANNUEL_PAYE"].includes(code)
+    || label.includes("conge annuel")
+    || label.includes("conge paye annuel")
+    || rule === "CONGE_ANNUEL_MG";
+};
+
+const computeAnnualLeaveDays = (start, end, holidays = []) => {
+  if (!start || !end) return 0;
+  const startDate = new Date(start);
+  const endDate = new Date(end);
+  const holidaySet = new Set(
+    holidays
+      .map((holiday) => {
+        const rawDate = holiday?.date || holiday?.jour;
+        if (!rawDate) return null;
+        const parsed = new Date(rawDate);
+        return Number.isNaN(parsed.getTime()) ? null : toLocalDateKey(parsed);
+      })
+      .filter(Boolean)
+  );
+
+  let count = 0;
+  const cursor = new Date(startDate);
+  cursor.setHours(0, 0, 0, 0);
+  endDate.setHours(0, 0, 0, 0);
+  while (cursor <= endDate) {
+    if (!holidaySet.has(toLocalDateKey(cursor))) count += 1;
+    cursor.setDate(cursor.getDate() + 1);
+  }
+  return count;
+};
+
 const computeWorkingDays = (start, end, holidays = []) => {
   if (!start || !end) return 0;
 
@@ -68,16 +105,20 @@ export default function DemandesPage() {
   const [loading, setLoading] = useState(false);
   const showToast = useToast();
 
+  const selectedType = typesConge.find((type) => String(type.id) === String(formData.typeCongeId));
+  const annualLeaveSelected = isAnnualLeaveType(selectedType);
+
   const workingDaysSummary = useMemo(() => {
-    if (!formData.debut || !formData.fin) return { calendarDays: 0, workingDays: 0 };
+    if (!formData.debut || !formData.fin) return { calendarDays: 0, workingDays: 0, annualDays: 0 };
     const start = new Date(formData.debut);
     const end = new Date(formData.fin);
-    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return { calendarDays: 0, workingDays: 0 };
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return { calendarDays: 0, workingDays: 0, annualDays: 0 };
 
     const calendarDays = Math.max(0, Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1);
     const workingDays = computeWorkingDays(start, end, holidays);
-    return { calendarDays, workingDays };
-  }, [formData.debut, formData.fin, holidays]);
+    const annualDays = computeAnnualLeaveDays(start, end, holidays);
+    return { calendarDays, workingDays, annualDays };
+  }, [formData.debut, formData.fin, formData.typeCongeId, holidays, typesConge]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -286,11 +327,17 @@ export default function DemandesPage() {
             {(formData.debut || formData.fin) && (
               <div className="rounded-xl border p-4" style={{ background: "var(--primary-soft)", borderColor: "var(--primary-border)" }}>
                 <div className="text-sm font-semibold" style={{ color: "var(--primary)" }}>
-                  Calcul des jours ouvrés
+                  {annualLeaveSelected ? "Calcul du congé annuel payé" : "Calcul des jours ouvrés"}
                 </div>
                 <div className="mt-2 flex flex-wrap gap-3 text-sm" style={{ color: "var(--text-main)" }}>
                   <span className="badge badge-ghost">{workingDaysSummary.calendarDays} jours calendaires</span>
-                  <span className="badge badge-info text-white">{workingDaysSummary.workingDays} jours ouvrés</span>
+                  {annualLeaveSelected ? (
+                    <span className="badge badge-info text-white">
+                      {workingDaysSummary.annualDays} jours décomptés, hors jours fériés
+                    </span>
+                  ) : (
+                    <span className="badge badge-info text-white">{workingDaysSummary.workingDays} jours ouvrés</span>
+                  )}
                 </div>
               </div>
             )}

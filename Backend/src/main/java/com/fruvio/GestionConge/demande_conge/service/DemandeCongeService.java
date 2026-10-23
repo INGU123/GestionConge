@@ -202,10 +202,21 @@ public class DemandeCongeService {
                 || "APPROVED".equalsIgnoreCase(statutNormalise);
 
         if (estValidee && demande.getDateDebut() != null && demande.getDateFin() != null) {
-            int jours = calculerJoursOuvres(demande.getDateDebut(), demande.getDateFin());
+            Type_conge typeConge = typeCongeRepo.findById(demande.getTypeCongeId())
+                    .orElseThrow(() -> new IllegalStateException("Le type de congé de cette demande n'existe plus."));
+            boolean congeAnnuel = ReglesCongeMadagascar.estCongeAnnuel(typeConge);
+            int jours = congeAnnuel
+                    ? jourFerieService.compterJoursCongeAnnuel(demande.getDateDebut(), demande.getDateFin())
+                    : calculerJoursOuvres(demande.getDateDebut(), demande.getDateFin());
+
             if (jours <= 0) {
-                throw new IllegalStateException(
-                        "La période demandée ne contient aucune journée ouvrée. Aucune validation ne peut être effectuée.");
+                throw new IllegalStateException(congeAnnuel
+                        ? "La période ne contient aucun jour de congé annuel décomptable."
+                        : "La période demandée ne contient aucune journée ouvrée. Aucune validation ne peut être effectuée.");
+            }
+            if (congeAnnuel) {
+                ReglesCongeMadagascar.verifierOuvertureDroit(demandeur, demande.getDateDebut());
+                verifierPremiereFraction(demande, demandeur, jours);
             }
             demande.setNombreJours(jours);
 
@@ -224,6 +235,20 @@ public class DemandeCongeService {
                 Solde_conge solde = soldeOpt.get();
                 int prisActuel = (solde.getSoldePris() != null) ? solde.getSoldePris() : 0;
                 int acquisActuel = (solde.getSoldeAquis() != null) ? solde.getSoldeAquis() : 0;
+
+                // Un solde peut avoir été initialisé avant le 12e mois de service.
+                // À l'ouverture effective du droit, attribuer au minimum les 30 jours légaux,
+                // sans écraser un droit contractuel plus favorable ni un solde déjà consommé.
+                if (congeAnnuel && prisActuel == 0
+                        && demandeur.getDate_embauche() != null
+                        && !demande.getDateDebut().isBefore(demandeur.getDate_embauche().plusYears(1))) {
+                    int minimumLegal = Math.max(ReglesCongeMadagascar.JOURS_ANNUELS_PAR_AN,
+                            typeConge.getNombreJoursParAn() == null ? 0 : typeConge.getNombreJoursParAn());
+                    if (acquisActuel < minimumLegal) {
+                        acquisActuel = minimumLegal;
+                        solde.setSoldeAquis(acquisActuel);
+                    }
+                }
                 int joursDisponibles = Math.max(0, acquisActuel - prisActuel);
 
                 if (joursDisponibles < jours) {

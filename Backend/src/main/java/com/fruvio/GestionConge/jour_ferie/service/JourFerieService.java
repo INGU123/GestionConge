@@ -63,4 +63,31 @@ public class JourFerieService {
 
         return count;
     }
+
+    /**
+     * Compte les jours de congé annuel en jours calendaires, en excluant les
+     * jours fériés actifs conformément à l'article 127 du Code du travail.
+     * Les samedis et dimanches restent comptés : il s'agit de jours calendaires.
+     */
+    public int compterJoursCongeAnnuel(LocalDate dateDebut, LocalDate dateFin) {
+        if (dateDebut == null || dateFin == null || dateFin.isBefore(dateDebut)) {
+            return 0;
+        }
+
+        List<JourFerie> joursFeries = jourFerieRepository
+                .findByActifTrueAndDateBetweenOrderByDateAsc(dateDebut, dateFin);
+        Set<LocalDate> datesFeriees = joursFeries.stream()
+                .map(JourFerie::getDate)
+                .collect(Collectors.toSet());
+
+        int count = 0;
+        LocalDate current = dateDebut;
+        while (!current.isAfter(dateFin)) {
+            if (!datesFeriees.contains(current)) {
+                count++;
+            }
+            current = current.plusDays(1);
+        }
+        return count;
+    }
 }

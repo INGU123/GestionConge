@@ -61,4 +61,14 @@ class JourFerieServiceTest {
 
         assertEquals(4, jourFerieService.compterJoursOuvres(LocalDate.of(2026, 12, 24), LocalDate.of(2026, 12, 31)));
     }
+
+    @Test
+    void shouldCountCalendarDaysForAnnualLeaveIncludingWeekendsButExcludingHolidays() {
+        when(jourFerieRepository.findByActifTrueAndDateBetweenOrderByDateAsc(LocalDate.of(2026, 1, 9),
+                LocalDate.of(2026, 1, 12))).thenReturn(List.of(
+                        JourFerie.builder().date(LocalDate.of(2026, 1, 11)).libelle("Jour férié").actif(true).build()));
+
+        assertEquals(3, jourFerieService.compterJoursCongeAnnuel(
+                LocalDate.of(2026, 1, 9), LocalDate.of(2026, 1, 12)));
+    }
 }

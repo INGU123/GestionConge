@@ -33,7 +33,7 @@ const sections = [
     icon: LogIn,
     roles: "Tous les rôles",
     images: [
-      { src: "/Aides/PageLogin.png", alt: "Écran de connexion GestionConge", caption: "Écran de connexion : saisie du matricule et du mot de passe." },
+      { src: "/Aides/PageLogin.png", alt: "Écran de connexion GestionConge", caption: "Écran de connexion : saisie du matricule et du mot de passe.", help: "Commencez par le matricule fourni par la SPAT, puis saisissez votre mot de passe. Vérifiez les deux champs avant de vous connecter. Le matricule est l’identifiant attendu, pas votre nom." },
     ],
     steps: [
       "Ouvrez l’adresse de GestionConge communiquée par votre organisation.",
@@ -55,7 +55,7 @@ const sections = [
     icon: LayoutDashboard,
     roles: "Tous les rôles",
     images: [
-      { src: "/Aides/retractMenu,nightmod,acceuilPage.png", alt: "Accueil, menu rétractable et mode jour/nuit", caption: "Tableau de bord, menu latéral rétractable et apparence jour/nuit." },
+      { src: "/Aides/retractMenu,nightmod,acceuilPage.png", alt: "Accueil, menu rétractable et mode jour/nuit", caption: "Tableau de bord, menu latéral rétractable et apparence jour/nuit.", help: "Utilisez le menu latéral pour accéder aux rubriques visibles pour votre rôle. Le bouton d’apparence change le thème ; le repli du menu libère de l’espace sans changer vos droits." },
     ],
     steps: [
       "Utilisez le menu latéral pour ouvrir une rubrique.",
@@ -104,7 +104,7 @@ const sections = [
     href: "/dashboard/solde",
     action: "Ouvrir les soldes",
     images: [
-      { src: "/Aides/SoldQuota.png", alt: "Écran des soldes et quotas de congés", caption: "Consultation des soldes et quotas de congés." },
+      { src: "/Aides/SoldQuota.png", alt: "Écran des soldes et quotas de congés", caption: "Consultation des soldes et quotas de congés.", help: "Repérez d’abord la ligne du collaborateur et le type de congé concernés, puis lisez les colonnes de solde et de quota. En cas de doute, comparez avec l’historique plutôt que de supposer qu’une demande a déjà été décomptée." },
     ],
     steps: [
       "Ouvrez « Mes Soldes » ou « Soldes & Quotas ».",
@@ -126,7 +126,7 @@ const sections = [
     icon: CalendarDays,
     roles: "Selon les droits du compte",
     images: [
-      { src: "/Aides/typeConge.png", alt: "Écran de gestion des types de congés", caption: "Écran des types de congés configurés dans GestionConge." },
+      { src: "/Aides/typeConge.png", alt: "Écran de gestion des types de congés", caption: "Écran des types de congés configurés dans GestionConge.", help: "Cette vue est destinée à l’administrateur. Vérifiez l’intitulé du type avant de modifier sa configuration. Les utilisateurs choisissent parmi les types disponibles dans le formulaire ; ils ne gèrent pas cette liste." },
     ],
     steps: [
       "Ouvrez la rubrique des types de congés si elle est disponible dans votre menu.",
@@ -148,7 +148,7 @@ const sections = [
     href: "/dashboard/historique",
     action: "Ouvrir l’historique",
     images: [
-      { src: "/Aides/historiqueConge.png", alt: "Historique des congés", caption: "Historique des demandes et des mouvements de congés." },
+      { src: "/Aides/historiqueConge.png", alt: "Historique des congés", caption: "Historique des demandes et des mouvements de congés.", help: "Pour vérifier une opération, comparez le collaborateur, les dates, le type et le statut. Utilisez la recherche ou les filtres seulement s’ils sont visibles dans votre écran. Si une entrée semble incorrecte, vérifiez les détails avant de refaire l’action." },
     ],
     steps: [
       "Ouvrez « Historique » depuis le menu latéral.",
@@ -173,7 +173,7 @@ const sections = [
     href: "/dashboard/utilisateurs",
     action: "Ouvrir les collaborateurs",
     images: [
-      { src: "/Aides/gestionCollaborateur.png", alt: "Gestion des collaborateurs", caption: "Liste et gestion des collaborateurs." },
+      { src: "/Aides/gestionCollaborateur.png", alt: "Gestion des collaborateurs", caption: "Liste et gestion des collaborateurs.", help: "Avant toute action, retrouvez la bonne personne à l’aide du matricule et vérifiez son identité. Lors d’une modification, contrôlez les champs et le rôle. Une suppression peut retirer l’accès au compte : ne la confirmez qu’après vérification." },
     ],
     steps: [
       "Ouvrez « Gestion Collaborateurs ».",
@@ -199,7 +199,7 @@ const sections = [
     href: "/dashboard/validation",
     action: "Ouvrir la validation",
     images: [
-      { src: "/Aides/validationConge.png", alt: "Validation des demandes de congé", caption: "Écran de traitement et de validation des demandes." },
+      { src: "/Aides/validationConge.png", alt: "Validation des demandes de congé", caption: "Écran de traitement et de validation des demandes.", help: "Examinez la demande avant de prendre une décision : identité du collaborateur, dates, type et motif. Si un refus demande une justification, indiquez un motif clair. Après validation ou refus, vérifiez que le statut a bien changé." },
     ],
     steps: [
       "Ouvrez « Validation des congés » si cette rubrique est disponible dans votre menu.",
@@ -245,9 +245,9 @@ const sections = [
     href: "/Components/mdpForget",
     action: "Ouvrir la récupération",
     images: [
-      { src: "/Aides/mdpForget.png", alt: "Accès à la récupération du mot de passe", caption: "Écran de récupération du mot de passe." },
-      { src: "/Aides/demandeReinitialisationMdp.png", alt: "Demande de réinitialisation du mot de passe", caption: "Formulaire de demande de réinitialisation." },
-      { src: "/Aides/reinitialisationByAdmin.png", alt: "Réinitialisation du mot de passe par l’administrateur", caption: "Étape de réinitialisation prise en charge par l’administrateur." },
+      { src: "/Aides/mdpForget.png", alt: "Accès à la récupération du mot de passe", caption: "Écran de récupération du mot de passe.", help: "Ouvrez cette fonction depuis la page de connexion et suivez les champs réellement affichés. Relisez le matricule ou les informations demandées avant d’envoyer la requête ; si la procédure ne correspond pas à cet exemple, suivez l’interface actuelle." },
+      { src: "/Aides/demandeReinitialisationMdp.png", alt: "Demande de réinitialisation du mot de passe", caption: "Formulaire de demande de réinitialisation.", help: "Remplissez les informations obligatoires indiquées dans le formulaire puis envoyez une seule demande. Notez que l’envoi d’une demande ne signifie pas que le mot de passe a déjà été changé." },
+      { src: "/Aides/reinitialisationByAdmin.png", alt: "Réinitialisation du mot de passe par l’administrateur", caption: "Étape de réinitialisation prise en charge par l’administrateur.", help: "Cette capture illustre le traitement côté administrateur. Vérifiez soigneusement le matricule du compte concerné avant d’agir, puis informez l’utilisateur selon la procédure interne. Ne partagez jamais les identifiants dans un canal non sécurisé." },
     ],
     steps: [
       "Sur l’écran de connexion, cliquez sur « Mot de passe oublié ? ».",
@@ -466,7 +466,7 @@ export default function GuideUtilisateurPage() {
                             />
                           </div>
                           <figcaption className="mt-2 text-sm font-semibold leading-5" style={{ color: "var(--text-main)" }}>{image.caption}</figcaption>
-                          <p className="mt-2 text-xs leading-5" style={{ color: "var(--text-muted)" }}>Conseil : comparez les libellés de cette capture avec ceux affichés dans votre session. L’interface peut évoluer ; fiez-vous aux champs et boutons réellement présents sur votre écran.</p>
+                          {image.help && <p className="mt-2 text-sm leading-6" style={{ color: "var(--text-muted)" }}>{image.help}</p>}
                         </figure>
                       ))}
                     </div>

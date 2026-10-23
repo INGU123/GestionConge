@@ -46,11 +46,12 @@ public class DemandeCongeService {
     private final JourFerieService jourFerieService;
 
     public DemandeCongeService(DemandeCongeRepository demandeRepo, Solde_congeRepository soldeRepo,
-            Type_congeRepository typeCongeRepo, Historique_mouvementService historiqueService,
-            Notification_congeService notificationService, UtilisateurRepository utilisateurRepo,
-            JourFerieService jourFerieService) {
+            AffectationCongeRepository affectationRepo, Type_congeRepository typeCongeRepo,
+            Historique_mouvementService historiqueService, Notification_congeService notificationService,
+            UtilisateurRepository utilisateurRepo, JourFerieService jourFerieService) {
         this.demandeRepo = demandeRepo;
         this.soldeRepo = soldeRepo;
+        this.affectationRepo = affectationRepo;
         this.typeCongeRepo = typeCongeRepo;
         this.historiqueService = historiqueService;
         this.notificationService = notificationService;

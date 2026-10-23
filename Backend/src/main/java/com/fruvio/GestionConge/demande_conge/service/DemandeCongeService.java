@@ -21,7 +21,9 @@ import com.fruvio.GestionConge.historique_mouvement.service.Historique_mouvement
 import com.fruvio.GestionConge.jour_ferie.service.JourFerieService;
 import com.fruvio.GestionConge.notifications_conge.service.Notification_congeService;
 import com.fruvio.GestionConge.solde_conge.entity.Solde_conge;
+import com.fruvio.GestionConge.solde_conge.entity.AffectationConge;
 import com.fruvio.GestionConge.solde_conge.repository.Solde_congeRepository;
+import com.fruvio.GestionConge.solde_conge.repository.AffectationCongeRepository;
 import com.fruvio.GestionConge.type_conge.entity.Type_conge;
 import com.fruvio.GestionConge.type_conge.service.ReglesCongeMadagascar;
 import com.fruvio.GestionConge.type_conge.repository.Type_congeRepository;
@@ -36,6 +38,7 @@ public class DemandeCongeService {
 
     private final DemandeCongeRepository demandeRepo;
     private final Solde_congeRepository soldeRepo;
+    private final AffectationCongeRepository affectationRepo;
     private final Type_congeRepository typeCongeRepo;
     private final Historique_mouvementService historiqueService;
     private final Notification_congeService notificationService;
@@ -223,45 +226,31 @@ public class DemandeCongeService {
             int annee = demande.getDateDebut().getYear();
 
             if (demande.getTypeCongeId() != null && demande.getUtilisateurId() != null) {
-                Optional<Solde_conge> soldeOpt = soldeRepo.findByUtilisateurIdAndTypeCongeIdAndPeriode(
-                        demande.getUtilisateurId(), demande.getTypeCongeId(), annee);
-
-                if (soldeOpt.isEmpty()) {
-                    throw new IllegalStateException(
-                            "Aucun solde trouvé pour le collaborateur #" + demande.getUtilisateurId() + ", le type #"
-                                    + demande.getTypeCongeId() + " pour l'année " + annee);
-                }
-
-                Solde_conge solde = soldeOpt.get();
-                int prisActuel = (solde.getSoldePris() != null) ? solde.getSoldePris() : 0;
-                int acquisActuel = (solde.getSoldeAquis() != null) ? solde.getSoldeAquis() : 0;
-
-                // Un solde peut avoir été initialisé avant le 12e mois de service.
-                // À l'ouverture effective du droit, attribuer au minimum les 30 jours légaux,
-                // sans écraser un droit contractuel plus favorable ni un solde déjà consommé.
-                if (congeAnnuel && prisActuel == 0
-                        && demandeur.getDate_embauche() != null
-                        && !demande.getDateDebut().isBefore(demandeur.getDate_embauche().plusYears(1))) {
-                    int minimumLegal = Math.max(ReglesCongeMadagascar.JOURS_ANNUELS_PAR_AN,
-                            typeConge.getNombreJoursParAn() == null ? 0 : typeConge.getNombreJoursParAn());
-                    if (acquisActuel < minimumLegal) {
-                        acquisActuel = minimumLegal;
-                        solde.setSoldeAquis(acquisActuel);
+                if (congeAnnuel) {
+                    debiterDroitsCongesAnnuels(demande, typeConge, jours, annee, demandeur);
+                } else {
+                    Optional<Solde_conge> soldeOpt = soldeRepo.findByUtilisateurIdAndTypeCongeIdAndPeriode(
+                            demande.getUtilisateurId(), demande.getTypeCongeId(), annee);
+                    if (soldeOpt.isEmpty()) {
+                        throw new IllegalStateException(
+                                "Aucun solde trouvé pour le collaborateur #" + demande.getUtilisateurId()
+                                        + ", le type #" + demande.getTypeCongeId() + " pour l'année " + annee);
                     }
+
+                    Solde_conge solde = soldeOpt.get();
+                    int prisActuel = solde.getSoldePris() != null ? solde.getSoldePris() : 0;
+                    int acquisActuel = solde.getSoldeAquis() != null ? solde.getSoldeAquis() : 0;
+                    int disponibles = Math.max(0, acquisActuel - prisActuel);
+                    if (disponibles < jours) {
+                        throw new IllegalStateException("Solde insuffisant : " + jours
+                                + " jour(s) demandés pour " + disponibles + " jour(s) disponibles.");
+                    }
+                    int nouveauPris = prisActuel + jours;
+                    solde.setSoldePris(nouveauPris);
+                    solde.setSoldeRestant(Math.max(0, acquisActuel - nouveauPris));
+                    solde.setDate_maj(new Timestamp(System.currentTimeMillis()));
+                    soldeRepo.save(solde);
                 }
-                int joursDisponibles = Math.max(0, acquisActuel - prisActuel);
-
-                if (joursDisponibles < jours) {
-                    throw new IllegalStateException("Solde insuffisant : " + jours + " jour(s) demandés pour "
-                            + joursDisponibles + " jour(s) disponibles.");
-                }
-
-                int nouveauSoldePris = prisActuel + jours;
-                solde.setSoldePris(nouveauSoldePris);
-                solde.setSoldeRestant(Math.max(0, acquisActuel - nouveauSoldePris));
-                solde.setDate_maj(new Timestamp(System.currentTimeMillis()));
-
-                soldeRepo.save(solde);
 
                 try {
                     historiqueService.enregistrerMouvement(demande.getUtilisateurId(), "DEBIT_CONGE", jours,
@@ -315,10 +304,30 @@ public class DemandeCongeService {
         }
 
         if ("VALIDEE".equalsIgnoreCase(demande.getStatut())) {
-            int joursAReintegrer = demande.getNombreJours() != null ? demande.getNombreJours()
-                    : calculerJoursOuvres(demande.getDateDebut(), demande.getDateFin());
-            if (demande.getTypeCongeId() != null && demande.getUtilisateurId() != null && demande.getDateDebut() != null
-                    && demande.getDateFin() != null) {
+            Type_conge typeConge = demande.getTypeCongeId() == null ? null
+                    : typeCongeRepo.findById(demande.getTypeCongeId()).orElse(null);
+            List<AffectationConge> affectations = affectationRepo.findByDemandeCongeId(demandeId);
+
+            if (ReglesCongeMadagascar.estCongeAnnuel(typeConge) && !affectations.isEmpty()) {
+                for (AffectationConge affectation : affectations) {
+                    soldeRepo.findById(affectation.getSoldeCongeId()).ifPresent(solde -> {
+                        int prisActuel = solde.getSoldePris() != null ? solde.getSoldePris() : 0;
+                        int acquisActuel = solde.getSoldeAquis() != null ? solde.getSoldeAquis() : 0;
+                        int nouveauPris = Math.max(0, prisActuel - affectation.getNombreJours());
+                        solde.setSoldePris(nouveauPris);
+                        solde.setSoldeRestant(Math.max(0, acquisActuel - nouveauPris));
+                        solde.setDate_maj(new Timestamp(System.currentTimeMillis()));
+                        soldeRepo.save(solde);
+                    });
+                }
+                affectationRepo.deleteByDemandeCongeId(demandeId);
+            } else if (demande.getTypeCongeId() != null && demande.getUtilisateurId() != null
+                    && demande.getDateDebut() != null && demande.getDateFin() != null) {
+                // Compatibilité avec les anciennes demandes qui n'ont pas d'affectation historisée.
+                int joursAReintegrer = demande.getNombreJours() != null ? demande.getNombreJours()
+                        : (ReglesCongeMadagascar.estCongeAnnuel(typeConge)
+                                ? jourFerieService.compterJoursCongeAnnuel(demande.getDateDebut(), demande.getDateFin())
+                                : calculerJoursOuvres(demande.getDateDebut(), demande.getDateFin()));
                 int annee = demande.getDateDebut().getYear();
                 Optional<Solde_conge> soldeOpt = soldeRepo.findByUtilisateurIdAndTypeCongeIdAndPeriode(
                         demande.getUtilisateurId(), demande.getTypeCongeId(), annee);
@@ -339,6 +348,81 @@ public class DemandeCongeService {
         return demandeRepo.save(demande);
     }
 
+
+
+    /**
+     * Débite les droits annuels les plus anciens en premier. Les reliquats des
+     * trois dernières années peuvent ainsi être utilisés conformément à l'article 130.
+     * Chaque débit est historisé afin que l'annulation restitue les bons millésimes.
+     */
+    private void debiterDroitsCongesAnnuels(DemandeConge demande, Type_conge typeConge,
+            int joursDemandes, int anneeDemande, Utilisateur demandeur) {
+        List<Solde_conge> soldes = soldeRepo.findByUtilisateurIdAndTypeCongeId(
+                demande.getUtilisateurId(), demande.getTypeCongeId());
+
+        Solde_conge soldeAnneeCourante = soldes.stream()
+                .filter(s -> s.getPeriode() == anneeDemande)
+                .findFirst()
+                .orElseThrow(() -> new IllegalStateException(
+                        "Aucun solde de congé annuel n'est initialisé pour l'année " + anneeDemande + "."));
+
+        int acquisCourant = soldeAnneeCourante.getSoldeAquis() == null ? 0 : soldeAnneeCourante.getSoldeAquis();
+        int prisCourant = soldeAnneeCourante.getSoldePris() == null ? 0 : soldeAnneeCourante.getSoldePris();
+        int minimumLegal = Math.max(ReglesCongeMadagascar.JOURS_ANNUELS_PAR_AN,
+                typeConge.getNombreJoursParAn() == null ? 0 : typeConge.getNombreJoursParAn());
+
+        if (prisCourant == 0 && acquisCourant < minimumLegal
+                && demandeur.getDate_embauche() != null
+                && !demande.getDateDebut().isBefore(demandeur.getDate_embauche().plusYears(1))) {
+            soldeAnneeCourante.setSoldeAquis(minimumLegal);
+            soldeAnneeCourante.setSoldeRestant(minimumLegal);
+            soldeAnneeCourante.setDate_maj(new Timestamp(System.currentTimeMillis()));
+            soldeRepo.save(soldeAnneeCourante);
+        }
+
+        List<Solde_conge> soldesUtilisables = soldes.stream()
+                .filter(s -> s.getPeriode() >= anneeDemande - 2 && s.getPeriode() <= anneeDemande)
+                .sorted((a, b) -> Integer.compare(a.getPeriode(), b.getPeriode()))
+                .toList();
+
+        int totalDisponible = soldesUtilisables.stream()
+                .mapToInt(s -> Math.max(0, (s.getSoldeAquis() == null ? 0 : s.getSoldeAquis())
+                        - (s.getSoldePris() == null ? 0 : s.getSoldePris())))
+                .sum();
+
+        if (totalDisponible < joursDemandes) {
+            throw new IllegalStateException("Solde de congé annuel insuffisant : " + joursDemandes
+                    + " jour(s) demandés, " + totalDisponible
+                    + " jour(s) disponibles en tenant compte des reliquats utilisables sur trois ans.");
+        }
+
+        int restantAImputer = joursDemandes;
+        for (Solde_conge solde : soldesUtilisables) {
+            if (restantAImputer == 0) {
+                break;
+            }
+            int acquis = solde.getSoldeAquis() == null ? 0 : solde.getSoldeAquis();
+            int pris = solde.getSoldePris() == null ? 0 : solde.getSoldePris();
+            int disponible = Math.max(0, acquis - pris);
+            int imputation = Math.min(disponible, restantAImputer);
+            if (imputation == 0) {
+                continue;
+            }
+
+            solde.setSoldePris(pris + imputation);
+            solde.setSoldeRestant(Math.max(0, acquis - (pris + imputation)));
+            solde.setDate_maj(new Timestamp(System.currentTimeMillis()));
+            soldeRepo.save(solde);
+
+            AffectationConge affectation = new AffectationConge();
+            affectation.setDemandeCongeId(demande.getId());
+            affectation.setSoldeCongeId(solde.getId());
+            affectation.setNombreJours(imputation);
+            affectationRepo.save(affectation);
+
+            restantAImputer -= imputation;
+        }
+    }
 
     /**
      * Vérifie la première fraction de congé annuel : 15 jours continus au cours

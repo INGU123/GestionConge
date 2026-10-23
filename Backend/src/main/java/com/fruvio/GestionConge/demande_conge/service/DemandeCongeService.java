@@ -23,6 +23,7 @@ import com.fruvio.GestionConge.notifications_conge.service.Notification_congeSer
 import com.fruvio.GestionConge.solde_conge.entity.Solde_conge;
 import com.fruvio.GestionConge.solde_conge.repository.Solde_congeRepository;
 import com.fruvio.GestionConge.type_conge.entity.Type_conge;
+import com.fruvio.GestionConge.type_conge.service.ReglesCongeMadagascar;
 import com.fruvio.GestionConge.type_conge.repository.Type_congeRepository;
 import com.fruvio.GestionConge.utilisateur.entity.Role;
 import com.fruvio.GestionConge.utilisateur.entity.Utilisateur;
@@ -69,54 +70,63 @@ public class DemandeCongeService {
         demande.setStatut("EN_ATTENTE");
         demande.setDateCreation(LocalDate.now());
 
-        if (demande.getDateDebut() != null && demande.getDateFin() != null) {
-            if (demande.getDateFin().isBefore(demande.getDateDebut())) {
-                throw new IllegalArgumentException("La date de fin ne peut pas être antérieure à la date de début.");
-            }
+        if (demande.getDateDebut() == null || demande.getDateFin() == null) {
+            throw new IllegalArgumentException("Les dates de début et de fin sont obligatoires.");
+        }
+        if (demande.getDateFin().isBefore(demande.getDateDebut())) {
+            throw new IllegalArgumentException("La date de fin ne peut pas être antérieure à la date de début.");
+        }
+        if (demande.getTypeCongeId() == null) {
+            throw new IllegalArgumentException("Veuillez sélectionner un type de congé.");
+        }
 
-            int joursOuvres = calculerJoursOuvres(demande.getDateDebut(), demande.getDateFin());
-            if (joursOuvres <= 0) {
-                throw new IllegalArgumentException(
-                        "Cette période ne contient aucune journée ouvrée. La demande de congé doit inclure au moins un jour ouvré.");
-            }
-            demande.setNombreJours(joursOuvres);
+        Type_conge typeConge = typeCongeRepo.findById(demande.getTypeCongeId())
+                .orElseThrow(() -> new IllegalArgumentException("Le type de congé sélectionné n'existe pas."));
 
-            if (demande.getTypeCongeId() == null) {
-                throw new IllegalArgumentException("Veuillez sélectionner un type de congé.");
-            }
+        boolean congeAnnuel = ReglesCongeMadagascar.estCongeAnnuel(typeConge);
+        int nombreJours = congeAnnuel
+                ? jourFerieService.compterJoursCongeAnnuel(demande.getDateDebut(), demande.getDateFin())
+                : calculerJoursOuvres(demande.getDateDebut(), demande.getDateFin());
 
-            Type_conge typeConge = typeCongeRepo.findById(demande.getTypeCongeId())
-                    .orElseThrow(() -> new IllegalArgumentException(
-                            "Le type de congé sélectionné n'existe pas."));
+        if (nombreJours <= 0) {
+            throw new IllegalArgumentException(congeAnnuel
+                    ? "La période demandée ne contient aucun jour de congé décomptable après exclusion des jours fériés."
+                    : "Cette période ne contient aucune journée ouvrée. La demande doit inclure au moins un jour ouvré.");
+        }
 
-            Integer limiteJours = typeConge.getNombreJoursParAn();
-            if (limiteJours != null && limiteJours > 0 && joursOuvres > limiteJours) {
-                throw new IllegalArgumentException(
-                        "Demande non autorisée : le type « " + typeConge.getLibelle()
-                                + " » autorise au maximum " + limiteJours
-                                + " jour(s) ouvré(s), mais vous en demandez " + joursOuvres + ".");
-            }
+        if (congeAnnuel) {
+            Utilisateur demandeur = utilisateurRepo.findById(utilisateurId)
+                    .orElseThrow(() -> new IllegalArgumentException("Collaborateur demandeur introuvable."));
+            ReglesCongeMadagascar.verifierOuvertureDroit(demandeur, demande.getDateDebut());
+            verifierPremiereFraction(demande, demandeur, nombreJours);
+        }
 
-            for (DemandeConge existing : demandeRepo.findByUtilisateurId(utilisateurId)) {
-                if (existing == null || Objects.equals(existing.getId(), demande.getId())) {
-                    continue;
-                }
-                if (existing.getDateDebut() == null || existing.getDateFin() == null) {
-                    continue;
-                }
-                if ("ANNULEE".equalsIgnoreCase(existing.getStatut())
-                        || "REFUSEE".equalsIgnoreCase(existing.getStatut())) {
-                    continue;
-                }
-                boolean overlaps = !(demande.getDateFin().isBefore(existing.getDateDebut())
-                        || demande.getDateDebut().isAfter(existing.getDateFin()));
-                if (overlaps) {
-                    throw new IllegalStateException(
-                            "Cette période chevauche une autre demande de congé déjà enregistrée.");
-                }
+        Integer limiteJours = typeConge.getNombreJoursParAn();
+        if (limiteJours != null && limiteJours > 0 && nombreJours > limiteJours) {
+            throw new IllegalArgumentException(
+                    "Demande non autorisée : le type « " + typeConge.getLibelle()
+                            + " » autorise au maximum " + limiteJours
+                            + " jour(s) par demande, mais vous en demandez " + nombreJours + ".");
+        }
+        demande.setNombreJours(nombreJours);
+
+        for (DemandeConge existing : demandeRepo.findByUtilisateurId(utilisateurId)) {
+            if (existing == null || Objects.equals(existing.getId(), demande.getId())) {
+                continue;
             }
-        } else {
-            demande.setNombreJours(0);
+            if (existing.getDateDebut() == null || existing.getDateFin() == null) {
+                continue;
+            }
+            if ("ANNULEE".equalsIgnoreCase(existing.getStatut())
+                    || "REFUSEE".equalsIgnoreCase(existing.getStatut())) {
+                continue;
+            }
+            boolean overlaps = !(demande.getDateFin().isBefore(existing.getDateDebut())
+                    || demande.getDateDebut().isAfter(existing.getDateFin()));
+            if (overlaps) {
+                throw new IllegalStateException(
+                        "Cette période chevauche une autre demande de congé déjà enregistrée.");
+            }
         }
 
         DemandeConge saved = demandeRepo.save(demande);
@@ -302,6 +312,41 @@ public class DemandeCongeService {
 
         demande.setStatut("ANNULEE");
         return demandeRepo.save(demande);
+    }
+
+
+    /**
+     * Vérifie la première fraction de congé annuel : 15 jours continus au cours
+     * des trois mois suivant l'ouverture du droit, en tenant compte des congés
+     * annuels déjà validés dans cette fenêtre.
+     */
+    private void verifierPremiereFraction(DemandeConge demande, Utilisateur demandeur, int nombreJours) {
+        if (!ReglesCongeMadagascar.estDansFenetrePremiereFraction(demandeur, demande.getDateDebut())) {
+            return;
+        }
+        if (nombreJours >= ReglesCongeMadagascar.PREMIERE_FRACTION_JOURS) {
+            return;
+        }
+
+        LocalDate ouverture = ReglesCongeMadagascar.dateOuvertureDroit(demandeur);
+        LocalDate finFenetre = ouverture.plusMonths(3).minusDays(1);
+        boolean fractionDejaPrise = demandeRepo.findByUtilisateurId(demande.getUtilisateurId()).stream()
+                .filter(existing -> existing != null
+                        && !Objects.equals(existing.getId(), demande.getId())
+                        && Objects.equals(existing.getTypeCongeId(), demande.getTypeCongeId())
+                        && "VALIDEE".equalsIgnoreCase(existing.getStatut())
+                        && existing.getDateDebut() != null
+                        && !existing.getDateDebut().isBefore(ouverture)
+                        && !existing.getDateDebut().isAfter(finFenetre))
+                .anyMatch(existing -> existing.getNombreJours() != null
+                        && existing.getNombreJours() >= ReglesCongeMadagascar.PREMIERE_FRACTION_JOURS);
+
+        if (!fractionDejaPrise) {
+            throw new IllegalArgumentException(
+                    "La première fraction du congé annuel doit être prise de manière ininterrompue sur au moins "
+                            + ReglesCongeMadagascar.PREMIERE_FRACTION_JOURS
+                            + " jours dans les trois mois suivant l'ouverture du droit (article 130).");
+        }
     }
 
     private int calculerJoursOuvres(LocalDate dateDebut, LocalDate dateFin) {

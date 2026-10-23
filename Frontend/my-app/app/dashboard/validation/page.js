@@ -133,6 +133,11 @@ export default function ValidationPage() {
   };
 
   const handleConfirmRefus = async () => {
+    const motif = modalRefus.motif.trim();
+    if (!motif) {
+      showToast("Le motif de refus est obligatoire. Veuillez justifier votre décision.", "warning");
+      return;
+    }
     if (!manager?.id || !modalRefus.demandeId) return;
     setActionLoading(modalRefus.demandeId);
     try {
@@ -140,12 +145,12 @@ export default function ValidationPage() {
         modalRefus.demandeId,
         manager.id,
         "REFUSEE",
-        modalRefus.motif
+        motif
       );
       setDemandes((prev) =>
         prev.map((d) =>
           d.id === modalRefus.demandeId
-            ? { ...d, statut: "REFUSEE", motifRefus: modalRefus.motif }
+            ? { ...d, statut: "REFUSEE", motifRefus: motif }
             : d
         )
       );
@@ -376,11 +381,19 @@ export default function ValidationPage() {
             </p>
             <textarea
               rows={3}
+              required
+              aria-label="Motif obligatoire du refus"
+              aria-invalid={!modalRefus.motif.trim()}
               value={modalRefus.motif}
               onChange={(e) => setModalRefus({ ...modalRefus, motif: e.target.value })}
-              placeholder="Ex: Impératifs de service, effectif critique sur la période, solde insuffisant..."
+              placeholder="Expliquez obligatoirement la raison du refus..."
               className="textarea textarea-bordered w-full text-sm text-slate-800 bg-white focus:outline-hidden"
             />
+            {!modalRefus.motif.trim() && (
+              <p className="text-xs text-rose-600" role="alert">
+                Le motif de refus est obligatoire. Le refus ne pourra pas être confirmé sans justification.
+              </p>
+            )}
             <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
               <button
                 onClick={() => setModalRefus({ open: false, demandeId: null, motif: "" })}
@@ -390,7 +403,8 @@ export default function ValidationPage() {
               </button>
               <button
                 onClick={handleConfirmRefus}
-                className="btn btn-error btn-sm text-white font-semibold gap-1"
+                disabled={!modalRefus.motif.trim() || actionLoading === modalRefus.demandeId}
+                className="btn btn-error btn-sm text-white font-semibold gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <X className="w-4 h-4" />
                 Confirmer le refus

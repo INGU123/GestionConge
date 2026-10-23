@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import {
   FiBookOpen as BookOpen,
   FiSearch as Search,
@@ -28,6 +29,9 @@ const sections = [
     description: "Accéder à votre espace GestionConge.",
     icon: LogIn,
     roles: "Tous les rôles",
+    images: [
+      { src: "/Aides/PageLogin.png", alt: "Écran de connexion GestionConge", caption: "Écran de connexion : saisie du matricule et du mot de passe." },
+    ],
     steps: [
       "Ouvrez l’adresse de GestionConge communiquée par votre organisation.",
       "Saisissez votre matricule dans le champ « Matricule ».",
@@ -45,6 +49,9 @@ const sections = [
     description: "Comprendre le menu et retrouver les fonctionnalités.",
     icon: LayoutDashboard,
     roles: "Tous les rôles",
+    images: [
+      { src: "/Aides/retractMenu,nightmod,acceuilPage.png", alt: "Accueil, menu rétractable et mode jour/nuit", caption: "Tableau de bord, menu latéral rétractable et apparence jour/nuit." },
+    ],
     steps: [
       "Utilisez le menu latéral pour ouvrir une rubrique.",
       "« Accueil » ramène au tableau de bord.",
@@ -87,6 +94,9 @@ const sections = [
     roles: "Tous les rôles selon les droits",
     href: "/dashboard/solde",
     action: "Ouvrir les soldes",
+    images: [
+      { src: "/Aides/SoldQuota.png", alt: "Écran des soldes et quotas de congés", caption: "Consultation des soldes et quotas de congés." },
+    ],
     steps: [
       "Ouvrez « Mes Soldes » ou « Soldes & Quotas ».",
       "Repérez le collaborateur ou le type de congé concerné selon les données affichées.",
@@ -99,6 +109,24 @@ const sections = [
     ],
   },
   {
+    id: "types-conge",
+    title: "5. Types de congés",
+    description: "Consulter les catégories de congés proposées dans l’application.",
+    icon: CalendarDays,
+    roles: "Selon les droits du compte",
+    images: [
+      { src: "/Aides/typeConge.png", alt: "Écran de gestion des types de congés", caption: "Écran des types de congés configurés dans GestionConge." },
+    ],
+    steps: [
+      "Ouvrez la rubrique des types de congés si elle est disponible dans votre menu.",
+      "Consultez les intitulés et les informations affichés pour chaque type.",
+      "Lors de la création d’une demande, choisissez uniquement un type proposé par le formulaire.",
+    ],
+    notes: [
+      "Les types disponibles dépendent de la configuration de l’application et des droits de votre compte.",
+    ],
+  },
+  {
     id: "historique",
     title: "5. Historique et statuts",
     description: "Retrouver une demande et comprendre son état.",
@@ -106,6 +134,9 @@ const sections = [
     roles: "Selon les droits du compte",
     href: "/dashboard/historique",
     action: "Ouvrir l’historique",
+    images: [
+      { src: "/Aides/historiqueConge.png", alt: "Historique des congés", caption: "Historique des demandes et des mouvements de congés." },
+    ],
     steps: [
       "Ouvrez « Historique » depuis le menu latéral.",
       "Repérez la demande ou le mouvement recherché dans la liste.",
@@ -126,6 +157,9 @@ const sections = [
     roles: "Administrateur (ADMIN)",
     href: "/dashboard/utilisateurs",
     action: "Ouvrir les collaborateurs",
+    images: [
+      { src: "/Aides/gestionCollaborateur.png", alt: "Gestion des collaborateurs", caption: "Liste et gestion des collaborateurs." },
+    ],
     steps: [
       "Ouvrez « Gestion Collaborateurs ».",
       "Utilisez la recherche pour retrouver un collaborateur par matricule, nom ou rôle.",
@@ -147,6 +181,9 @@ const sections = [
     roles: "Manager et administrateur selon les autorisations",
     href: "/dashboard/validation",
     action: "Ouvrir la validation",
+    images: [
+      { src: "/Aides/validationConge.png", alt: "Validation des demandes de congé", caption: "Écran de traitement et de validation des demandes." },
+    ],
     steps: [
       "Ouvrez « Validation des congés » si cette rubrique est disponible dans votre menu.",
       "Consultez les informations de la demande : collaborateur, dates, motif et statut.",
@@ -186,6 +223,11 @@ const sections = [
     roles: "Tous les rôles",
     href: "/Components/mdpForget",
     action: "Ouvrir la récupération",
+    images: [
+      { src: "/Aides/mdpForget.png", alt: "Accès à la récupération du mot de passe", caption: "Écran de récupération du mot de passe." },
+      { src: "/Aides/demandeReinitialisationMdp.png", alt: "Demande de réinitialisation du mot de passe", caption: "Formulaire de demande de réinitialisation." },
+      { src: "/Aides/reinitialisationByAdmin.png", alt: "Réinitialisation du mot de passe par l’administrateur", caption: "Étape de réinitialisation prise en charge par l’administrateur." },
+    ],
     steps: [
       "Sur l’écran de connexion, cliquez sur « Mot de passe oublié ? ».",
       "Suivez les instructions affichées dans le formulaire de récupération.",
@@ -350,6 +392,25 @@ export default function GuideUtilisateurPage() {
                       </li>
                     ))}
                   </ol>
+                  {section.images?.length > 0 && (
+                    <div className="mt-5 grid gap-4">
+                      {section.images.map((image) => (
+                        <figure key={image.src} className="overflow-hidden rounded-xl border border-[var(--primary-border)] bg-[var(--page-bg)] p-3 sm:p-4">
+                          <div className="overflow-hidden rounded-lg border border-[var(--primary-border)] bg-[var(--panel)]">
+                            <Image
+                              src={image.src}
+                              alt={image.alt}
+                              width={1600}
+                              height={1000}
+                              sizes="(max-width: 768px) 100vw, 900px"
+                              className="h-auto max-h-[620px] w-full object-contain"
+                            />
+                          </div>
+                          <figcaption className="mt-2 text-xs leading-5" style={{ color: "var(--text-muted)" }}>{image.caption}</figcaption>
+                        </figure>
+                      ))}
+                    </div>
+                  )}
                   {section.notes?.length > 0 && (
                     <div className="mt-5 rounded-xl border border-blue-500/20 bg-blue-500/5 p-4">
                       <div className="mb-2 flex items-center gap-2 text-sm font-semibold" style={{ color: "var(--text-main)" }}>

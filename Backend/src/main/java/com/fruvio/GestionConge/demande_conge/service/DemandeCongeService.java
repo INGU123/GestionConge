@@ -169,6 +169,12 @@ public class DemandeCongeService {
             throw new IllegalArgumentException("Le statut de traitement est invalide.");
         }
 
+        String motifRefusNormalise = motifRefus == null ? "" : motifRefus.trim();
+        if ("REFUSEE".equals(statutNormalise) && motifRefusNormalise.isEmpty()) {
+            throw new IllegalArgumentException(
+                    "Le motif de refus est obligatoire. Veuillez justifier votre décision avant de continuer.");
+        }
+
         if (!"EN_ATTENTE".equalsIgnoreCase(demande.getStatut())) {
             throw new IllegalStateException("Seule une demande en attente peut être traitée.");
         }
@@ -179,7 +185,7 @@ public class DemandeCongeService {
         demande.setDateValidation(LocalDate.now());
 
         if ("REFUSEE".equalsIgnoreCase(statutNormalise)) {
-            demande.setMotifRefus(motifRefus);
+            demande.setMotifRefus(motifRefusNormalise);
         }
 
         boolean estValidee = "VALIDEE".equalsIgnoreCase(statutNormalise) || "VALIDE".equalsIgnoreCase(statutNormalise)
@@ -245,7 +251,7 @@ public class DemandeCongeService {
             try {
                 notificationService.creerNotification(demande.getUtilisateurId(),
                         "Votre demande de congé du " + demande.getDateDebut() + " a été REFUSÉE"
-                                + (motifRefus != null && !motifRefus.isEmpty() ? " (Motif : " + motifRefus + ")" : "."),
+                                + (motifRefusNormalise.isEmpty() ? "." : " (Motif : " + motifRefusNormalise + ")"),
                         "REFUS", "/dashboard/demande");
             } catch (Exception e) {
                 log.warn("Échec d'envoi notification refus : {}", e.getMessage());

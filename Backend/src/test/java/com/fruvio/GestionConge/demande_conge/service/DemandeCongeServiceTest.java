@@ -24,6 +24,7 @@ import com.fruvio.GestionConge.jour_ferie.service.JourFerieService;
 import com.fruvio.GestionConge.historique_mouvement.service.Historique_mouvementService;
 import com.fruvio.GestionConge.notifications_conge.service.Notification_congeService;
 import com.fruvio.GestionConge.solde_conge.entity.Solde_conge;
+import com.fruvio.GestionConge.solde_conge.repository.AffectationCongeRepository;
 import com.fruvio.GestionConge.solde_conge.repository.Solde_congeRepository;
 import com.fruvio.GestionConge.utilisateur.entity.Role;
 import com.fruvio.GestionConge.type_conge.entity.Type_conge;
@@ -39,6 +40,9 @@ class DemandeCongeServiceTest {
 
         @Mock
         private Solde_congeRepository soldeRepo;
+
+        @Mock
+        private AffectationCongeRepository affectationRepo;
 
         @Mock
         private Type_congeRepository typeCongeRepo;
@@ -62,6 +66,9 @@ class DemandeCongeServiceTest {
         void setUp() {
                 lenient().when(demandeRepo.save(any(DemandeConge.class)))
                                 .thenAnswer(invocation -> invocation.getArgument(0));
+                lenient().when(typeCongeRepo.findById(1L)).thenReturn(Optional.of(
+                                Type_conge.builder().id(1L).code("EXC").libelle("Congé exceptionnel")
+                                                .nombreJoursParAn(30).build()));
         }
 
         @Test
@@ -104,10 +111,13 @@ class DemandeCongeServiceTest {
                                 .dateFin(LocalDate.of(2026, 10, 15)).build();
 
                 when(typeCongeRepo.findById(1L)).thenReturn(Optional.of(
-                                Type_conge.builder().id(1L).libelle("Congé annuel").nombreJoursParAn(30).build()));
+                                Type_conge.builder().id(1L).code("CA").libelle("Congé annuel")
+                                                .nombreJoursParAn(30).build()));
+                when(utilisateurRepo.findById(7L)).thenReturn(Optional.of(
+                                Utilisateur.builder().id(7L).date_embauche(LocalDate.of(2024, 1, 1)).build()));
                 when(demandeRepo.findByUtilisateurId(7L)).thenReturn(List.of(existing));
-                when(jourFerieService.compterJoursOuvres(LocalDate.of(2026, 10, 5), LocalDate.of(2026, 10, 15)))
-                                .thenReturn(7);
+                when(jourFerieService.compterJoursCongeAnnuel(LocalDate.of(2026, 10, 5), LocalDate.of(2026, 10, 15)))
+                                .thenReturn(11);
 
                 assertThrows(IllegalStateException.class, () -> demandeCongeService.creerDemande(7L, newRequest,
                                 Utilisateur.builder().id(7L).role(Role.EMPLOYE).build()));

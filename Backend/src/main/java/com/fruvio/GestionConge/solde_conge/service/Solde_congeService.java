@@ -107,10 +107,13 @@ public class Solde_congeService {
                 if (ReglesCongeMadagascar.estCongeAnnuel(type)) {
                     LocalDate dateOuverture = ReglesCongeMadagascar.dateOuvertureDroit(utilisateur);
                     LocalDate finAnnee = LocalDate.of(annee, 12, 31);
-                    // Le droit annuel n'est disponible qu'à partir de 12 mois de service effectif.
-                    // La validation de la demande contrôle aussi sa date de début réelle.
-                    nbJours = finAnnee.isBefore(dateOuverture) ? 0
-                            : Math.max(ReglesCongeMadagascar.JOURS_ANNUELS_PAR_AN, nbJours);
+                    boolean droitOuvertDansCettePeriode = !finAnnee.isBefore(dateOuverture)
+                            && (annee < LocalDate.now().getYear() || !LocalDate.now().isBefore(dateOuverture));
+                    // Pour l'année courante, ne pas afficher les 30 jours avant l'ouverture réelle du droit.
+                    // La validation vérifie également la date de début du congé demandé.
+                    nbJours = droitOuvertDansCettePeriode
+                            ? Math.max(ReglesCongeMadagascar.JOURS_ANNUELS_PAR_AN, nbJours)
+                            : 0;
                 }
 
                 solde.setSoldeAquis(nbJours);

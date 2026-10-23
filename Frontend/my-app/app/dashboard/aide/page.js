@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { getCurrentUser } from "@/lib/apiClient";
 import Link from "next/link";
 import Image from "next/image";
 import {
@@ -25,7 +26,9 @@ import {
 const sections = [
   {
     id: "connexion",
-    title: "1. Connexion et accès",
+    title: "Connexion et accès",
+    forRoles: ["EMPLOYE", "MANAGER", "ADMIN"],
+    detail: "Utilisez votre matricule et le mot de passe associé. Après connexion, vérifiez que le nom et le rôle affichés correspondent à votre compte. Si le rôle est incorrect, contactez l’administrateur.",
     description: "Accéder à votre espace GestionConge.",
     icon: LogIn,
     roles: "Tous les rôles",
@@ -45,7 +48,9 @@ const sections = [
   },
   {
     id: "tableau-de-bord",
-    title: "2. Tableau de bord et navigation",
+    title: "Tableau de bord et navigation",
+    forRoles: ["EMPLOYE", "MANAGER", "ADMIN"],
+    detail: "Le menu varie selon le profil. Les collaborateurs accèdent à leurs demandes, les managers aux demandes à traiter selon leurs droits et l’administrateur aux fonctions de gestion. Une rubrique absente peut simplement être réservée à un autre rôle.",
     description: "Comprendre le menu et retrouver les fonctionnalités.",
     icon: LayoutDashboard,
     roles: "Tous les rôles",
@@ -66,7 +71,9 @@ const sections = [
   },
   {
     id: "demandes",
-    title: "3. Créer et suivre une demande de congé",
+    title: "Créer et suivre une demande de congé",
+    forRoles: ["EMPLOYE", "MANAGER"],
+    detail: "Cette rubrique concerne les collaborateurs et les managers autorisés à déposer une demande pour leur propre compte. Elle est volontairement masquée pour ADMIN, dont l’espace est consacré à l’administration et au suivi des outils RH.",
     description: "Saisir les informations puis suivre la décision.",
     icon: ClipboardList,
     roles: "Collaborateur et manager selon les droits",
@@ -88,7 +95,9 @@ const sections = [
   },
   {
     id: "soldes",
-    title: "4. Consulter les soldes et quotas",
+    title: "Consulter les soldes et quotas",
+    forRoles: ["EMPLOYE", "MANAGER", "ADMIN"],
+    detail: "Vérifiez le nom du collaborateur, le type de congé et les valeurs de solde/quotas avant de tirer une conclusion. Les libellés visibles dans le tableau font foi. Ne supposez pas qu’une demande en attente a déjà été décomptée.",
     description: "Lire les informations de congés disponibles.",
     icon: CalendarDays,
     roles: "Tous les rôles selon les droits",
@@ -110,7 +119,9 @@ const sections = [
   },
   {
     id: "types-conge",
-    title: "5. Types de congés",
+    title: "Types de congés",
+    forRoles: ["ADMIN"],
+    detail: "Rubrique réservée à l’administration : consultez les types configurés dans l’application. Les collaborateurs choisissent un type dans le formulaire de demande, sans modifier la configuration.",
     description: "Consulter les catégories de congés proposées dans l’application.",
     icon: CalendarDays,
     roles: "Selon les droits du compte",
@@ -128,7 +139,9 @@ const sections = [
   },
   {
     id: "historique",
-    title: "5. Historique et statuts",
+    title: "Historique et statuts",
+    forRoles: ["EMPLOYE", "MANAGER", "ADMIN"],
+    detail: "Pour retrouver une entrée, comparez les dates, le type de congé et le statut. Si le statut ne correspond pas à ce que vous attendiez, consultez les détails disponibles ou contactez le responsable avant de soumettre une seconde demande.",
     description: "Retrouver une demande et comprendre son état.",
     icon: History,
     roles: "Selon les droits du compte",
@@ -151,7 +164,9 @@ const sections = [
   },
   {
     id: "collaborateurs",
-    title: "6. Gestion des collaborateurs",
+    title: "Gestion des collaborateurs",
+    forRoles: ["ADMIN"],
+    detail: "Avant de créer ou modifier un compte, vérifiez le matricule et l’identité. Contrôlez le rôle attribué, car il détermine les rubriques accessibles. Confirmez une suppression uniquement après avoir vérifié le compte concerné.",
     description: "Administrer les comptes et les informations autorisées.",
     icon: Users,
     roles: "Administrateur (ADMIN)",
@@ -175,7 +190,9 @@ const sections = [
   },
   {
     id: "validation",
-    title: "7. Traiter les demandes",
+    title: "Traiter les demandes",
+    forRoles: ["MANAGER", "ADMIN"],
+    detail: "Le manager examine les demandes auxquelles il a accès. L’administrateur peut accéder aux outils de validation selon les autorisations prévues. Avant de décider, vérifiez l’identité, les dates et le motif, puis contrôlez le statut mis à jour.",
     description: "Examiner les demandes et enregistrer une décision.",
     icon: CheckCircle2,
     roles: "Manager et administrateur selon les autorisations",
@@ -199,7 +216,9 @@ const sections = [
   },
   {
     id: "notifications",
-    title: "8. Notifications",
+    title: "Notifications",
+    forRoles: ["EMPLOYE", "MANAGER", "ADMIN"],
+    detail: "Ouvrez la cloche pour lire les événements, puis utilisez les filtres proposés. Une notification affichée dans l’application n’est pas nécessairement un e-mail envoyé.",
     description: "Lire les alertes affichées dans la barre supérieure.",
     icon: Bell,
     roles: "Tous les rôles",
@@ -217,7 +236,9 @@ const sections = [
   },
   {
     id: "mot-de-passe",
-    title: "9. Mot de passe oublié",
+    title: "Mot de passe oublié",
+    forRoles: ["EMPLOYE", "MANAGER", "ADMIN"],
+    detail: "Démarrez depuis l’écran de connexion et suivez exactement le formulaire actuellement affiché. Si la demande doit être traitée par l’administrateur, surveillez son retour. Ne transmettez jamais votre mot de passe existant.",
     description: "Demander la récupération de votre accès.",
     icon: KeyRound,
     roles: "Tous les rôles",
@@ -242,7 +263,9 @@ const sections = [
   },
   {
     id: "securite",
-    title: "10. Sécurité et bonnes pratiques",
+    title: "Sécurité et bonnes pratiques",
+    forRoles: ["EMPLOYE", "MANAGER", "ADMIN"],
+    detail: "Protégez votre session et les informations RH. Vérifiez les données avant une opération, ne partagez pas vos identifiants et signalez les anomalies au responsable désigné.",
     description: "Protéger votre compte et éviter les erreurs.",
     icon: ShieldCheck,
     roles: "Tous les rôles",
@@ -262,11 +285,34 @@ const sections = [
 export default function GuideUtilisateurPage() {
   const [search, setSearch] = useState("");
   const [openSections, setOpenSections] = useState(["connexion"]);
+  const [currentUser, setCurrentUser] = useState(null);
+  const [userLoading, setUserLoading] = useState(true);
+
+  useEffect(() => {
+    let active = true;
+    getCurrentUser()
+      .then((user) => { if (active) setCurrentUser(user || null); })
+      .catch((error) => {
+        console.error("Impossible de récupérer le rôle pour le guide :", error);
+        if (active) setCurrentUser(null);
+      })
+      .finally(() => { if (active) setUserLoading(false); });
+    return () => { active = false; };
+  }, []);
+
+  const role = (currentUser?.role || "").toString().trim().toUpperCase().replace(/^ROLE_/, "");
+  const isAdmin = role === "ADMIN";
+  const isManager = role === "MANAGER";
+  const roleLabel = isAdmin ? "Administrateur" : isManager ? "Manager" : role === "EMPLOYE" || role === "EMPLOYÉ" ? "Collaborateur" : "Utilisateur";
+  const visibleSections = useMemo(
+    () => sections.filter((section) => !section.forRoles || section.forRoles.includes(role)),
+    [role],
+  );
 
   const filteredSections = useMemo(() => {
     const term = search.trim().toLocaleLowerCase("fr");
-    if (!term) return sections;
-    return sections.filter((section) =>
+    if (!term) return visibleSections;
+    return visibleSections.filter((section) =>
       [
         section.title,
         section.description,
@@ -278,7 +324,7 @@ export default function GuideUtilisateurPage() {
         .toLocaleLowerCase("fr")
         .includes(term),
     );
-  }, [search]);
+  }, [search, visibleSections]);
 
   const toggleSection = (id) => {
     setOpenSections((current) =>
@@ -301,9 +347,7 @@ export default function GuideUtilisateurPage() {
               Guide d’utilisation GestionConge
             </h1>
             <p className="mt-3 max-w-xl text-sm leading-6 opacity-80">
-              Retrouvez les étapes essentielles pour utiliser vos demandes,
-              consulter les soldes, suivre les décisions et comprendre les
-              outils disponibles selon votre rôle.
+              Retrouvez une aide adaptée à votre profil : {roleLabel}. Les rubriques réservées aux autres rôles sont masquées pour vous montrer les procédures utiles à votre travail.
             </p>
           </div>
           <div className="flex h-20 w-20 shrink-0 items-center justify-center self-start rounded-2xl bg-blue-500/15 md:self-center">
@@ -333,13 +377,17 @@ export default function GuideUtilisateurPage() {
         </p>
       </section>
 
+      <div className="mb-1 rounded-xl border border-[var(--primary-border)] bg-[var(--panel)] p-4 text-sm" style={{ color: "var(--text-muted)" }}>
+        <span className="font-semibold" style={{ color: "var(--text-main)" }}>Profil actuel : {roleLabel}</span>
+        <p className="mt-1">Le guide affiche uniquement les rubriques prévues pour ce rôle. Les opérations restent soumises aux autorisations du compte.</p>
+      </div>
       <div className="grid gap-3 sm:grid-cols-2">
         {[
-          { label: "Collaborateur", detail: "Demandes et consultation des soldes", icon: ClipboardList },
-          { label: "Manager", detail: "Examen des demandes accessibles", icon: CheckCircle2 },
-          { label: "Administrateur", detail: "Gestion des collaborateurs et quotas", icon: Users },
-          { label: "Tous les utilisateurs", detail: "Connexion, notifications et sécurité", icon: ShieldCheck },
-        ].map((role) => {
+          { label: "Collaborateur", detail: "Déposer et suivre ses demandes", icon: ClipboardList, visible: !isAdmin },
+          { label: "Manager", detail: "Examiner les demandes accessibles", icon: CheckCircle2, visible: isManager },
+          { label: "Administrateur", detail: "Gérer les comptes et les paramètres RH", icon: Users, visible: isAdmin },
+          { label: "Tous les utilisateurs", detail: "Connexion, notifications et sécurité", icon: ShieldCheck, visible: true },
+        ].filter((item) => item.visible).map((role) => {
           const Icon = role.icon;
           return (
             <div key={role.label} className="flex items-start gap-3 rounded-xl border border-[var(--primary-border)] bg-[var(--panel)] p-4">
@@ -355,6 +403,11 @@ export default function GuideUtilisateurPage() {
         })}
       </div>
 
+      {userLoading ? (
+        <section className="rounded-2xl border border-[var(--primary-border)] bg-[var(--panel)] p-6 text-sm" style={{ color: "var(--text-muted)" }}>
+          Chargement des rubriques correspondant à votre rôle…
+        </section>
+      ) : (
       <section className="space-y-3">
         {filteredSections.map((section) => {
           const Icon = section.icon;
@@ -383,6 +436,12 @@ export default function GuideUtilisateurPage() {
                     <ShieldCheck className="h-3.5 w-3.5" />
                     Accès : {section.roles}
                   </div>
+                  {section.detail && (
+                    <div className="mb-4 rounded-xl border border-[var(--primary-border)] bg-[var(--page-bg)] p-4 text-sm leading-6" style={{ color: "var(--text-main)" }}>
+                      <p className="mb-1 font-semibold">Objectif de cette rubrique</p>
+                      {section.detail}
+                    </div>
+                  )}
                   <h2 className="mb-3 text-sm font-bold" style={{ color: "var(--text-main)" }}>Étapes à suivre</h2>
                   <ol className="space-y-3">
                     {section.steps.map((step, index) => (
@@ -406,7 +465,8 @@ export default function GuideUtilisateurPage() {
                               className="h-auto max-h-[620px] w-full object-contain"
                             />
                           </div>
-                          <figcaption className="mt-2 text-xs leading-5" style={{ color: "var(--text-muted)" }}>{image.caption}</figcaption>
+                          <figcaption className="mt-2 text-sm font-semibold leading-5" style={{ color: "var(--text-main)" }}>{image.caption}</figcaption>
+                          <p className="mt-2 text-xs leading-5" style={{ color: "var(--text-muted)" }}>Conseil : comparez les libellés de cette capture avec ceux affichés dans votre session. L’interface peut évoluer ; fiez-vous aux champs et boutons réellement présents sur votre écran.</p>
                         </figure>
                       ))}
                     </div>
@@ -444,6 +504,7 @@ export default function GuideUtilisateurPage() {
           </div>
         )}
       </section>
+      )}
 
       <footer className="rounded-xl bg-[var(--page-bg)] p-4 text-xs leading-5" style={{ color: "var(--text-muted)" }}>
         <p className="font-semibold">Besoin d’aide supplémentaire ?</p>

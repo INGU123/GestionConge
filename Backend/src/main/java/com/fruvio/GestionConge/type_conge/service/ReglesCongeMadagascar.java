@@ -27,9 +27,9 @@ public final class ReglesCongeMadagascar {
         if (type == null) {
             return false;
         }
-        String code = normaliser(type.getCode());
+        String code = normaliser(type.getCode()).toUpperCase(Locale.ROOT);
         String libelle = normaliser(type.getLibelle());
-        String regle = normaliser(type.getRegle_acquisition());
+        String regle = normaliser(type.getRegle_acquisition()).toUpperCase(Locale.ROOT);
 
         return "CA".equals(code)
                 || "CONGE_ANNUEL".equals(code)

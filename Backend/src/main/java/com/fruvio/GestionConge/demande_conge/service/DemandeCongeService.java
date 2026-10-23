@@ -205,6 +205,15 @@ public class DemandeCongeService {
         boolean estValidee = "VALIDEE".equalsIgnoreCase(statutNormalise) || "VALIDE".equalsIgnoreCase(statutNormalise)
                 || "APPROVED".equalsIgnoreCase(statutNormalise);
 
+        if (estValidee && (demande.getDateDebut() == null || demande.getDateFin() == null)) {
+            throw new IllegalStateException(
+                    "Une demande doit comporter une date de début et une date de fin avant validation.");
+        }
+        if (estValidee && demande.getDateFin().isBefore(demande.getDateDebut())) {
+            throw new IllegalStateException(
+                    "La date de fin ne peut pas être antérieure à la date de début.");
+        }
+
         if (estValidee && demande.getDateDebut() != null && demande.getDateFin() != null) {
             Type_conge typeConge = typeCongeRepo.findById(demande.getTypeCongeId())
                     .orElseThrow(() -> new IllegalStateException("Le type de congé de cette demande n'existe plus."));

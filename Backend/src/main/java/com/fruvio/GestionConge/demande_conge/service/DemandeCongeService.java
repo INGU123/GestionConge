@@ -358,19 +358,41 @@ public class DemandeCongeService {
      */
     private void debiterDroitsCongesAnnuels(DemandeConge demande, Type_conge typeConge,
             int joursDemandes, int anneeDemande, Utilisateur demandeur) {
+        if (demandeur.getDate_embauche() == null) {
+            throw new IllegalStateException("La date d'embauche est nécessaire pour calculer les droits annuels.");
+        }
+        int minimumLegal = Math.max(ReglesCongeMadagascar.JOURS_ANNUELS_PAR_AN,
+                typeConge.getNombreJoursParAn() == null ? 0 : typeConge.getNombreJoursParAn());
+        LocalDate ouvertureDroit = ReglesCongeMadagascar.dateOuvertureDroit(demandeur);
+
+        // Garantit l'existence des millésimes nécessaires au report sur trois ans.
+        int premiereAnneeUtile = Math.max(demandeur.getDate_embauche().getYear(), anneeDemande - 2);
+        for (int annee = premiereAnneeUtile; annee <= anneeDemande; annee++) {
+            if (!soldeRepo.existsByUtilisateurIdAndTypeCongeIdAndPeriode(
+                    demande.getUtilisateurId(), demande.getTypeCongeId(), annee)) {
+                int acquis = LocalDate.of(annee, 12, 31).isBefore(ouvertureDroit) ? 0 : minimumLegal;
+                Solde_conge nouveau = new Solde_conge();
+                nouveau.setUtilisateurId(demande.getUtilisateurId());
+                nouveau.setTypeCongeId(demande.getTypeCongeId());
+                nouveau.setPeriode(annee);
+                nouveau.setSoldeAquis(acquis);
+                nouveau.setSoldePris(0);
+                nouveau.setSoldeRestant(acquis);
+                nouveau.setDate_maj(new Timestamp(System.currentTimeMillis()));
+                soldeRepo.save(nouveau);
+            }
+        }
+
         List<Solde_conge> soldes = soldeRepo.findByUtilisateurIdAndTypeCongeId(
                 demande.getUtilisateurId(), demande.getTypeCongeId());
-
         Solde_conge soldeAnneeCourante = soldes.stream()
                 .filter(s -> s.getPeriode() == anneeDemande)
                 .findFirst()
                 .orElseThrow(() -> new IllegalStateException(
-                        "Aucun solde de congé annuel n'est initialisé pour l'année " + anneeDemande + "."));
+                        "Impossible d'initialiser le solde de congé annuel pour l'année " + anneeDemande + "."));
 
         int acquisCourant = soldeAnneeCourante.getSoldeAquis() == null ? 0 : soldeAnneeCourante.getSoldeAquis();
         int prisCourant = soldeAnneeCourante.getSoldePris() == null ? 0 : soldeAnneeCourante.getSoldePris();
-        int minimumLegal = Math.max(ReglesCongeMadagascar.JOURS_ANNUELS_PAR_AN,
-                typeConge.getNombreJoursParAn() == null ? 0 : typeConge.getNombreJoursParAn());
 
         if (prisCourant == 0 && acquisCourant < minimumLegal
                 && demandeur.getDate_embauche() != null

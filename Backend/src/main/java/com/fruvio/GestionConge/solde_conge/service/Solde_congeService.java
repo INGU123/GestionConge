@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
+import java.time.LocalDate;
 
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
@@ -15,6 +16,7 @@ import com.fruvio.GestionConge.solde_conge.entity.Solde_conge;
 import com.fruvio.GestionConge.solde_conge.repository.Solde_congeRepository;
 import com.fruvio.GestionConge.type_conge.entity.Type_conge;
 import com.fruvio.GestionConge.type_conge.repository.Type_congeRepository;
+import com.fruvio.GestionConge.type_conge.service.ReglesCongeMadagascar;
 import com.fruvio.GestionConge.utilisateur.entity.Role;
 import com.fruvio.GestionConge.utilisateur.entity.Utilisateur;
 import com.fruvio.GestionConge.utilisateur.repository.UtilisateurRepository;
@@ -90,6 +92,8 @@ public class Solde_congeService {
     @Transactional
     public void initialiserSoldesPourUtilisateur(Long utilisateurId, int annee) {
         List<Type_conge> types = typeCongeRepository.findAll();
+        Utilisateur utilisateur = utilisateurRepository.findById(utilisateurId)
+                .orElseThrow(() -> new IllegalArgumentException("Collaborateur introuvable : " + utilisateurId));
 
         for (Type_conge type : types) {
             if (!soldeCongeRepository.existsByUtilisateurIdAndTypeCongeIdAndPeriode(utilisateurId, type.getId(),
@@ -98,7 +102,20 @@ public class Solde_congeService {
                 solde.setUtilisateurId(utilisateurId);
                 solde.setTypeCongeId(type.getId());
                 solde.setPeriode(annee);
-                int nbJours = (type.getNombreJoursParAn() != null) ? type.getNombreJoursParAn() : 0;
+
+                int nbJours = type.getNombreJoursParAn() == null ? 0 : type.getNombreJoursParAn();
+                if (ReglesCongeMadagascar.estCongeAnnuel(type)) {
+                    LocalDate dateOuverture = ReglesCongeMadagascar.dateOuvertureDroit(utilisateur);
+                    LocalDate finAnnee = LocalDate.of(annee, 12, 31);
+                    boolean droitOuvertDansCettePeriode = !finAnnee.isBefore(dateOuverture)
+                            && (annee < LocalDate.now().getYear() || !LocalDate.now().isBefore(dateOuverture));
+                    // Pour l'année courante, ne pas afficher les 30 jours avant l'ouverture réelle du droit.
+                    // La validation vérifie également la date de début du congé demandé.
+                    nbJours = droitOuvertDansCettePeriode
+                            ? Math.max(ReglesCongeMadagascar.JOURS_ANNUELS_PAR_AN, nbJours)
+                            : 0;
+                }
+
                 solde.setSoldeAquis(nbJours);
                 solde.setSoldePris(0);
                 solde.setSoldeRestant(nbJours);

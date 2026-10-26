@@ -290,13 +290,17 @@ export default function GuideUtilisateurPage() {
 
   useEffect(() => {
     let active = true;
-    getCurrentUser()
-      .then((user) => { if (active) setCurrentUser(user || null); })
-      .catch((error) => {
-        console.error("Impossible de récupérer le rôle pour le guide :", error);
-        if (active) setCurrentUser(null);
-      })
-      .finally(() => { if (active) setUserLoading(false); });
+
+    try {
+      const user = getCurrentUser();
+      if (active) setCurrentUser(user || null);
+    } catch (error) {
+      console.error("Impossible de récupérer le rôle pour le guide :", error);
+      if (active) setCurrentUser(null);
+    } finally {
+      if (active) setUserLoading(false);
+    }
+
     return () => { active = false; };
   }, []);
 

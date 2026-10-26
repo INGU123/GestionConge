@@ -1,45 +1,36 @@
 package com.fruvio.GestionConge.utilisateur.service;
 
+import com.fruvio.GestionConge.utilisateur.config.JwtUtil;
+
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import java.time.LocalDateTime;
-import java.util.Properties;
 import java.util.Optional;
 
-import jakarta.mail.Session;
-import jakarta.mail.internet.InternetAddress;
-import jakarta.mail.internet.MimeMessage;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.http.ResponseEntity;
-import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.security.access.AccessDeniedException;
 
 import com.fruvio.GestionConge.demande_conge.repository.DemandeCongeRepository;
 import com.fruvio.GestionConge.historique_mouvement.repository.Historique_mouvementRepository;
-import com.fruvio.GestionConge.utilisateur.config.JwtUtil;
-import com.fruvio.GestionConge.utilisateur.controller.PasswordResetController;
 import com.fruvio.GestionConge.notifications_conge.repository.NotificationRepository;
 import com.fruvio.GestionConge.service_conge.repository.Service_congeRepository;
 import com.fruvio.GestionConge.solde_conge.repository.Solde_congeRepository;
 import com.fruvio.GestionConge.solde_conge.service.Solde_congeService;
-import com.fruvio.GestionConge.utilisateur.dto.ResetPasswordRequest;
+import com.fruvio.GestionConge.utilisateur.dto.ForgotPasswordRequest;
 import com.fruvio.GestionConge.utilisateur.dto.UtilisateurCreateRequest;
+import com.fruvio.GestionConge.utilisateur.controller.PasswordResetController;
+import com.fruvio.GestionConge.utilisateur.entity.PasswordResetRequestEntity;
+import com.fruvio.GestionConge.utilisateur.repository.PasswordResetRequestRepository;
 import com.fruvio.GestionConge.utilisateur.entity.Role;
 import com.fruvio.GestionConge.utilisateur.entity.Utilisateur;
 import com.fruvio.GestionConge.utilisateur.repository.UtilisateurRepository;
@@ -95,76 +86,101 @@ class UtilisateurServiceTest {
     }
 
     @Test
-    void resetPasswordEndpointAcceptsTokenAndNewPassword() {
+    void loginDoesNotAcceptEmailAsIdentifier() {
+        when(utilisateurRepository.findByMatricule("employee@example.com")).thenReturn(Optional.empty());
+
+        assertNull(utilisateurService.login("employee@example.com", "any-password"));
+
+        verify(utilisateurRepository, never()).findByEmail("employee@example.com");
+    }
+
+    @Test
+    void loginSucceedsWithValidMatriculeAndPassword() {
+        String hash = "$2a$10$mockedBcryptHash";
+        Utilisateur employee = Utilisateur.builder()
+                .id(11L).matricule("EMP-LOGIN-01")
+                .actif(true).password(hash).build();
+
+        when(utilisateurRepository.findByMatricule("EMP-LOGIN-01"))
+                .thenReturn(Optional.of(employee));
+        when(passwordEncoder.matches("Valid123!", hash)).thenReturn(true);
+
+        assertEquals(employee, utilisateurService.login("EMP-LOGIN-01", "Valid123!"));
+        verify(passwordEncoder).matches("Valid123!", hash);
+    }
+
+    @Test
+    void loginRejectsIncorrectPassword() {
+        String hash = "$2a$10$mockedBcryptHash";
+        Utilisateur employee = Utilisateur.builder()
+                .id(12L).matricule("EMP-LOGIN-02")
+                .actif(true).password(hash).build();
+
+        when(utilisateurRepository.findByMatricule("EMP-LOGIN-02"))
+                .thenReturn(Optional.of(employee));
+        when(passwordEncoder.matches("Wrong123!", hash)).thenReturn(false);
+
+        assertNull(utilisateurService.login("EMP-LOGIN-02", "Wrong123!"));
+        verify(passwordEncoder).matches("Wrong123!", hash);
+    }
+
+    @Test
+    void loginRejectsInactiveAccount() {
+        String hash = "$2a$10$mockedBcryptHash";
+        Utilisateur employee = Utilisateur.builder()
+                .id(13L).matricule("EMP-LOGIN-03")
+                .actif(false).password(hash).build();
+
+        when(utilisateurRepository.findByMatricule("EMP-LOGIN-03"))
+                .thenReturn(Optional.of(employee));
+
+        assertNull(utilisateurService.login("EMP-LOGIN-03", "Valid123!"));
+        verify(passwordEncoder, never()).matches("Valid123!", hash);
+    }
+
+    @Test
+    void loginRejectsUnknownMatricule() {
+        when(utilisateurRepository.findByMatricule("EMP-UNKNOWN"))
+                .thenReturn(Optional.empty());
+
+        assertNull(utilisateurService.login("EMP-UNKNOWN", "Valid123!"));
+        verify(passwordEncoder, never()).matches(any(), any());
+    }
+
+    @Test
+    void loginRejectsNonBcryptPassword() {
+        Utilisateur employee = Utilisateur.builder()
+                .id(14L).matricule("EMP-LOGIN-04")
+                .actif(true).password("plain-text-password").build();
+
+        when(utilisateurRepository.findByMatricule("EMP-LOGIN-04"))
+                .thenReturn(Optional.of(employee));
+
+        assertNull(utilisateurService.login("EMP-LOGIN-04", "plain-text-password"));
+        verify(passwordEncoder, never()).matches("plain-text-password", "plain-text-password");
+    }
+
+    @Test
+    void forgotPasswordRequestLooksUpMatriculeAndNotEmail() {
+        PasswordResetRequestRepository requestRepository = org.mockito.Mockito.mock(PasswordResetRequestRepository.class);
         PasswordResetController controller = new PasswordResetController(
-                new PasswordResetService(utilisateurRepository, emailService, passwordEncoder),
-                utilisateurRepository,
-                org.mockito.Mockito.mock(
-                        com.fruvio.GestionConge.utilisateur.repository.PasswordResetRequestRepository.class),
-                emailService,
-                passwordEncoder);
-        ResetPasswordRequest request = ResetPasswordRequest.builder().token("tok-123")
-                .newPassword("NouveauMotDePasse123!").build();
+                utilisateurRepository, requestRepository, emailService, passwordEncoder);
+        Utilisateur employee = Utilisateur.builder()
+                .id(10L).matricule("EMP-001").email("employee@example.com")
+                .nom("Test").prenom("Agent").actif(true).build();
 
-        Utilisateur user = Utilisateur.builder().id(10L).role(Role.EMPLOYE).resetToken("tok-123")
-                .tokenExpiration(LocalDateTime.now().plusMinutes(15)).build();
+        when(utilisateurRepository.findByMatricule("EMP-001")).thenReturn(Optional.of(employee));
+        when(requestRepository.findByStatutOrderByDateDemandeDesc("EN_ATTENTE")).thenReturn(java.util.List.of());
+        when(requestRepository.save(any(PasswordResetRequestEntity.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+        when(utilisateurRepository.findAll()).thenReturn(java.util.List.of());
 
-        when(utilisateurRepository.findByResetToken("tok-123")).thenReturn(Optional.of(user));
-        when(passwordEncoder.encode("NouveauMotDePasse123!")).thenReturn("hashed-password");
+        var response = controller.forgotPassword(ForgotPasswordRequest.builder().matricule("EMP-001").build());
 
-        ResponseEntity<?> response = controller.resetPassword(request, null, null);
-
-        assert (response.getStatusCode().is2xxSuccessful());
-        verify(utilisateurRepository).save(user);
-    }
-
-    @Test
-    void createPasswordResetTokenStoresTokenAndSendsThroughEmailService() {
-        PasswordResetService passwordResetService = new PasswordResetService(utilisateurRepository, emailService,
-                passwordEncoder);
-        Utilisateur user = Utilisateur.builder().id(10L).email("employee@example.com").actif(true).build();
-        when(utilisateurRepository.findByEmail("employee@example.com")).thenReturn(Optional.of(user));
-
-        passwordResetService.createPasswordResetToken("employee@example.com");
-
-        assertNotNull(user.getResetToken());
-        assertTrue(user.getTokenExpiration().isAfter(LocalDateTime.now()));
-        verify(emailService).sendResetPasswordEmail(eq(user.getEmail()), eq(user.getResetToken()));
-        verify(utilisateurRepository).save(user);
-    }
-
-    @Test
-    void createPasswordResetTokenClearsTokenWhenEmailCannotBeSent() {
-        PasswordResetService passwordResetService = new PasswordResetService(utilisateurRepository, emailService,
-                passwordEncoder);
-        Utilisateur user = Utilisateur.builder().id(10L).email("employee@example.com").actif(true).build();
-        when(utilisateurRepository.findByEmail("employee@example.com")).thenReturn(Optional.of(user));
-        doThrow(new IllegalStateException("SMTP unavailable")).when(emailService)
-                .sendResetPasswordEmail(eq(user.getEmail()), any());
-
-        passwordResetService.createPasswordResetToken("employee@example.com");
-
-        assertNull(user.getResetToken());
-        assertNull(user.getTokenExpiration());
-        verify(utilisateurRepository, org.mockito.Mockito.times(2)).save(user);
-    }
-
-    @Test
-    void resetEmailUsesConfiguredFrontendAndFruvioSender() throws Exception {
-        JavaMailSender mailSender = org.mockito.Mockito.mock(JavaMailSender.class);
-        MimeMessage mimeMessage = new MimeMessage(Session.getInstance(new Properties()));
-        when(mailSender.createMimeMessage()).thenReturn(mimeMessage);
-        EmailService service = new EmailService(mailSender, "no-reply@example.com", "https://gestion.example/");
-
-        service.sendResetPasswordEmail("employee@example.com", "test-token");
-
-        ArgumentCaptor<MimeMessage> messageCaptor = ArgumentCaptor.forClass(MimeMessage.class);
-        verify(mailSender).send(messageCaptor.capture());
-        MimeMessage sentMessage = messageCaptor.getValue();
-        InternetAddress sender = (InternetAddress) sentMessage.getFrom()[0];
-        assertEquals("Fruvio", sender.getPersonal());
-        assertTrue(((String) sentMessage.getContent())
-                .contains("https://gestion.example/Components/mdpReset?token=test-token"));
+        assertEquals(200, response.getStatusCode().value());
+        verify(utilisateurRepository).findByMatricule("EMP-001");
+        verify(utilisateurRepository, never()).findByEmail("employee@example.com");
+        verify(requestRepository).save(any(PasswordResetRequestEntity.class));
     }
 
     @Test

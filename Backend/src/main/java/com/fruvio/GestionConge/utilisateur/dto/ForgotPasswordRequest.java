@@ -1,8 +1,7 @@
-
 package com.fruvio.GestionConge.utilisateur.dto;
 
-import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -16,7 +15,7 @@ import lombok.Setter;
 @Builder
 public class ForgotPasswordRequest {
 
-    @NotBlank(message = "L'adresse e-mail est obligatoire.")
-    @Email(message = "L'adresse e-mail est invalide.")
-    private String email;
+    @NotBlank(message = "Le matricule est obligatoire.")
+    @Size(max = 50, message = "Le matricule est trop long.")
+    private String matricule;
 }

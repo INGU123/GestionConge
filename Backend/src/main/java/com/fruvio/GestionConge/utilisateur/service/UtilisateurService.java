@@ -139,14 +139,8 @@ public class UtilisateurService {
 
                 String search = identifier.trim();
 
-                // Recherche prioritaire par matricule,
-                // puis par email
+                // L'authentification se fait exclusivement par matricule.
                 Optional<Utilisateur> userOpt = utilisateurRepository.findByMatricule(search);
-
-                if (userOpt.isEmpty()) {
-
-                        userOpt = utilisateurRepository.findByEmail(search);
-                }
 
                 if (userOpt.isEmpty()) {
 

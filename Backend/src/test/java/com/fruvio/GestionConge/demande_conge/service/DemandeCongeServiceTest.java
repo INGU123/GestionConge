@@ -26,6 +26,8 @@ import com.fruvio.GestionConge.notifications_conge.service.Notification_congeSer
 import com.fruvio.GestionConge.solde_conge.entity.Solde_conge;
 import com.fruvio.GestionConge.solde_conge.repository.Solde_congeRepository;
 import com.fruvio.GestionConge.utilisateur.entity.Role;
+import com.fruvio.GestionConge.type_conge.entity.Type_conge;
+import com.fruvio.GestionConge.type_conge.repository.Type_congeRepository;
 import com.fruvio.GestionConge.utilisateur.entity.Utilisateur;
 import com.fruvio.GestionConge.utilisateur.repository.UtilisateurRepository;
 
@@ -37,6 +39,9 @@ class DemandeCongeServiceTest {
 
         @Mock
         private Solde_congeRepository soldeRepo;
+
+        @Mock
+        private Type_congeRepository typeCongeRepo;
 
         @Mock
         private Historique_mouvementService historiqueService;
@@ -94,9 +99,12 @@ class DemandeCongeServiceTest {
                 DemandeConge existing = DemandeConge.builder().id(1L).utilisateurId(7L)
                                 .dateDebut(LocalDate.of(2026, 10, 1)).dateFin(LocalDate.of(2026, 10, 10))
                                 .statut("VALIDEE").build();
-                DemandeConge newRequest = DemandeConge.builder().utilisateurId(7L).dateDebut(LocalDate.of(2026, 10, 5))
+                DemandeConge newRequest = DemandeConge.builder().utilisateurId(7L).typeCongeId(1L)
+                                .dateDebut(LocalDate.of(2026, 10, 5))
                                 .dateFin(LocalDate.of(2026, 10, 15)).build();
 
+                when(typeCongeRepo.findById(1L)).thenReturn(Optional.of(
+                                Type_conge.builder().id(1L).libelle("Congé annuel").nombreJoursParAn(30).build()));
                 when(demandeRepo.findByUtilisateurId(7L)).thenReturn(List.of(existing));
                 when(jourFerieService.compterJoursOuvres(LocalDate.of(2026, 10, 5), LocalDate.of(2026, 10, 15)))
                                 .thenReturn(7);

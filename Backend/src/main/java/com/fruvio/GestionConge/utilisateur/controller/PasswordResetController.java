@@ -16,31 +16,27 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import com.fruvio.GestionConge.utilisateur.dto.ForgotPasswordRequest;
-import com.fruvio.GestionConge.utilisateur.dto.ResetPasswordRequest;
 import com.fruvio.GestionConge.utilisateur.entity.PasswordResetRequestEntity;
 import com.fruvio.GestionConge.utilisateur.entity.Role;
 import com.fruvio.GestionConge.utilisateur.entity.Utilisateur;
 import com.fruvio.GestionConge.utilisateur.repository.PasswordResetRequestRepository;
 import com.fruvio.GestionConge.utilisateur.repository.UtilisateurRepository;
 import com.fruvio.GestionConge.utilisateur.service.EmailService;
-import com.fruvio.GestionConge.utilisateur.service.PasswordResetService;
 import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/auth")
 public class PasswordResetController {
     private static final Logger log = LoggerFactory.getLogger(PasswordResetController.class);
-    private final PasswordResetService passwordResetService;
     private final UtilisateurRepository utilisateurRepository;
     private final PasswordResetRequestRepository requestRepository;
     private final EmailService emailService;
     private final PasswordEncoder passwordEncoder;
 
-    public PasswordResetController(PasswordResetService passwordResetService,
+    public PasswordResetController(
             UtilisateurRepository utilisateurRepository,
             PasswordResetRequestRepository requestRepository,
             EmailService emailService, PasswordEncoder passwordEncoder) {
-        this.passwordResetService = passwordResetService;
         this.utilisateurRepository = utilisateurRepository;
         this.requestRepository = requestRepository;
         this.emailService = emailService;
@@ -50,8 +46,8 @@ public class PasswordResetController {
     @PostMapping("/forgot-password")
     @Transactional
     public ResponseEntity<Map<String, Object>> forgotPassword(@Valid @RequestBody ForgotPasswordRequest body) {
-        String email = body.getEmail().trim();
-        Utilisateur user = utilisateurRepository.findByEmail(email).orElse(null);
+        String matricule = body.getMatricule().trim();
+        Utilisateur user = utilisateurRepository.findByMatricule(matricule).orElse(null);
 
         // Réponse uniforme : ne pas révéler si un matricule existe.
         if (user != null && user.isActif()) {
@@ -139,21 +135,4 @@ public class PasswordResetController {
         return value.toString();
     }
 
-    @PostMapping("/reset-password")
-    public ResponseEntity<Map<String, Object>> resetPassword(
-            @Valid @RequestBody(required = false) ResetPasswordRequest body,
-            @RequestParam(required = false) String token,
-            @RequestParam(required = false) String newPassword) {
-        String resetToken = body != null && body.getToken() != null ? body.getToken() : token;
-        String pass = body != null && body.getNewPassword() != null ? body.getNewPassword() : newPassword;
-        if (resetToken == null || resetToken.trim().isEmpty() || pass == null || pass.trim().isEmpty()) {
-            return ResponseEntity.badRequest().body(Map.of("success", false, "message", "Le jeton et le nouveau mot de passe sont obligatoires."));
-        }
-        try {
-            passwordResetService.resetPassword(resetToken.trim(), pass.trim());
-            return ResponseEntity.ok(Map.of("success", true, "message", "Mot de passe mis à jour avec succès."));
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().body(Map.of("success", false, "message", e.getMessage()));
-        }
-    }
 }

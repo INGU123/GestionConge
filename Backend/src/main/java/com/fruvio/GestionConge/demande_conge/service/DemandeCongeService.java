@@ -22,6 +22,8 @@ import com.fruvio.GestionConge.jour_ferie.service.JourFerieService;
 import com.fruvio.GestionConge.notifications_conge.service.Notification_congeService;
 import com.fruvio.GestionConge.solde_conge.entity.Solde_conge;
 import com.fruvio.GestionConge.solde_conge.repository.Solde_congeRepository;
+import com.fruvio.GestionConge.type_conge.entity.Type_conge;
+import com.fruvio.GestionConge.type_conge.repository.Type_congeRepository;
 import com.fruvio.GestionConge.utilisateur.entity.Role;
 import com.fruvio.GestionConge.utilisateur.entity.Utilisateur;
 import com.fruvio.GestionConge.utilisateur.repository.UtilisateurRepository;
@@ -33,16 +35,19 @@ public class DemandeCongeService {
 
     private final DemandeCongeRepository demandeRepo;
     private final Solde_congeRepository soldeRepo;
+    private final Type_congeRepository typeCongeRepo;
     private final Historique_mouvementService historiqueService;
     private final Notification_congeService notificationService;
     private final UtilisateurRepository utilisateurRepo;
     private final JourFerieService jourFerieService;
 
     public DemandeCongeService(DemandeCongeRepository demandeRepo, Solde_congeRepository soldeRepo,
-            Historique_mouvementService historiqueService, Notification_congeService notificationService,
-            UtilisateurRepository utilisateurRepo, JourFerieService jourFerieService) {
+            Type_congeRepository typeCongeRepo, Historique_mouvementService historiqueService,
+            Notification_congeService notificationService, UtilisateurRepository utilisateurRepo,
+            JourFerieService jourFerieService) {
         this.demandeRepo = demandeRepo;
         this.soldeRepo = soldeRepo;
+        this.typeCongeRepo = typeCongeRepo;
         this.historiqueService = historiqueService;
         this.notificationService = notificationService;
         this.utilisateurRepo = utilisateurRepo;
@@ -75,6 +80,22 @@ public class DemandeCongeService {
                         "Cette période ne contient aucune journée ouvrée. La demande de congé doit inclure au moins un jour ouvré.");
             }
             demande.setNombreJours(joursOuvres);
+
+            if (demande.getTypeCongeId() == null) {
+                throw new IllegalArgumentException("Veuillez sélectionner un type de congé.");
+            }
+
+            Type_conge typeConge = typeCongeRepo.findById(demande.getTypeCongeId())
+                    .orElseThrow(() -> new IllegalArgumentException(
+                            "Le type de congé sélectionné n'existe pas."));
+
+            Integer limiteJours = typeConge.getNombreJoursParAn();
+            if (limiteJours != null && limiteJours > 0 && joursOuvres > limiteJours) {
+                throw new IllegalArgumentException(
+                        "Demande non autorisée : le type « " + typeConge.getLibelle()
+                                + " » autorise au maximum " + limiteJours
+                                + " jour(s) ouvré(s), mais vous en demandez " + joursOuvres + ".");
+            }
 
             for (DemandeConge existing : demandeRepo.findByUtilisateurId(utilisateurId)) {
                 if (existing == null || Objects.equals(existing.getId(), demande.getId())) {

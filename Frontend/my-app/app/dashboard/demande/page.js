@@ -134,9 +134,48 @@ export default function DemandesPage() {
       });
       showToast("Votre demande de congé a été envoyée.", "success");
     } catch (err) {
-      console.error("Erreur création demande:", err);
-      showToast(`Erreur lors de la création de la demande : ${err.message}`, "error");
-    } finally {
+    const data = err?.response?.data ?? err?.data ?? err?.body;
+    const rawMessage =
+      data?.message ||
+      data?.detail ||
+      (typeof data?.error === "string" ? data.error : data?.error?.message) ||
+      data?.data?.message ||
+      (typeof data === "string" ? data : "") ||
+      err?.message ||
+      "";
+
+    const message = typeof rawMessage === "string"
+      ? rawMessage
+      : String(rawMessage ?? "");
+
+    const normalized = message.toLowerCase();
+
+    if (
+      normalized.includes("maximum") ||
+      normalized.includes("limite") ||
+      normalized.includes("jours ouvrés") ||
+      normalized.includes("jour(s) ouvré(s)")
+    ) {
+      showToast(
+        `LIMITE DE CONGÉ DÉPASSÉE — ${message || "La durée demandée dépasse la limite autorisée pour ce type de congé."}`,
+        "warning"
+      );
+    } else if (
+      normalized.includes("chevauche") ||
+      normalized.includes("conflict") ||
+      normalized.includes("409")
+    ) {
+      showToast(
+        "CHEVAUCHEMENT DE DATES — Cette période chevauche une autre demande de congé déjà enregistrée. Choisissez une autre période.",
+        "warning"
+      );
+    } else {
+      showToast(
+        `ÉCHEC DE LA DEMANDE — ${message || "Impossible d'envoyer la demande de congé. Réessayez."}`,
+        "error"
+      );
+    }
+      } finally {
       setLoading(false);
     }
   };

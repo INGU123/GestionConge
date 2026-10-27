@@ -1,6 +1,7 @@
 package com.fruvio.GestionConge.solde_conge.controller;
 
 import java.util.List;
+import org.springframework.security.access.AccessDeniedException;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -59,15 +60,15 @@ public class Solde_congeController {
     @PreAuthorize("hasRole('ADMIN')")
     @PutMapping("/ajuster/{soldeId}")
     public ResponseEntity<Solde_conge> ajusterSolde(@PathVariable Long soldeId,
-            @RequestParam int nouveauNombreJoursRestants) {
+            @RequestParam int nouveauNombreJoursRestants, @RequestParam String motif) {
 
         Utilisateur currentUser = getCurrentAuthenticatedUser();
         if (currentUser == null) {
-            throw new IllegalStateException("Authentification requise pour ajuster le solde.");
+            throw new AccessDeniedException("Authentification requise pour ajuster le solde.");
         }
 
         Solde_conge soldeAjuste = soldeCongeService.ajusterSolde(soldeId, nouveauNombreJoursRestants,
-                currentUser.getId());
+                currentUser.getId(), motif);
         return ResponseEntity.ok(soldeAjuste);
     }
 

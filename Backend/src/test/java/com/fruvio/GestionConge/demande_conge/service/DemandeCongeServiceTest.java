@@ -97,16 +97,16 @@ class DemandeCongeServiceTest {
         @Test
         void creerDemandeRejectsOverlappingDatePeriod() {
                 DemandeConge existing = DemandeConge.builder().id(1L).utilisateurId(7L)
-                                .dateDebut(LocalDate.of(2026, 10, 1)).dateFin(LocalDate.of(2026, 10, 10))
+                                .dateDebut(LocalDate.now().plusDays(10)).dateFin(LocalDate.now().plusDays(19))
                                 .statut("VALIDEE").build();
                 DemandeConge newRequest = DemandeConge.builder().utilisateurId(7L).typeCongeId(1L)
-                                .dateDebut(LocalDate.of(2026, 10, 5))
-                                .dateFin(LocalDate.of(2026, 10, 15)).build();
+                                .dateDebut(LocalDate.now().plusDays(14))
+                                .dateFin(LocalDate.now().plusDays(24)).build();
 
                 when(typeCongeRepo.findById(1L)).thenReturn(Optional.of(
                                 Type_conge.builder().id(1L).libelle("Congé annuel").nombreJoursParAn(30).build()));
                 when(demandeRepo.findByUtilisateurId(7L)).thenReturn(List.of(existing));
-                when(jourFerieService.compterJoursOuvres(LocalDate.of(2026, 10, 5), LocalDate.of(2026, 10, 15)))
+                when(jourFerieService.compterJoursOuvres(LocalDate.now().plusDays(14), LocalDate.now().plusDays(24)))
                                 .thenReturn(7);
 
                 assertThrows(IllegalStateException.class, () -> demandeCongeService.creerDemande(7L, newRequest,
@@ -131,12 +131,12 @@ class DemandeCongeServiceTest {
                                 .dateDebut(LocalDate.of(2026, 12, 1)).dateFin(LocalDate.of(2026, 12, 4))
                                 .statut("EN_ATTENTE").build();
 
-                when(demandeRepo.findById(15L)).thenReturn(Optional.of(demande));
+                when(demandeRepo.verrouillerDemande(15L)).thenReturn(Optional.of(demande));
                 when(utilisateurRepo.findById(7L))
                                 .thenReturn(Optional.of(Utilisateur.builder().id(7L).manager_id(9L).build()));
                 when(jourFerieService.compterJoursOuvres(LocalDate.of(2026, 12, 1), LocalDate.of(2026, 12, 4)))
                                 .thenReturn(3);
-                when(soldeRepo.findByUtilisateurIdAndTypeCongeIdAndPeriode(7L, 1L, 2026))
+                when(soldeRepo.verrouillerSolde(7L, 1L, 2026))
                                 .thenReturn(Optional.of(Solde_conge.builder().utilisateurId(7L).typeCongeId(1L)
                                                 .periode(2026).soldeAquis(3).soldePris(3).soldeRestant(0).build()));
 
@@ -153,12 +153,12 @@ class DemandeCongeServiceTest {
                 Solde_conge solde = Solde_conge.builder().id(11L).utilisateurId(7L).typeCongeId(1L).periode(2026)
                                 .soldeAquis(20).soldePris(2).soldeRestant(18).build();
 
-                when(demandeRepo.findById(15L)).thenReturn(Optional.of(demande));
+                when(demandeRepo.verrouillerDemande(15L)).thenReturn(Optional.of(demande));
                 when(utilisateurRepo.findById(7L))
                                 .thenReturn(Optional.of(Utilisateur.builder().id(7L).manager_id(9L).build()));
                 when(jourFerieService.compterJoursOuvres(LocalDate.of(2026, 12, 24), LocalDate.of(2026, 12, 28)))
                                 .thenReturn(2);
-                when(soldeRepo.findByUtilisateurIdAndTypeCongeIdAndPeriode(7L, 1L, 2026))
+                when(soldeRepo.verrouillerSolde(7L, 1L, 2026))
                                 .thenReturn(Optional.of(solde));
 
                 DemandeConge result = demandeCongeService.traiterDemande(15L, 9L, "VALIDEE", null, manager);
@@ -175,9 +175,11 @@ class DemandeCongeServiceTest {
                 Solde_conge solde = Solde_conge.builder().id(5L).utilisateurId(7L).typeCongeId(1L).periode(2026)
                                 .soldeAquis(20).soldePris(2).soldeRestant(18).build();
 
-                when(demandeRepo.findById(22L)).thenReturn(Optional.of(demande));
-                when(soldeRepo.findByUtilisateurIdAndTypeCongeIdAndPeriode(7L, 1L, 2026))
+                when(demandeRepo.verrouillerDemande(22L)).thenReturn(Optional.of(demande));
+                when(soldeRepo.verrouillerSolde(7L, 1L, 2026))
                                 .thenReturn(Optional.of(solde));
+                when(jourFerieService.compterJoursOuvres(LocalDate.of(2026, 12, 24), LocalDate.of(2026, 12, 28)))
+                                .thenReturn(2);
 
                 DemandeConge result = demandeCongeService.annulerDemande(22L, 7L,
                                 Utilisateur.builder().id(7L).role(Role.EMPLOYE).build());

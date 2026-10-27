@@ -47,12 +47,12 @@ export const getAllSoldes = async () => {
   }
 };
 
-export const ajustSolde = async (soldeId, nouveauNombreJoursRestants) => {
+export const ajustSolde = async (soldeId, nouveauNombreJoursRestants, motif) => {
   try {
     const response = await authFetch(
       `${API_URL}/ajuster/${soldeId}?nouveauNombreJoursRestants=${encodeURIComponent(
         Math.round(Number(nouveauNombreJoursRestants))
-      )}`,
+      )}&motif=${encodeURIComponent(motif?.trim() || "")}`,
       {
         method: "PUT",
       }

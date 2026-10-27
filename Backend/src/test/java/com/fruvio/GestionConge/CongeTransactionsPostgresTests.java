@@ -70,4 +70,57 @@ class CongeTransactionsPostgresTests {
             demandes.deleteById(demande.getId());
         }
     }
+
+    @Test
+    void deuxTransactionsNePeuventPasDebiterLeMemeSoldeEnParallele() throws Exception {
+        Solde_conge initial = soldes.saveAndFlush(Solde_conge.builder()
+                .utilisateurId(-987654322L).typeCongeId(-987654322L)
+                .periode(2098).soldeAquis(10).soldePris(0).soldeRestant(10).build());
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        CountDownLatch premierVerrouAcquis = new CountDownLatch(1);
+        CountDownLatch libererPremier = new CountDownLatch(1);
+        CountDownLatch deuxiemeDemarre = new CountDownLatch(1);
+        try {
+            Future<?> premier = executor.submit(() -> {
+                new TransactionTemplate(transactionManager).executeWithoutResult(status -> {
+                    Solde_conge solde = soldes.verrouillerSolde(-987654322L, -987654322L, 2098)
+                            .orElseThrow();
+                    premierVerrouAcquis.countDown();
+                    try {
+                        if (!libererPremier.await(10, TimeUnit.SECONDS)) {
+                            throw new IllegalStateException("Timeout du premier verrou");
+                        }
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                        throw new IllegalStateException(e);
+                    }
+                    solde.setSoldePris(7);
+                    solde.setSoldeRestant(3);
+                    soldes.saveAndFlush(solde);
+                });
+            });
+            assertTrue(premierVerrouAcquis.await(10, TimeUnit.SECONDS));
+            Future<Integer> deuxieme = executor.submit(() ->
+                new TransactionTemplate(transactionManager).execute(status -> {
+                    deuxiemeDemarre.countDown();
+                    Solde_conge solde = soldes.verrouillerSolde(-987654322L, -987654322L, 2098)
+                            .orElseThrow();
+                    // Une fois le premier debit valide, le second doit voir le solde actualise.
+                    return solde.getSoldeRestant();
+                })
+            );
+            assertTrue(deuxiemeDemarre.await(10, TimeUnit.SECONDS));
+            assertThrows(TimeoutException.class, () -> deuxieme.get(400, TimeUnit.MILLISECONDS),
+                    "La seconde transaction ne doit pas franchir le verrou tant que la premiere le detient");
+            libererPremier.countDown();
+            premier.get(10, TimeUnit.SECONDS);
+            assertEquals(3, deuxieme.get(10, TimeUnit.SECONDS));
+            assertEquals(3, soldes.findById(initial.getId()).orElseThrow().getSoldeRestant());
+        } finally {
+            libererPremier.countDown();
+            executor.shutdownNow();
+            assertTrue(executor.awaitTermination(15, TimeUnit.SECONDS));
+            soldes.deleteById(initial.getId());
+        }
+    }
 }

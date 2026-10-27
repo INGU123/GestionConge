@@ -13,6 +13,8 @@ import {
   FiShield,
   FiUser,
   FiKey,
+  FiEye,
+  FiEyeOff,
 } from "react-icons/fi";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
@@ -33,6 +35,19 @@ function ResetPasswordForm() {
   const [confirmation, setConfirmation] = useState("");
   const [message, setMessage] = useState({ text: "", type: "" });
   const [loading, setLoading] = useState(false);
+  const [visiblePasswords, setVisiblePasswords] = useState({
+    ancienMotDePasse: false,
+    nouveauMotDePasse: false,
+    confirmation: false,
+  });
+
+  const togglePassword = (field) => {
+    setVisiblePasswords((previous) => ({
+      ...previous,
+      [field]: !previous[field],
+    }));
+  };
+
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -161,31 +176,109 @@ function ResetPasswordForm() {
 
               <div className="login-field">
                 <label htmlFor="ancienMotDePasse">Mot de passe temporaire (ancien mot de passe)</label>
-                <div className="login-input-wrap">
+                <div className="login-input-wrap" style={{ position: "relative" }}>
                   <FiKey className="login-input-icon" aria-hidden="true" />
-                  <input id="ancienMotDePasse" type="password" placeholder="Mot de passe reçu par e-mail"
+                  <input id="ancienMotDePasse" type={visiblePasswords.ancienMotDePasse ? "text" : "password"} placeholder="Mot de passe reçu par e-mail"
                     value={ancienMotDePasse} onChange={(event) => setAncienMotDePasse(event.target.value)}
-                    autoComplete="current-password" required disabled={loading} />
+                    autoComplete="current-password" required disabled={loading} style={{ paddingRight: "48px" }} />
+                  <button
+                    type="button"
+                    aria-label={visiblePasswords.ancienMotDePasse ? "Masquer le mot de passe" : "Afficher le mot de passe"}
+                    aria-pressed={visiblePasswords.ancienMotDePasse}
+                    onClick={() => togglePassword("ancienMotDePasse")}
+                    disabled={loading}
+                    style={{
+                      position: "absolute",
+                      right: "12px",
+                      top: "50%",
+                      transform: "translateY(-50%)",
+                      background: "transparent",
+                      border: "none",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      width: "24px",
+                      height: "24px",
+                      padding: 0,
+                      color: "#64748b",
+                      cursor: loading ? "not-allowed" : "pointer",
+                      zIndex: 2,
+                    }}
+                  >
+                    {visiblePasswords.ancienMotDePasse ? <FiEyeOff size={18} /> : <FiEye size={18} />}
+                  </button>
                 </div>
               </div>
 
               <div className="login-field">
                 <label htmlFor="nouveauMotDePasse">Nouveau mot de passe</label>
-                <div className="login-input-wrap">
+                <div className="login-input-wrap" style={{ position: "relative" }}>
                   <FiLock className="login-input-icon" aria-hidden="true" />
-                  <input id="nouveauMotDePasse" type="password" placeholder="6 caractères minimum"
+                  <input id="nouveauMotDePasse" type={visiblePasswords.nouveauMotDePasse ? "text" : "password"} placeholder="6 caractères minimum"
                     value={nouveauMotDePasse} onChange={(event) => setNouveauMotDePasse(event.target.value)}
-                    autoComplete="new-password" minLength={6} required disabled={loading} />
+                    autoComplete="new-password" minLength={6} required disabled={loading} style={{ paddingRight: "48px" }} />
+                  <button
+                    type="button"
+                    aria-label={visiblePasswords.nouveauMotDePasse ? "Masquer le mot de passe" : "Afficher le mot de passe"}
+                    aria-pressed={visiblePasswords.nouveauMotDePasse}
+                    onClick={() => togglePassword("nouveauMotDePasse")}
+                    disabled={loading}
+                    style={{
+                      position: "absolute",
+                      right: "12px",
+                      top: "50%",
+                      transform: "translateY(-50%)",
+                      background: "transparent",
+                      border: "none",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      width: "24px",
+                      height: "24px",
+                      padding: 0,
+                      color: "#64748b",
+                      cursor: loading ? "not-allowed" : "pointer",
+                      zIndex: 2,
+                    }}
+                  >
+                    {visiblePasswords.nouveauMotDePasse ? <FiEyeOff size={18} /> : <FiEye size={18} />}
+                  </button>
                 </div>
               </div>
 
               <div className="login-field">
                 <label htmlFor="confirmation">Confirmer le nouveau mot de passe</label>
-                <div className="login-input-wrap">
+                <div className="login-input-wrap" style={{ position: "relative" }}>
                   <FiLock className="login-input-icon" aria-hidden="true" />
-                  <input id="confirmation" type="password" placeholder="Saisissez à nouveau le nouveau mot de passe"
+                  <input id="confirmation" type={visiblePasswords.confirmation ? "text" : "password"} placeholder="Saisissez à nouveau le nouveau mot de passe"
                     value={confirmation} onChange={(event) => setConfirmation(event.target.value)}
-                    autoComplete="new-password" minLength={6} required disabled={loading} />
+                    autoComplete="new-password" minLength={6} required disabled={loading} style={{ paddingRight: "48px" }} />
+                  <button
+                    type="button"
+                    aria-label={visiblePasswords.confirmation ? "Masquer le mot de passe" : "Afficher le mot de passe"}
+                    aria-pressed={visiblePasswords.confirmation}
+                    onClick={() => togglePassword("confirmation")}
+                    disabled={loading}
+                    style={{
+                      position: "absolute",
+                      right: "12px",
+                      top: "50%",
+                      transform: "translateY(-50%)",
+                      background: "transparent",
+                      border: "none",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      width: "24px",
+                      height: "24px",
+                      padding: 0,
+                      color: "#64748b",
+                      cursor: loading ? "not-allowed" : "pointer",
+                      zIndex: 2,
+                    }}
+                  >
+                    {visiblePasswords.confirmation ? <FiEyeOff size={18} /> : <FiEye size={18} />}
+                  </button>
                 </div>
               </div>
 

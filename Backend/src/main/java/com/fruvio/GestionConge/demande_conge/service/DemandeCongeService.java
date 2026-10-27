@@ -205,9 +205,18 @@ public class DemandeCongeService {
             }
             demande.setNombreJours(jours);
 
-            int annee = demande.getDateDebut().getYear();
-
-            if (demande.getTypeCongeId() != null && demande.getUtilisateurId() != null) {
+            // Regle de ventilation : un conge traversant le 31 decembre doit
+            // etre impute aux exercices respectifs, jamais entierement au premier.
+            // La transaction doit echouer si un seul exercice manque de droits.
+            if (demande.getTypeCongeId() == null || demande.getUtilisateurId() == null) {
+                throw new IllegalStateException("Demande incomplete : type de congé ou utilisateur absent.");
+            }
+            for (int annee = demande.getDateDebut().getYear(); annee <= demande.getDateFin().getYear(); annee++) {
+                LocalDate debutAnnee = demande.getDateDebut().isAfter(LocalDate.of(annee, 1, 1))
+                        ? demande.getDateDebut() : LocalDate.of(annee, 1, 1);
+                LocalDate finAnnee = demande.getDateFin().isBefore(LocalDate.of(annee, 12, 31))
+                        ? demande.getDateFin() : LocalDate.of(annee, 12, 31);
+                int joursAnnee = calculerJoursOuvres(debutAnnee, finAnnee);
                 Optional<Solde_conge> soldeOpt = soldeRepo.findByUtilisateurIdAndTypeCongeIdAndPeriode(
                         demande.getUtilisateurId(), demande.getTypeCongeId(), annee);
 
@@ -222,12 +231,12 @@ public class DemandeCongeService {
                 int acquisActuel = (solde.getSoldeAquis() != null) ? solde.getSoldeAquis() : 0;
                 int joursDisponibles = Math.max(0, acquisActuel - prisActuel);
 
-                if (joursDisponibles < jours) {
-                    throw new IllegalStateException("Solde insuffisant : " + jours + " jour(s) demandés pour "
+                if (joursDisponibles < joursAnnee) {
+                    throw new IllegalStateException("Solde insuffisant : " + joursAnnee + " jour(s) demandés pour "
                             + joursDisponibles + " jour(s) disponibles.");
                 }
 
-                int nouveauSoldePris = prisActuel + jours;
+                int nouveauSoldePris = prisActuel + joursAnnee;
                 solde.setSoldePris(nouveauSoldePris);
                 solde.setSoldeRestant(Math.max(0, acquisActuel - nouveauSoldePris));
                 solde.setDate_maj(new Timestamp(System.currentTimeMillis()));
@@ -236,7 +245,7 @@ public class DemandeCongeService {
 
                 // AUDIT OBLIGATOIRE : l'echec du journal doit annuler la transaction
                 // (solde + statut + historique). Ne jamais masquer cette exception.
-                historiqueService.enregistrerMouvement(demande.getUtilisateurId(), "DEBIT_CONGE", jours,
+                historiqueService.enregistrerMouvement(demande.getUtilisateurId(), "DEBIT_CONGE", joursAnnee,
                         demande.getTypeCongeId(), demande.getId(),
                         "Congé validé par le responsable #" + actualValidatorId, actualValidatorId);
             }
@@ -296,18 +305,27 @@ public class DemandeCongeService {
                     : calculerJoursOuvres(demande.getDateDebut(), demande.getDateFin());
             if (demande.getTypeCongeId() != null && demande.getUtilisateurId() != null && demande.getDateDebut() != null
                     && demande.getDateFin() != null) {
-                int annee = demande.getDateDebut().getYear();
+                // Restituer exactement les jours imputes a chaque exercice.
+                for (int annee = demande.getDateDebut().getYear(); annee <= demande.getDateFin().getYear(); annee++) {
+                LocalDate debutAnnee = demande.getDateDebut().isAfter(LocalDate.of(annee, 1, 1))
+                        ? demande.getDateDebut() : LocalDate.of(annee, 1, 1);
+                LocalDate finAnnee = demande.getDateFin().isBefore(LocalDate.of(annee, 12, 31))
+                        ? demande.getDateFin() : LocalDate.of(annee, 12, 31);
+                int joursAReintegrerAnnee = calculerJoursOuvres(debutAnnee, finAnnee);
                 Optional<Solde_conge> soldeOpt = soldeRepo.findByUtilisateurIdAndTypeCongeIdAndPeriode(
                         demande.getUtilisateurId(), demande.getTypeCongeId(), annee);
                 if (soldeOpt.isPresent()) {
                     Solde_conge solde = soldeOpt.get();
                     int prisActuel = solde.getSoldePris() != null ? solde.getSoldePris() : 0;
                     int acquisActuel = solde.getSoldeAquis() != null ? solde.getSoldeAquis() : 0;
-                    int nouveauPris = Math.max(0, prisActuel - joursAReintegrer);
+                    int nouveauPris = Math.max(0, prisActuel - joursAReintegrerAnnee);
                     solde.setSoldePris(nouveauPris);
                     solde.setSoldeRestant(Math.max(0, acquisActuel - nouveauPris));
                     solde.setDate_maj(new Timestamp(System.currentTimeMillis()));
                     soldeRepo.save(solde);
+                } else {
+                    throw new IllegalStateException("Solde introuvable pour l'année " + annee + ". Annulation impossible sans régularisation RH.");
+                }
                 }
             }
         }

@@ -110,17 +110,32 @@ public class Solde_congeService {
     // Ajuster manuellement le solde (Strictement réservé à l'Admin)
     @Transactional
     public Solde_conge ajusterSolde(Long soldeId, int nouveauNombreJoursRestants) {
-        return ajusterSolde(soldeId, nouveauNombreJoursRestants, null);
+        return ajusterSolde(soldeId, nouveauNombreJoursRestants, null, null);
     }
 
     @Transactional
     public Solde_conge ajusterSolde(Long soldeId, int nouveauNombreJoursRestants, Long acteurId) {
+        return ajusterSolde(soldeId, nouveauNombreJoursRestants, acteurId, null);
+    }
+
+    @Transactional
+    public Solde_conge ajusterSolde(Long soldeId, int nouveauNombreJoursRestants, Long acteurId, String motif) {
+        if (acteurId == null) {
+            throw new AccessDeniedException("Un administrateur authentifié est requis.");
+        }
+        if (motif == null || motif.trim().length() < 10) {
+            throw new IllegalArgumentException("Le motif de correction doit contenir au moins 10 caractères.");
+        }
         if (nouveauNombreJoursRestants < 0) {
             throw new IllegalArgumentException("Le solde ne peut pas être négatif.");
         }
 
         Solde_conge solde = soldeCongeRepository.findById(soldeId)
                 .orElseThrow(() -> new IllegalArgumentException("Solde introuvable"));
+
+        if (Objects.equals(solde.getUtilisateurId(), acteurId)) {
+            throw new AccessDeniedException("Vous ne pouvez pas ajuster votre propre solde.");
+        }
 
         int ancienRestant = solde.getSoldeRestant() != null ? solde.getSoldeRestant() : 0;
         int acquis = solde.getSoldeAquis() != null ? solde.getSoldeAquis() : 0;
@@ -136,7 +151,8 @@ public class Solde_congeService {
             int delta = Math.abs(nouveauNombreJoursRestants - ancienRestant);
             historiqueMouvementService.enregistrerMouvement(solde.getUtilisateurId(), "AJUSTEMENT_SOLDE", delta,
                     solde.getTypeCongeId(), null,
-                    "Ajustement manuel du solde : " + ancienRestant + " -> " + nouveauNombreJoursRestants, acteurId);
+                    "Ajustement manuel du solde : " + ancienRestant + " -> " + nouveauNombreJoursRestants
+                            + " | Motif : " + motif.trim(), acteurId);
         }
 
         return saved;

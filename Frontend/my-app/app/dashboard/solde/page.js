@@ -211,7 +211,7 @@ export default function SoldeConge() {
         soldeId: null,
         nouveauSolde: 0,
         typeLibelle: "",
-    motif: "",
+        motif: "",
       });
 
       const targetId = selectedUserId || user?.id;
@@ -597,7 +597,7 @@ export default function SoldeConge() {
                     soldeId: null,
                     nouveauSolde: 0,
                     typeLibelle: "",
-    motif: "",
+        motif: "",
                   })
                 }
                 className="btn btn-ghost btn-sm font-semibold"

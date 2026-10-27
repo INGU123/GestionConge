@@ -263,4 +263,58 @@ class DemandeCongeServiceTest {
                                 32L, 9L, "VALIDEE", null, Utilisateur.builder().id(9L).role(Role.ADMIN).build()));
                 org.mockito.Mockito.verifyNoInteractions(soldeRepo);
         }
+
+        @Test
+        void employeNePeutPasTraiterUneDemande() {
+                assertThrows(org.springframework.security.access.AccessDeniedException.class,
+                                () -> demandeCongeService.traiterDemande(15L, 7L, "VALIDEE", null,
+                                                Utilisateur.builder().id(7L).role(Role.EMPLOYE).build()));
+                org.mockito.Mockito.verifyNoInteractions(soldeRepo);
+        }
+
+        @Test
+        void managerExterieurNePeutPasValider() {
+                DemandeConge demande = DemandeConge.builder().id(15L).utilisateurId(7L)
+                                .statut("EN_ATTENTE").build();
+                when(demandeRepo.verrouillerDemande(15L)).thenReturn(Optional.of(demande));
+                when(utilisateurRepo.findById(7L))
+                                .thenReturn(Optional.of(Utilisateur.builder().id(7L).manager_id(99L).build()));
+                assertThrows(org.springframework.security.access.AccessDeniedException.class,
+                                () -> demandeCongeService.traiterDemande(15L, 9L, "VALIDEE", null,
+                                                Utilisateur.builder().id(9L).role(Role.MANAGER).build()));
+                org.mockito.Mockito.verifyNoInteractions(soldeRepo);
+        }
+
+        @Test
+        void refusSansMotifEstInterdit() {
+                DemandeConge demande = DemandeConge.builder().id(15L).utilisateurId(7L)
+                                .statut("EN_ATTENTE").build();
+                when(demandeRepo.verrouillerDemande(15L)).thenReturn(Optional.of(demande));
+                when(utilisateurRepo.findById(7L))
+                                .thenReturn(Optional.of(Utilisateur.builder().id(7L).build()));
+                assertThrows(IllegalArgumentException.class,
+                                () -> demandeCongeService.traiterDemande(15L, 9L, "REFUSEE", "   ",
+                                                Utilisateur.builder().id(9L).role(Role.ADMIN).build()));
+                org.mockito.Mockito.verifyNoInteractions(soldeRepo);
+        }
+
+        @Test
+        void employeNePeutPasCreerPourAutrui() {
+                assertThrows(org.springframework.security.access.AccessDeniedException.class,
+                                () -> demandeCongeService.creerDemande(8L, DemandeConge.builder().build(),
+                                                Utilisateur.builder().id(7L).role(Role.EMPLOYE).build()));
+                org.mockito.Mockito.verifyNoInteractions(demandeRepo);
+        }
+
+        @Test
+        void annulationValideeApresDebutEstInterdite() {
+                DemandeConge demande = DemandeConge.builder().id(40L).utilisateurId(7L)
+                                .dateDebut(LocalDate.now().minusDays(1))
+                                .statut("VALIDEE").build();
+                when(demandeRepo.verrouillerDemande(40L)).thenReturn(Optional.of(demande));
+                assertThrows(IllegalStateException.class,
+                                () -> demandeCongeService.annulerDemande(40L, 7L,
+                                                Utilisateur.builder().id(7L).role(Role.EMPLOYE).build()));
+                org.mockito.Mockito.verifyNoInteractions(soldeRepo);
+        }
 }

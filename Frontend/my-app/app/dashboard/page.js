@@ -103,7 +103,7 @@ export default function Dashboard() {
           )}
           <Link
             href="/dashboard/solde"
-            className="btn btn-outline btn-sm text-slate-200 border-slate-600 hover:bg-slate-800 hover:text-white gap-2"
+            className="btn btn-outline btn-sm !text-white [&_svg]:!text-white border-slate-600 hover:bg-slate-800 hover:!text-white gap-2"
           >
             <Eye className="w-4 h-4" />
             Consulter mes soldes

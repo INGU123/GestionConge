@@ -126,7 +126,12 @@ public class Solde_congeService {
 
         int ancienRestant = solde.getSoldeRestant() != null ? solde.getSoldeRestant() : 0;
         int acquis = solde.getSoldeAquis() != null ? solde.getSoldeAquis() : 0;
-        int pris = Math.max(0, acquis - nouveauNombreJoursRestants);
+        // INVARIANT : le reliquat ne peut depasser les droits acquis.
+        // Les droits supplementaires doivent etre accordes via un workflow RH audite.
+        if (nouveauNombreJoursRestants > acquis) {
+            throw new IllegalArgumentException("Le solde restant ne peut pas dépasser les jours acquis.");
+        }
+        int pris = acquis - nouveauNombreJoursRestants;
 
         solde.setSoldeRestant(nouveauNombreJoursRestants);
         solde.setSoldePris(pris);

@@ -65,6 +65,14 @@ public class DemandeCongeService {
             throw new AccessDeniedException("Vous ne pouvez soumettre une demande que pour votre propre compte.");
         }
 
+        // INVARIANT METIER : aucune demande incomplete ne doit etre persistée.
+        // Le frontend affiche le message IllegalArgumentException via le ToastProvider existant.
+        if (demande == null || demande.getDateDebut() == null || demande.getDateFin() == null) {
+            throw new IllegalArgumentException("Veuillez renseigner les dates de début et de fin du congé.");
+        }
+        if (demande.getDateDebut().isBefore(LocalDate.now())) {
+            throw new IllegalArgumentException("Une nouvelle demande ne peut pas commencer dans le passé.");
+        }
         demande.setUtilisateurId(utilisateurId);
         demande.setStatut("EN_ATTENTE");
         demande.setDateCreation(LocalDate.now());
@@ -115,8 +123,6 @@ public class DemandeCongeService {
                             "Cette période chevauche une autre demande de congé déjà enregistrée.");
                 }
             }
-        } else {
-            demande.setNombreJours(0);
         }
 
         DemandeConge saved = demandeRepo.save(demande);
@@ -228,13 +234,11 @@ public class DemandeCongeService {
 
                 soldeRepo.save(solde);
 
-                try {
-                    historiqueService.enregistrerMouvement(demande.getUtilisateurId(), "DEBIT_CONGE", jours,
-                            demande.getTypeCongeId(), demande.getId(),
-                            "Congé validé par le responsable #" + actualValidatorId, actualValidatorId);
-                } catch (Exception e) {
-                    log.warn("Impossible d'enregistrer le mouvement d'historique : {}", e.getMessage());
-                }
+                // AUDIT OBLIGATOIRE : l'echec du journal doit annuler la transaction
+                // (solde + statut + historique). Ne jamais masquer cette exception.
+                historiqueService.enregistrerMouvement(demande.getUtilisateurId(), "DEBIT_CONGE", jours,
+                        demande.getTypeCongeId(), demande.getId(),
+                        "Congé validé par le responsable #" + actualValidatorId, actualValidatorId);
             }
 
             try {
@@ -277,6 +281,14 @@ public class DemandeCongeService {
 
         if (!"EN_ATTENTE".equalsIgnoreCase(demande.getStatut()) && !"VALIDEE".equalsIgnoreCase(demande.getStatut())) {
             throw new IllegalStateException("Seule une demande en attente ou validée peut être annulée.");
+        }
+
+        // Une annulation retroactive d'un conge commence modifierait les soldes
+        // historiques : elle doit passer par un workflow RH distinct et audite.
+        if ("VALIDEE".equalsIgnoreCase(demande.getStatut())
+                && demande.getDateDebut() != null
+                && !demande.getDateDebut().isAfter(LocalDate.now())) {
+            throw new IllegalStateException("Ce congé a déjà commencé : contactez les RH pour une régularisation.");
         }
 
         if ("VALIDEE".equalsIgnoreCase(demande.getStatut())) {

@@ -154,7 +154,7 @@ public class DemandeCongeService {
             throw new AccessDeniedException("Les employés ne sont pas habilités à traiter les demandes de congé.");
         }
 
-        DemandeConge demande = demandeRepo.findById(demandeId)
+        DemandeConge demande = demandeRepo.verrouillerDemande(demandeId)
                 .orElseThrow(() -> new IllegalArgumentException("Demande non trouvée avec l'ID : " + demandeId));
 
         Long demandeurId = demande.getUtilisateurId();
@@ -217,7 +217,7 @@ public class DemandeCongeService {
                 LocalDate finAnnee = demande.getDateFin().isBefore(LocalDate.of(annee, 12, 31))
                         ? demande.getDateFin() : LocalDate.of(annee, 12, 31);
                 int joursAnnee = calculerJoursOuvres(debutAnnee, finAnnee);
-                Optional<Solde_conge> soldeOpt = soldeRepo.findByUtilisateurIdAndTypeCongeIdAndPeriode(
+                Optional<Solde_conge> soldeOpt = soldeRepo.verrouillerSolde(
                         demande.getUtilisateurId(), demande.getTypeCongeId(), annee);
 
                 if (soldeOpt.isEmpty()) {
@@ -281,7 +281,7 @@ public class DemandeCongeService {
             throw new AccessDeniedException("Authentification requise.");
         }
 
-        DemandeConge demande = demandeRepo.findById(demandeId)
+        DemandeConge demande = demandeRepo.verrouillerDemande(demandeId)
                 .orElseThrow(() -> new IllegalArgumentException("Demande non trouvée avec l'ID : " + demandeId));
 
         if (currentUser.getRole() != Role.ADMIN && !Objects.equals(currentUser.getId(), demande.getUtilisateurId())) {
@@ -301,8 +301,6 @@ public class DemandeCongeService {
         }
 
         if ("VALIDEE".equalsIgnoreCase(demande.getStatut())) {
-            int joursAReintegrer = demande.getNombreJours() != null ? demande.getNombreJours()
-                    : calculerJoursOuvres(demande.getDateDebut(), demande.getDateFin());
             if (demande.getTypeCongeId() != null && demande.getUtilisateurId() != null && demande.getDateDebut() != null
                     && demande.getDateFin() != null) {
                 // Restituer exactement les jours imputes a chaque exercice.
@@ -312,7 +310,7 @@ public class DemandeCongeService {
                 LocalDate finAnnee = demande.getDateFin().isBefore(LocalDate.of(annee, 12, 31))
                         ? demande.getDateFin() : LocalDate.of(annee, 12, 31);
                 int joursAReintegrerAnnee = calculerJoursOuvres(debutAnnee, finAnnee);
-                Optional<Solde_conge> soldeOpt = soldeRepo.findByUtilisateurIdAndTypeCongeIdAndPeriode(
+                Optional<Solde_conge> soldeOpt = soldeRepo.verrouillerSolde(
                         demande.getUtilisateurId(), demande.getTypeCongeId(), annee);
                 if (soldeOpt.isPresent()) {
                     Solde_conge solde = soldeOpt.get();

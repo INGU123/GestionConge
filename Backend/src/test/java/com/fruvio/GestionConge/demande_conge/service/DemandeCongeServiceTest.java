@@ -4,6 +4,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -185,6 +187,32 @@ class DemandeCongeServiceTest {
                 assertEquals("ANNULEE", result.getStatut());
                 assertEquals(0, solde.getSoldePris());
                 assertEquals(20, solde.getSoldeRestant());
+                verify(historiqueService).enregistrerMouvement(
+                                7L, "CREDIT_CONGE", 2, 1L, 22L,
+                                "Restitution des jours suite à l'annulation du congé", 7L);
+        }
+
+        @Test
+        void annulerDemandeValideeSansSoldeEstRefusee() {
+                DemandeConge demande = DemandeConge.builder()
+                                .id(23L).utilisateurId(7L).typeCongeId(1L)
+                                .dateDebut(LocalDate.of(2026, 12, 24))
+                                .dateFin(LocalDate.of(2026, 12, 28))
+                                .nombreJours(2).statut("VALIDEE").build();
+
+                when(demandeRepo.findById(23L)).thenReturn(Optional.of(demande));
+                when(soldeRepo.findByUtilisateurIdAndTypeCongeIdAndPeriode(7L, 1L, 2026))
+                                .thenReturn(Optional.empty());
+
+                assertThrows(IllegalStateException.class,
+                                () -> demandeCongeService.annulerDemande(23L, 7L,
+                                                Utilisateur.builder().id(7L)
+                                                                .role(Role.EMPLOYE).build()));
+
+                assertEquals("VALIDEE", demande.getStatut());
+                verify(demandeRepo, never()).save(any(DemandeConge.class));
+                verify(soldeRepo, never()).save(any(Solde_conge.class));
+                verifyNoInteractions(historiqueService);
         }
 
         @Test

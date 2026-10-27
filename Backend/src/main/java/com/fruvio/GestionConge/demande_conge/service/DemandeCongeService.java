@@ -287,7 +287,11 @@ public class DemandeCongeService {
                 int annee = demande.getDateDebut().getYear();
                 Optional<Solde_conge> soldeOpt = soldeRepo.findByUtilisateurIdAndTypeCongeIdAndPeriode(
                         demande.getUtilisateurId(), demande.getTypeCongeId(), annee);
-                if (soldeOpt.isPresent()) {
+                if (soldeOpt.isEmpty()) {
+                    throw new IllegalStateException(
+                            "Annulation impossible : solde de congé introuvable.");
+                }
+                {
                     Solde_conge solde = soldeOpt.get();
                     int prisActuel = solde.getSoldePris() != null ? solde.getSoldePris() : 0;
                     int acquisActuel = solde.getSoldeAquis() != null ? solde.getSoldeAquis() : 0;
@@ -296,6 +300,18 @@ public class DemandeCongeService {
                     solde.setSoldeRestant(Math.max(0, acquisActuel - nouveauPris));
                     solde.setDate_maj(new Timestamp(System.currentTimeMillis()));
                     soldeRepo.save(solde);
+
+                    int joursRestitues = prisActuel - nouveauPris;
+                    if (joursRestitues > 0) {
+                        historiqueService.enregistrerMouvement(
+                                demande.getUtilisateurId(),
+                                "CREDIT_CONGE",
+                                joursRestitues,
+                                demande.getTypeCongeId(),
+                                demande.getId(),
+                                "Restitution des jours suite à l'annulation du congé",
+                                currentUser.getId());
+                    }
                 }
             }
         }
@@ -344,6 +360,10 @@ public class DemandeCongeService {
     public List<DemandeConge> getDemandesEnAttentePourManager(Long managerId, Utilisateur currentUser) {
         if (currentUser == null) {
             throw new AccessDeniedException("Authentification requise.");
+        }
+
+        if (currentUser.getRole() != Role.ADMIN && currentUser.getRole() != Role.MANAGER) {
+            throw new AccessDeniedException("Accès réservé aux managers et administrateurs.");
         }
 
         if (currentUser.getRole() == Role.MANAGER && !Objects.equals(currentUser.getId(), managerId)) {

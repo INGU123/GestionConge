@@ -55,8 +55,6 @@ public class Solde_congeService {
             }
         }
 
-        int annee = java.time.LocalDate.now().getYear();
-        initialiserSoldesPourUtilisateur(utilisateurId, annee);
         return soldeCongeRepository.findByUtilisateurId(utilisateurId);
     }
 

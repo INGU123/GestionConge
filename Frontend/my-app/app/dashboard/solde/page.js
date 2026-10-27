@@ -46,6 +46,7 @@ export default function SoldeConge() {
     soldeId: null,
     nouveauSolde: 0,
     typeLibelle: "",
+    motif: "",
   });
 
   /*
@@ -179,6 +180,7 @@ export default function SoldeConge() {
       soldeId: solde.id,
       nouveauSolde: Math.round(Number(solde.soldeRestant) || 0),
       typeLibelle: typeLabel,
+      motif: "",
     });
   };
 
@@ -189,11 +191,15 @@ export default function SoldeConge() {
     if (!modalAjust.soldeId) {
       return;
     }
+    if ((modalAjust.motif || "").trim().length < 10) {
+      setMsg({ type: "error", text: "Veuillez saisir un motif de correction (10 caractères minimum)." });
+      return;
+    }
 
     try {
       const nouveauNombre = Math.round(Number(modalAjust.nouveauSolde) || 0);
 
-      await ajustSolde(modalAjust.soldeId, nouveauNombre);
+      await ajustSolde(modalAjust.soldeId, nouveauNombre, modalAjust.motif);
 
       setMsg({
         type: "success",
@@ -205,6 +211,7 @@ export default function SoldeConge() {
         soldeId: null,
         nouveauSolde: 0,
         typeLibelle: "",
+    motif: "",
       });
 
       const targetId = selectedUserId || user?.id;
@@ -246,6 +253,7 @@ export default function SoldeConge() {
    * ROLE ADMIN
    */
   const isAdmin = user?.role?.toString().trim().toUpperCase() === "ADMIN";
+  const canAdjust = isAdmin && String(selectedUserId) !== String(user?.id);
 
   /*
    * CALCUL DES TOTAUX
@@ -432,7 +440,7 @@ export default function SoldeConge() {
                   <th className="py-3">Solde restant</th>
                   <th className="py-3">Taux d&apos;utilisation</th>
                   <th className="py-3">Mise à jour</th>
-                  {isAdmin && <th className="py-3 text-right">Ajustement</th>}
+                  {canAdjust && <th className="py-3 text-right">Correction</th>}
                 </tr>
               </thead>
 
@@ -504,7 +512,7 @@ export default function SoldeConge() {
                           : "-"}
                       </td>
 
-                      {isAdmin && (
+                      {canAdjust && (
                         <td className="py-3.5 text-right">
                           <button
                             onClick={() =>
@@ -565,6 +573,22 @@ export default function SoldeConge() {
               />
             </div>
 
+            <div>
+              <label htmlFor="motif-ajustement" className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
+                Motif obligatoire de la correction
+              </label>
+              <textarea
+                id="motif-ajustement"
+                value={modalAjust.motif || ""}
+                onChange={(e) => setModalAjust((current) => ({ ...current, motif: e.target.value }))}
+                minLength={10}
+                required
+                rows={3}
+                className="textarea textarea-bordered w-full bg-white text-slate-900"
+                placeholder="Ex. Régularisation validée par le service RH"
+              />
+            </div>
+
             <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
               <button
                 onClick={() =>
@@ -573,6 +597,7 @@ export default function SoldeConge() {
                     soldeId: null,
                     nouveauSolde: 0,
                     typeLibelle: "",
+    motif: "",
                   })
                 }
                 className="btn btn-ghost btn-sm font-semibold"
@@ -582,6 +607,7 @@ export default function SoldeConge() {
 
               <button
                 onClick={handleConfirmAjust}
+                disabled={(modalAjust.motif || "").trim().length < 10}
                 className="btn btn-primary btn-sm font-semibold"
               >
                 Enregistrer les modifications

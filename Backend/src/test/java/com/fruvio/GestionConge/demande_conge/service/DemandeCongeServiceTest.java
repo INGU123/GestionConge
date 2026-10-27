@@ -200,4 +200,67 @@ class DemandeCongeServiceTest {
                 assertThrows(IllegalArgumentException.class, () -> demandeCongeService.creerDemande(7L, request,
                                 Utilisateur.builder().id(7L).role(Role.EMPLOYE).build()));
         }
+
+        @Test
+        void traiterDemandeVentileLesJoursSurDeuxExercices() {
+                LocalDate debut = LocalDate.of(2026, 12, 30);
+                LocalDate fin = LocalDate.of(2027, 1, 4);
+                DemandeConge demande = DemandeConge.builder().id(30L).utilisateurId(7L).typeCongeId(1L)
+                                .dateDebut(debut).dateFin(fin).statut("EN_ATTENTE").build();
+                Solde_conge solde2026 = Solde_conge.builder().periode(2026).soldeAquis(10).soldePris(1).build();
+                Solde_conge solde2027 = Solde_conge.builder().periode(2027).soldeAquis(10).soldePris(2).build();
+                Utilisateur admin = Utilisateur.builder().id(9L).role(Role.ADMIN).build();
+
+                when(demandeRepo.verrouillerDemande(30L)).thenReturn(Optional.of(demande));
+                when(utilisateurRepo.findById(7L)).thenReturn(Optional.of(Utilisateur.builder().id(7L).build()));
+                when(jourFerieService.compterJoursOuvres(debut, fin)).thenReturn(3);
+                when(jourFerieService.compterJoursOuvres(debut, LocalDate.of(2026, 12, 31))).thenReturn(2);
+                when(jourFerieService.compterJoursOuvres(LocalDate.of(2027, 1, 1), fin)).thenReturn(1);
+                when(soldeRepo.verrouillerSolde(7L, 1L, 2026)).thenReturn(Optional.of(solde2026));
+                when(soldeRepo.verrouillerSolde(7L, 1L, 2027)).thenReturn(Optional.of(solde2027));
+
+                DemandeConge resultat = demandeCongeService.traiterDemande(30L, 9L, "VALIDEE", null, admin);
+
+                assertEquals("VALIDEE", resultat.getStatut());
+                assertEquals(3, resultat.getNombreJours());
+                assertEquals(3, solde2026.getSoldePris());
+                assertEquals(3, solde2027.getSoldePris());
+                verify(soldeRepo, org.mockito.Mockito.times(2)).save(any(Solde_conge.class));
+        }
+
+        @Test
+        void traiterDemandeRefuseSiSoldeDeuxiemeExerciceAbsent() {
+                LocalDate debut = LocalDate.of(2026, 12, 30);
+                LocalDate fin = LocalDate.of(2027, 1, 4);
+                DemandeConge demande = DemandeConge.builder().id(31L).utilisateurId(7L).typeCongeId(1L)
+                                .dateDebut(debut).dateFin(fin).statut("EN_ATTENTE").build();
+                Solde_conge solde2026 = Solde_conge.builder().periode(2026).soldeAquis(10).soldePris(1).build();
+                Utilisateur admin = Utilisateur.builder().id(9L).role(Role.ADMIN).build();
+
+                when(demandeRepo.verrouillerDemande(31L)).thenReturn(Optional.of(demande));
+                when(utilisateurRepo.findById(7L)).thenReturn(Optional.of(Utilisateur.builder().id(7L).build()));
+                when(jourFerieService.compterJoursOuvres(debut, fin)).thenReturn(3);
+                when(jourFerieService.compterJoursOuvres(debut, LocalDate.of(2026, 12, 31))).thenReturn(2);
+                when(jourFerieService.compterJoursOuvres(LocalDate.of(2027, 1, 1), fin)).thenReturn(1);
+                when(soldeRepo.verrouillerSolde(7L, 1L, 2026)).thenReturn(Optional.of(solde2026));
+                when(soldeRepo.verrouillerSolde(7L, 1L, 2027)).thenReturn(Optional.empty());
+
+                assertThrows(IllegalStateException.class,
+                                () -> demandeCongeService.traiterDemande(31L, 9L, "VALIDEE", null, admin));
+                // La transaction Spring annule les mutations precedentes en cas d'exception.
+                // Ce test unitaire ne remplace pas un test d'integration transactionnel.
+        }
+
+        @Test
+        void traiterDemandeInterditUneSecondeValidation() {
+                DemandeConge demande = DemandeConge.builder().id(32L).utilisateurId(7L).typeCongeId(1L)
+                                .dateDebut(LocalDate.of(2026, 12, 1)).dateFin(LocalDate.of(2026, 12, 2))
+                                .statut("VALIDEE").build();
+                when(demandeRepo.verrouillerDemande(32L)).thenReturn(Optional.of(demande));
+                when(utilisateurRepo.findById(7L)).thenReturn(Optional.of(Utilisateur.builder().id(7L).build()));
+
+                assertThrows(IllegalStateException.class, () -> demandeCongeService.traiterDemande(
+                                32L, 9L, "VALIDEE", null, Utilisateur.builder().id(9L).role(Role.ADMIN).build()));
+                org.mockito.Mockito.verifyNoInteractions(soldeRepo);
+        }
 }

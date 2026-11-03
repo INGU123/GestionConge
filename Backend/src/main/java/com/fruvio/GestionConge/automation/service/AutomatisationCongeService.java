@@ -136,7 +136,7 @@ public class AutomatisationCongeService {
 
         Date sqlToday = Date.valueOf(today);
         for (Map.Entry<Long, Integer> entry : countByRecipient.entrySet()) {
-            if (notificationRepository.existsByUtilisateurIdAndTypeAndDate_envoi(
+            if (notificationRepository.existsForRecipientAndTypeOnDate(
                     entry.getKey(), "RAPPEL_CONGE", sqlToday)) {
                 continue;
             }
@@ -180,7 +180,7 @@ public class AutomatisationCongeService {
         Date sqlToday = Date.valueOf(today);
         List<Utilisateur> admins = utilisateurRepository.findByRoleAndActifTrue(Role.ADMIN);
         for (Utilisateur admin : admins) {
-            if (notificationRepository.existsByUtilisateurIdAndTypeAndDate_envoi(
+            if (notificationRepository.existsForRecipientAndTypeOnDate(
                     admin.getId(), "RAPPORT_RH", sqlToday)) {
                 continue;
             }

@@ -18,6 +18,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import com.fruvio.GestionConge.demande_conge.entity.DemandeConge;
 import com.fruvio.GestionConge.demande_conge.repository.DemandeCongeRepository;
@@ -58,6 +59,7 @@ class AutomatisationCongeServiceTest {
         when(soldeCongeRepository.existsByUtilisateurIdAndTypeCongeIdAndPeriode(10L, 20L, annee))
                 .thenReturn(false);
 
+        ReflectionTestUtils.setField(service, "annualBalancesEnabled", true);
         service.initialiserSoldesAnnuelsManquants();
 
         ArgumentCaptor<Solde_conge> captor = ArgumentCaptor.forClass(Solde_conge.class);

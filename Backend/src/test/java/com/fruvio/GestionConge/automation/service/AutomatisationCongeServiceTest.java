@@ -49,6 +49,14 @@ class AutomatisationCongeServiceTest {
     @InjectMocks AutomatisationCongeService service;
 
     @Test
+    void gardeLattributionAnnuelleDesactiveeParDefaut() {
+        service.initialiserSoldesAnnuelsManquants();
+
+        org.mockito.Mockito.verifyNoInteractions(
+                utilisateurRepository, typeCongeRepository, soldeCongeRepository, historiqueService);
+    }
+
+    @Test
     void initialiseLeSoldeAnnuelManquantAvecLeQuotaConfigure() {
         int annee = LocalDate.now(ZONE).getYear();
         Utilisateur employe = Utilisateur.builder().id(10L).actif(true).build();

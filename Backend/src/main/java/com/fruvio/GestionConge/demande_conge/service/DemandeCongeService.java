@@ -123,13 +123,32 @@ public class DemandeCongeService {
 
         if (saved != null) {
             try {
-                notificationService
-                        .creerNotification(
-                                utilisateurId, "Votre demande de congé du " + demande.getDateDebut() + " au "
-                                        + demande.getDateFin() + " a été soumise avec succès.",
-                                "INFO", "/dashboard/demande");
+                notificationService.creerNotification(
+                        utilisateurId, "Votre demande de congé du " + demande.getDateDebut() + " au "
+                                + demande.getDateFin() + " a été soumise avec succès.",
+                        "INFO", "/dashboard/demande");
+
+                Utilisateur demandeur = utilisateurRepo.findById(utilisateurId).orElse(null);
+                Utilisateur manager = demandeur == null || demandeur.getManager_id() == null
+                        ? null : utilisateurRepo.findById(demandeur.getManager_id()).orElse(null);
+
+                if (manager != null && manager.isActif() && manager.getRole() == Role.MANAGER) {
+                    notificationService.creerNotification(manager.getId(),
+                            "Nouvelle demande de congé de " + safe(demandeur.getPrenom()) + " "
+                                    + safe(demandeur.getNom()) + " du " + demande.getDateDebut()
+                                    + " au " + demande.getDateFin() + ".",
+                            "NOUVELLE_DEMANDE", "/dashboard/demande");
+                } else {
+                    for (Utilisateur admin : utilisateurRepo.findByRoleAndActifTrue(Role.ADMIN)) {
+                        notificationService.creerNotification(admin.getId(),
+                                "Demande de congé sans manager actif : " + safe(demandeur == null ? null : demandeur.getPrenom())
+                                        + " " + safe(demandeur == null ? null : demandeur.getNom())
+                                        + " (demande #" + saved.getId() + ").",
+                                "NOUVELLE_DEMANDE", "/dashboard/demande");
+                    }
+                }
             } catch (Exception e) {
-                log.warn("Impossible de créer la notification pour la demande #{} : {}", saved.getId(), e.getMessage());
+                log.warn("Demande #{} enregistrée, mais une notification a échoué.", saved.getId(), e);
             }
         }
 
@@ -317,7 +336,27 @@ public class DemandeCongeService {
         }
 
         demande.setStatut("ANNULEE");
-        return demandeRepo.save(demande);
+        DemandeConge saved = demandeRepo.save(demande);
+        try {
+            notificationService.creerNotification(demande.getUtilisateurId(),
+                    "Votre demande de congé du " + demande.getDateDebut() + " au " + demande.getDateFin()
+                            + " a été annulée.",
+                    "ANNULATION", "/dashboard/demande");
+            Utilisateur demandeur = utilisateurRepo.findById(demande.getUtilisateurId()).orElse(null);
+            if (demandeur != null && demandeur.getManager_id() != null) {
+                notificationService.creerNotification(demandeur.getManager_id(),
+                        "La demande de congé #" + demande.getId() + " de " + safe(demandeur.getPrenom())
+                                + " " + safe(demandeur.getNom()) + " a été annulée.",
+                        "ANNULATION", "/dashboard/demande");
+            }
+        } catch (Exception e) {
+            log.warn("Demande #{} annulée, mais une notification a échoué.", demandeId, e);
+        }
+        return saved;
+    }
+
+    private String safe(String value) {
+        return value == null ? "" : value.trim();
     }
 
     private int calculerJoursOuvres(LocalDate dateDebut, LocalDate dateFin) {

@@ -11,6 +11,7 @@ import java.util.Map;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -42,6 +43,9 @@ public class AutomatisationCongeService {
     private final Notification_congeService notificationService;
     private final Historique_mouvementService historiqueService;
 
+    @Value("$" + "{app.automation.annual-balances.enabled:false}")
+    private boolean annualBalancesEnabled;
+
     public AutomatisationCongeService(
             UtilisateurRepository utilisateurRepository,
             Type_congeRepository typeCongeRepository,
@@ -67,6 +71,11 @@ public class AutomatisationCongeService {
     @Scheduled(cron = "0 15 2 * * *", zone = "Africa/Antananarivo")
     @Transactional
     public void initialiserSoldesAnnuelsManquants() {
+        if (!annualBalancesEnabled) {
+            log.warn("Attribution annuelle automatique désactivée : le moteur légal des droits par période de référence doit être migré avant activation.");
+            return;
+        }
+
         int annee = LocalDate.now(ZONE).getYear();
         List<Utilisateur> utilisateurs = utilisateurRepository.findByActifTrue();
         List<Type_conge> types = typeCongeRepository.findByActifTrue();

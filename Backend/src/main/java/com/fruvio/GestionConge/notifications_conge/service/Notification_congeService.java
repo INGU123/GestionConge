@@ -7,6 +7,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import com.fruvio.GestionConge.notifications_conge.entity.Notification;
 import com.fruvio.GestionConge.notifications_conge.repository.NotificationRepository;
@@ -48,7 +50,21 @@ public class Notification_congeService {
                 .build();
         notificationRepository.save(notification);
 
-        // L'e-mail est complémentaire : une panne SMTP ne doit pas annuler l'action métier.
+        // L'e-mail est envoyé après validation de la transaction pour éviter les faux avis.
+        Runnable sendEmail = () -> envoyerEmail(utilisateurId, contenu, type, lien);
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    sendEmail.run();
+                }
+            });
+        } else {
+            sendEmail.run();
+        }
+    }
+
+    private void envoyerEmail(Long utilisateurId, String contenu, String type, String lien) {
         if (emailService == null || utilisateurRepository == null) return;
         try {
             Utilisateur destinataire = utilisateurRepository.findById(utilisateurId).orElse(null);

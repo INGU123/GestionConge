@@ -9,6 +9,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import com.fruvio.GestionConge.utilisateur.entity.Utilisateur;
+import com.fruvio.GestionConge.utilisateur.entity.Role;
 
 @Repository
 public interface UtilisateurRepository extends JpaRepository<Utilisateur, Long> {
@@ -24,6 +25,10 @@ public interface UtilisateurRepository extends JpaRepository<Utilisateur, Long> 
     boolean existsByEmail(String email);
 
     boolean existsByNumeroCinIgnoreCase(String numeroCin);
+
+    List<Utilisateur> findByActifTrue();
+
+    List<Utilisateur> findByRoleAndActifTrue(Role role);
 
     @Query("SELECT u FROM Utilisateur u WHERE u.manager_id = :managerId")
     List<Utilisateur> findByManagerId(@Param("managerId") Long managerId);

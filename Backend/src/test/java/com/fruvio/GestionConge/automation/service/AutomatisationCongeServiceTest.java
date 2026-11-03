@@ -113,7 +113,7 @@ class AutomatisationCongeServiceTest {
 
         when(demandeCongeRepository.findAll()).thenReturn(List.of(request));
         when(utilisateurRepository.findByRoleAndActifTrue(Role.ADMIN)).thenReturn(List.of(admin));
-        when(notificationRepository.existsByUtilisateurIdAndTypeAndDate_envoi(
+        when(notificationRepository.existsForRecipientAndTypeOnDate(
                 99L, "RAPPORT_RH", Date.valueOf(today))).thenReturn(false);
 
         service.envoyerBilanMensuelRH();

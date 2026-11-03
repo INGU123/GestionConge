@@ -85,6 +85,7 @@ class AutomatisationCongeServiceTest {
         when(soldeCongeRepository.existsByUtilisateurIdAndTypeCongeIdAndPeriode(10L, 20L, annee))
                 .thenReturn(true);
 
+        ReflectionTestUtils.setField(service, "annualBalancesEnabled", true);
         service.initialiserSoldesAnnuelsManquants();
 
         org.mockito.Mockito.verify(soldeCongeRepository, org.mockito.Mockito.never()).save(any(Solde_conge.class));

@@ -151,7 +151,7 @@ public class AutomatisationCongeService {
     }
 
     @Scheduled(cron = "0 30 8 1 * *", zone = "Africa/Antananarivo")
-    @Transactional(readOnly = true)
+    @Transactional
     public void envoyerBilanMensuelRH() {
         LocalDate today = LocalDate.now(ZONE);
         YearMonth month = YearMonth.from(today).minusMonths(1);

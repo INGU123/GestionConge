@@ -10,4 +10,6 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
     List<Notification> findByUtilisateurIdAndLueFalse(Long utilisateurId);
     List<Notification> findByUtilisateurId(Long utilisateurId);
     boolean existsByUtilisateurId(Long utilisateurId);
+
+    boolean existsByUtilisateurIdAndTypeAndDate_envoi(Long utilisateurId, String type, java.sql.Date dateEnvoi);
 }

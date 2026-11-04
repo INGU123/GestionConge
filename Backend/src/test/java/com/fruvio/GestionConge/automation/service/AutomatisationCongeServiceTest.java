@@ -36,7 +36,7 @@ import com.fruvio.GestionConge.utilisateur.repository.UtilisateurRepository;
 @ExtendWith(MockitoExtension.class)
 class AutomatisationCongeServiceTest {
 
-    private static final ZoneId ZONE = ZoneId.of("Africa/Antananarivo");
+    private static final ZoneId ZONE = ZoneId.of("GMT+03:00");
 
     @Mock UtilisateurRepository utilisateurRepository;
     @Mock Type_congeRepository typeCongeRepository;

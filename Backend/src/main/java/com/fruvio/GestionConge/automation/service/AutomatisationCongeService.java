@@ -33,7 +33,7 @@ import com.fruvio.GestionConge.utilisateur.repository.UtilisateurRepository;
 public class AutomatisationCongeService {
 
     private static final Logger log = LoggerFactory.getLogger(AutomatisationCongeService.class);
-    private static final ZoneId ZONE = ZoneId.of("Africa/Antananarivo");
+    private static final ZoneId ZONE = ZoneId.of("+03:00");
 
     private final UtilisateurRepository utilisateurRepository;
     private final Type_congeRepository typeCongeRepository;
@@ -68,7 +68,7 @@ public class AutomatisationCongeService {
      * nombreJoursParAn configuré par l'administration. Aucun taux légal
      * ni prorata non confirmé n'est introduit par cette automatisation.
      */
-    @Scheduled(cron = "0 15 2 * * *", zone = "Africa/Antananarivo")
+    @Scheduled(cron = "0 15 2 * * *", zone = "GMT+03:00")
     @Transactional
     public void initialiserSoldesAnnuelsManquants() {
         if (!annualBalancesEnabled) {
@@ -115,7 +115,7 @@ public class AutomatisationCongeService {
         log.info("Initialisation annuelle terminée : {} solde(s) créé(s) pour {}.", created, annee);
     }
 
-    @Scheduled(cron = "0 0 8 * * *", zone = "Africa/Antananarivo")
+    @Scheduled(cron = "0 0 8 * * *", zone = "GMT+03:00")
     @Transactional
     public void rappelerDemandesEnAttente() {
         int reminderDays = 3;
@@ -159,7 +159,7 @@ public class AutomatisationCongeService {
         log.info("Rappels traités pour {} destinataire(s).", countByRecipient.size());
     }
 
-    @Scheduled(cron = "0 30 8 1 * *", zone = "Africa/Antananarivo")
+    @Scheduled(cron = "0 30 8 1 * *", zone = "GMT+03:00")
     @Transactional
     public void envoyerBilanMensuelRH() {
         LocalDate today = LocalDate.now(ZONE);

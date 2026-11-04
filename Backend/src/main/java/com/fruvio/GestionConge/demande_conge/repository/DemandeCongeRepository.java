@@ -19,6 +19,8 @@ public interface DemandeCongeRepository extends JpaRepository<DemandeConge, Long
 
     List<DemandeConge> findByStatut(String statut);
 
+    List<DemandeConge> findByStatutAndDateCreationLessThanEqual(String statut, java.time.LocalDate dateCreation);
+
     List<DemandeConge> findByUtilisateurIdIn(List<Long> utilisateurIds);
 
     List<DemandeConge> findByUtilisateurIdInAndStatut(List<Long> utilisateurIds, String statut);

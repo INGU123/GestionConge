@@ -3,12 +3,21 @@ package com.fruvio.GestionConge.demande_conge.repository;
 import java.util.List;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+
+import jakarta.persistence.LockModeType;
 import org.springframework.stereotype.Repository;
 
 import com.fruvio.GestionConge.demande_conge.entity.DemandeConge;
 
 @Repository
 public interface DemandeCongeRepository extends JpaRepository<DemandeConge, Long> {
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select d from DemandeConge d where d.id = :id")
+    java.util.Optional<DemandeConge> findByIdForUpdate(@Param("id") Long id);
     List<DemandeConge> findByUtilisateurId(Long utilisateurId);
 
     boolean existsByUtilisateurId(Long utilisateurId);

@@ -191,7 +191,7 @@ class DemandeCongeServiceTest {
                 assertEquals(20, solde.getSoldeRestant());
                 verify(historiqueService).enregistrerMouvement(
                                 7L, "CREDIT_CONGE", 2, 1L, 22L,
-                                "Restitution des jours suite à l'annulation du congé", 7L);
+                                "Restitution des jours suite à l'annulation du congé (exercice 2026)", 7L);
         }
 
         @Test

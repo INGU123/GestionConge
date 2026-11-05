@@ -172,7 +172,7 @@ public class DemandeCongeService {
             throw new AccessDeniedException("Les employés ne sont pas habilités à traiter les demandes de congé.");
         }
 
-        DemandeConge demande = demandeRepo.findById(demandeId)
+        DemandeConge demande = demandeRepo.findByIdForUpdate(demandeId)
                 .orElseThrow(() -> new IllegalArgumentException("Demande non trouvée avec l'ID : " + demandeId));
 
         Long demandeurId = demande.getUtilisateurId();
@@ -307,7 +307,7 @@ public class DemandeCongeService {
             throw new AccessDeniedException("Authentification requise.");
         }
 
-        DemandeConge demande = demandeRepo.findById(demandeId)
+        DemandeConge demande = demandeRepo.findByIdForUpdate(demandeId)
                 .orElseThrow(() -> new IllegalArgumentException("Demande non trouvée avec l'ID : " + demandeId));
 
         if (currentUser.getRole() != Role.ADMIN && !Objects.equals(currentUser.getId(), demande.getUtilisateurId())) {

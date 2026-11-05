@@ -296,4 +296,41 @@ class DemandeCongeServiceTest {
                 assertEquals(20, balance2027.getSoldeRestant());
         }
 
+
+        @Test
+        void traiterDemandeDebitsEachCalendarYearForMultiYearLeave() {
+                Utilisateur manager = Utilisateur.builder().id(9L).role(Role.MANAGER).build();
+                DemandeConge demande = DemandeConge.builder().id(45L).utilisateurId(7L).typeCongeId(1L)
+                                .dateDebut(LocalDate.of(2026, 12, 31)).dateFin(LocalDate.of(2027, 1, 4))
+                                .statut("EN_ATTENTE").build();
+                Solde_conge balance2026 = Solde_conge.builder().utilisateurId(7L).typeCongeId(1L)
+                                .periode(2026).soldeAquis(10).soldePris(0).soldeRestant(10).build();
+                Solde_conge balance2027 = Solde_conge.builder().utilisateurId(7L).typeCongeId(1L)
+                                .periode(2027).soldeAquis(10).soldePris(0).soldeRestant(10).build();
+
+                when(demandeRepo.findById(45L)).thenReturn(Optional.of(demande));
+                when(utilisateurRepo.findById(7L)).thenReturn(Optional.of(
+                                Utilisateur.builder().id(7L).manager_id(9L).build()));
+                when(jourFerieService.compterJoursOuvres(LocalDate.of(2026, 12, 31), LocalDate.of(2026, 12, 31)))
+                                .thenReturn(1);
+                when(jourFerieService.compterJoursOuvres(LocalDate.of(2027, 1, 1), LocalDate.of(2027, 1, 4)))
+                                .thenReturn(2);
+                when(soldeRepo.findByUtilisateurIdAndTypeCongeIdAndPeriode(7L, 1L, 2026))
+                                .thenReturn(Optional.of(balance2026));
+                when(soldeRepo.findByUtilisateurIdAndTypeCongeIdAndPeriode(7L, 1L, 2027))
+                                .thenReturn(Optional.of(balance2027));
+
+                DemandeConge result = demandeCongeService.traiterDemande(45L, 9L, "VALIDEE", null, manager);
+
+                assertEquals(3, result.getNombreJours());
+                assertEquals(1, balance2026.getSoldePris());
+                assertEquals(9, balance2026.getSoldeRestant());
+                assertEquals(2, balance2027.getSoldePris());
+                assertEquals(8, balance2027.getSoldeRestant());
+                verify(historiqueService).enregistrerMouvement(7L, "DEBIT_CONGE", 1, 1L, 45L,
+                                "Congé validé par le responsable #9 (exercice 2026)", 9L);
+                verify(historiqueService).enregistrerMouvement(7L, "DEBIT_CONGE", 2, 1L, 45L,
+                                "Congé validé par le responsable #9 (exercice 2027)", 9L);
+        }
+
 }

@@ -133,6 +133,18 @@ export default function UtilisateursPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!editingUser) {
+      const requiredValues = [
+        newUser.matricule, newUser.nom, newUser.prenom, newUser.numero_cin,
+        newUser.date_naissance, newUser.email, newUser.telephone, newUser.adresse,
+        newUser.role, newUser.date_embauche, newUser.fonction, newUser.type_contrat,
+        newUser.service_id, newUser.manager_id,
+      ];
+      if (requiredValues.some((value) => value == null || String(value).trim() === "")) {
+        showToast("Compléter toutes les informations de l'utilisateur", "warning");
+        return;
+      }
+    }
     try {
       const payload = {
         ...(editingUser ? { id: editingUser.id } : {}),
@@ -639,7 +651,7 @@ export default function UtilisateursPage() {
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-3">
+            <form onSubmit={handleSubmit} noValidate className="space-y-3">
               <div>
                 <label className="block text-xs font-bold uppercase text-slate-600 mb-1">
                   Matricule
@@ -689,6 +701,7 @@ export default function UtilisateursPage() {
                     maxLength={30}
                     autoComplete="off"
                     placeholder="Numéro de carte d'identité"
+                    required={!editingUser}
                     value={newUser.numero_cin || ""}
                     onChange={(e) => setNewUser({ ...newUser, numero_cin: e.target.value })}
                     className="input input-bordered input-sm w-full bg-white text-slate-800 focus:outline-hidden"
@@ -698,6 +711,7 @@ export default function UtilisateursPage() {
                   <label className="block text-xs font-bold uppercase text-slate-600 mb-1">Date de naissance</label>
                   <input
                     type="date"
+                    required={!editingUser}
                     value={newUser.date_naissance || ""}
                     max={new Date().toISOString().split("T")[0]}
                     onChange={(e) => setNewUser({ ...newUser, date_naissance: e.target.value })}
@@ -727,6 +741,7 @@ export default function UtilisateursPage() {
                     type="tel"
                     maxLength={30}
                     autoComplete="tel"
+                    required={!editingUser}
                     value={newUser.telephone || ""}
                     onChange={(e) => setNewUser({ ...newUser, telephone: e.target.value })}
                     className="input input-bordered input-sm w-full bg-white text-slate-800 focus:outline-hidden"
@@ -738,6 +753,7 @@ export default function UtilisateursPage() {
                     type="text"
                     maxLength={500}
                     autoComplete="street-address"
+                    required={!editingUser}
                     value={newUser.adresse || ""}
                     onChange={(e) => setNewUser({ ...newUser, adresse: e.target.value })}
                     className="input input-bordered input-sm w-full bg-white text-slate-800 focus:outline-hidden"
@@ -764,6 +780,7 @@ export default function UtilisateursPage() {
                     Rôle
                   </label>
                   <select
+                    required={!editingUser}
                     value={newUser.role}
                     onChange={(e) => setNewUser({ ...newUser, role: e.target.value })}
                     className="select select-bordered select-sm w-full bg-white text-slate-800 focus:outline-hidden"
@@ -781,6 +798,7 @@ export default function UtilisateursPage() {
                 </label>
                 <input
                   type="date"
+                  required={!editingUser}
                   value={newUser.date_embauche || ""}
                   onChange={(e) => setNewUser({ ...newUser, date_embauche: e.target.value })}
                   className="input input-bordered input-sm w-full bg-white text-slate-800 focus:outline-hidden"
@@ -794,6 +812,7 @@ export default function UtilisateursPage() {
                     type="text"
                     maxLength={100}
                     placeholder="Ex. Agent administratif"
+                    required={!editingUser}
                     value={newUser.fonction || ""}
                     onChange={(e) => setNewUser({ ...newUser, fonction: e.target.value })}
                     className="input input-bordered input-sm w-full bg-white text-slate-800 focus:outline-hidden"
@@ -802,6 +821,7 @@ export default function UtilisateursPage() {
                 <div>
                   <label className="block text-xs font-bold uppercase text-slate-600 mb-1">Type de contrat</label>
                   <select
+                    required={!editingUser}
                     value={newUser.type_contrat || ""}
                     onChange={(e) => setNewUser({ ...newUser, type_contrat: e.target.value })}
                     className="select select-bordered select-sm w-full bg-white text-slate-800 focus:outline-hidden"
@@ -820,6 +840,7 @@ export default function UtilisateursPage() {
                 <div>
                   <label className="block text-xs font-bold uppercase text-slate-600 mb-1">Service</label>
                   <select
+                    required={!editingUser}
                     value={newUser.service_id == null ? "" : String(newUser.service_id)}
                     onChange={(e) => setNewUser({ ...newUser, service_id: e.target.value })}
                     disabled={servicesLoading}
@@ -834,6 +855,7 @@ export default function UtilisateursPage() {
                 <div>
                   <label className="block text-xs font-bold uppercase text-slate-600 mb-1">Responsable hiérarchique</label>
                   <select
+                    required={!editingUser}
                     value={newUser.manager_id == null ? "" : String(newUser.manager_id)}
                     onChange={(e) => setNewUser({ ...newUser, manager_id: e.target.value })}
                     className="select select-bordered select-sm w-full bg-white text-slate-800 focus:outline-hidden"

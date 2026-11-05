@@ -15,6 +15,10 @@ public class Type_congeService {
     }
 
     public Type_conge save(Type_conge typeConge) {
+        if (typeConge == null) {
+            throw new IllegalArgumentException("Les informations du type de congé sont obligatoires.");
+        }
+        normaliserEtVerifierUnicite(typeConge, null);
         if (typeConge.getRegle_acquisition() == null || typeConge.getRegle_acquisition().trim().isEmpty()) {
             typeConge.setRegle_acquisition("STANDARD");
         }
@@ -43,6 +47,7 @@ public class Type_congeService {
         if (existant != null) {
             if (details.getCode() != null) existant.setCode(details.getCode());
             if (details.getLibelle() != null) existant.setLibelle(details.getLibelle());
+            normaliserEtVerifierUnicite(existant, id);
             if (details.getNombreJoursParAn() != null) existant.setNombreJoursParAn(details.getNombreJoursParAn());
             existant.setJustificatifObligatoire(details.isJustificatifObligatoire());
             if (details.getActif() != null) existant.setActif(details.getActif());
@@ -51,6 +56,30 @@ public class Type_congeService {
             return typeCongeRepository.save(existant);
         }
         return null;
+    }
+
+    private void normaliserEtVerifierUnicite(Type_conge typeConge, Long idExclu) {
+        String code = typeConge.getCode() == null ? "" : typeConge.getCode().trim().toUpperCase();
+        String libelle = typeConge.getLibelle() == null ? "" : typeConge.getLibelle().trim();
+
+        if (code.isEmpty() || libelle.isEmpty()) {
+            throw new IllegalArgumentException("Le sigle et le libellé du type de congé sont obligatoires.");
+        }
+
+        boolean codeExiste = idExclu == null
+                ? typeCongeRepository.existsByCodeIgnoreCase(code)
+                : typeCongeRepository.existsByCodeIgnoreCaseAndIdNot(code, idExclu);
+        boolean libelleExiste = idExclu == null
+                ? typeCongeRepository.existsByLibelleIgnoreCase(libelle)
+                : typeCongeRepository.existsByLibelleIgnoreCaseAndIdNot(libelle, idExclu);
+
+        if (codeExiste || libelleExiste) {
+            throw new IllegalArgumentException(
+                    "Type existant : ce sigle ou ce libellé est déjà utilisé par un autre type de congé.");
+        }
+
+        typeConge.setCode(code);
+        typeConge.setLibelle(libelle);
     }
 
     public boolean deleteById(Long id) {

@@ -25,51 +25,6 @@ import {
 
 const sections = [
   {
-    id: "connexion",
-    title: "Connexion et accès",
-    forRoles: ["EMPLOYE", "MANAGER", "ADMIN"],
-    detail: "Utilisez votre matricule et le mot de passe associé. Après connexion, vérifiez que le nom et le rôle affichés correspondent à votre compte. Si le rôle est incorrect, contactez l’administrateur.",
-    description: "Accéder à votre espace GestionConge.",
-    icon: LogIn,
-    roles: "Tous les rôles",
-    images: [
-      { src: "/Aides/PageLogin.png", alt: "Écran de connexion GestionConge", caption: "Écran de connexion : saisie du matricule et du mot de passe.", help: "Commencez par le matricule fourni par la SPAT, puis saisissez votre mot de passe. Vérifiez les deux champs avant de vous connecter. Le matricule est l’identifiant attendu, pas votre nom." },
-    ],
-    steps: [
-      "Ouvrez l’adresse de GestionConge communiquée par votre organisation.",
-      "Saisissez votre matricule dans le champ « Matricule ».",
-      "Entrez votre mot de passe, puis cliquez sur « Se connecter ».",
-      "Après connexion, vous arrivez sur le tableau de bord correspondant à votre rôle.",
-    ],
-    notes: [
-      "L’écran de connexion utilise un matricule, et non une adresse e-mail, comme identifiant.",
-      "Si vos identifiants sont refusés, vérifiez leur saisie. Si le problème persiste, contactez l’administrateur.",
-    ],
-  },
-  {
-    id: "tableau-de-bord",
-    title: "Tableau de bord et navigation",
-    forRoles: ["EMPLOYE", "MANAGER", "ADMIN"],
-    detail: "Le menu varie selon le profil. Les collaborateurs accèdent à leurs demandes, les managers aux demandes à traiter selon leurs droits et l’administrateur aux fonctions de gestion. Une rubrique absente peut simplement être réservée à un autre rôle.",
-    description: "Comprendre le menu et retrouver les fonctionnalités.",
-    icon: LayoutDashboard,
-    roles: "Tous les rôles",
-    images: [
-      { src: "/Aides/retractMenu,nightmod,acceuilPage.png", alt: "Accueil, menu rétractable et mode jour/nuit", caption: "Tableau de bord, menu latéral rétractable et apparence jour/nuit.", help: "Utilisez le menu latéral pour accéder aux rubriques visibles pour votre rôle. Le bouton d’apparence change le thème ; le repli du menu libère de l’espace sans changer vos droits." },
-    ],
-    steps: [
-      "Utilisez le menu latéral pour ouvrir une rubrique.",
-      "« Accueil » ramène au tableau de bord.",
-      "« Mes Demandes » permet aux profils concernés d’accéder à la gestion de leurs demandes.",
-      "« Mes Soldes » ou « Soldes & Quotas » ouvre la consultation des soldes.",
-      "« Historique » permet de consulter les mouvements et les demandes accessibles à votre profil.",
-    ],
-    notes: [
-      "Le menu varie selon les droits du compte. Une rubrique absente peut être réservée à un autre rôle.",
-      "Le bouton de mode jour/nuit permet de modifier l’apparence du tableau de bord.",
-    ],
-  },
-  {
     id: "demandes",
     title: "Créer et suivre une demande de congé",
     forRoles: ["EMPLOYE", "MANAGER"],
@@ -95,8 +50,8 @@ const sections = [
   },
   {
     id: "soldes",
-    title: "Consulter les soldes et quotas",
-    forRoles: ["EMPLOYE", "MANAGER", "ADMIN"],
+    title: "Consulter solde et quota",
+    forRoles: ["ADMIN"],
     detail: "Vérifiez le nom du collaborateur, le type de congé et les valeurs de solde/quotas avant de tirer une conclusion. Les libellés visibles dans le tableau font foi. Ne supposez pas qu’une demande en attente a déjà été décomptée.",
     description: "Lire les informations de congés disponibles.",
     icon: CalendarDays,
@@ -119,7 +74,7 @@ const sections = [
   },
   {
     id: "types-conge",
-    title: "Types de congés",
+    title: "Gestion des types de congé",
     forRoles: ["ADMIN"],
     detail: "Rubrique réservée à l’administration : consultez les types configurés dans l’application. Les collaborateurs choisissent un type dans le formulaire de demande, sans modifier la configuration.",
     description: "Consulter les catégories de congés proposées dans l’application.",
@@ -284,7 +239,7 @@ const sections = [
 
 export default function GuideUtilisateurPage() {
   const [search, setSearch] = useState("");
-  const [openSections, setOpenSections] = useState(["connexion"]);
+  const [openSections, setOpenSections] = useState([]);
   const [currentUser, setCurrentUser] = useState(null);
   const [userLoading, setUserLoading] = useState(true);
 
@@ -390,7 +345,7 @@ export default function GuideUtilisateurPage() {
           { label: "Collaborateur", detail: "Déposer et suivre ses demandes", icon: ClipboardList, visible: !isAdmin },
           { label: "Manager", detail: "Examiner les demandes accessibles", icon: CheckCircle2, visible: isManager },
           { label: "Administrateur", detail: "Gérer les comptes et les paramètres RH", icon: Users, visible: isAdmin },
-          { label: "Tous les utilisateurs", detail: "Connexion, notifications et sécurité", icon: ShieldCheck, visible: true },
+          { label: "Tous les utilisateurs", detail: "Notifications et sécurité", icon: ShieldCheck, visible: true },
         ].filter((item) => item.visible).map((role) => {
           const Icon = role.icon;
           return (

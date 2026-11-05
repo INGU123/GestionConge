@@ -36,33 +36,36 @@ export default function HistoriquePage() {
 
 
   useEffect(() => {
+    const user = getCurrentUser();
+    if (!user) {
+      setLoading(false);
+      return;
+    }
+
+    setCurrentUser(user);
+    const role = String(user.role || "").trim().toUpperCase().replace(/^ROLE_/, "");
+    setViewAll(role === "ADMIN" || role === "MANAGER");
+  }, []);
+
+  useEffect(() => {
+    if (!currentUser) return;
     let isMounted = true;
 
     async function fetchData() {
-      const user = getCurrentUser();
-      if (!user) {
-        if (isMounted) setLoading(false);
-        return;
-      }
-
-      if (isMounted) {
-        setCurrentUser(user);
-        const isManagerRole = user.role === "ADMIN" || user.role === "MANAGER";
-        setViewAll(isManagerRole);
-      }
-
       try {
-        if (isMounted) setLoading(true);
-        const isManager = user.role === "ADMIN" || user.role === "MANAGER";
-
+        setLoading(true);
+        const role = String(currentUser.role || "").trim().toUpperCase().replace(/^ROLE_/, "");
+        const canViewAll = role === "ADMIN" || role === "MANAGER";
         const [mouvementsData, typesData, usersRes] = await Promise.all([
-          viewAll && isManager
+          viewAll && canViewAll
             ? getAllHistorique()
-            : getHistoriqueUtilisateur(user.id),
+            : getHistoriqueUtilisateur(currentUser.id),
           getAllTypeConge().catch(() => []),
-          authFetch("http://localhost:8080/utilisateur/all")
-            .then((r) => (r.ok ? r.json() : []))
-            .catch(() => []),
+          canViewAll
+            ? authFetch("http://localhost:8080/utilisateur/all")
+                .then((r) => (r.ok ? r.json() : []))
+                .catch(() => [])
+            : Promise.resolve([]),
         ]);
 
         if (isMounted) {
@@ -79,12 +82,11 @@ export default function HistoriquePage() {
       }
     }
 
-    fetchData();
-
+    void fetchData();
     return () => {
       isMounted = false;
     };
-  }, [viewAll, showToast]);
+  }, [currentUser, viewAll, showToast]);
 
   const getUserName = (userId) => {
     const found = utilisateurs.find((u) => u.id === userId);
@@ -101,7 +103,8 @@ export default function HistoriquePage() {
     return found?.libelle || found?.code || `Type #${typeId}`;
   };
 
-  const isManager = currentUser?.role === "ADMIN" || currentUser?.role === "MANAGER";
+  const currentRole = String(currentUser?.role || "").trim().toUpperCase().replace(/^ROLE_/, "");
+  const isManager = currentRole === "ADMIN" || currentRole === "MANAGER";
 
   const handleExportPdf = () => {
     try {

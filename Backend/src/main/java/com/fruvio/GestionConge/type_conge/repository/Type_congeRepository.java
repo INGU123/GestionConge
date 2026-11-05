@@ -6,4 +6,8 @@ import com.fruvio.GestionConge.type_conge.entity.Type_conge;
 
 public interface Type_congeRepository extends JpaRepository<Type_conge,Long>{
     java.util.List<Type_conge> findByActifTrue();
+    boolean existsByCodeIgnoreCase(String code);
+    boolean existsByLibelleIgnoreCase(String libelle);
+    boolean existsByCodeIgnoreCaseAndIdNot(String code, Long id);
+    boolean existsByLibelleIgnoreCaseAndIdNot(String libelle, Long id);
 }

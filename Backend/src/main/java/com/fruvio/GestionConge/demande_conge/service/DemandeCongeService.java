@@ -5,6 +5,8 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.LinkedHashMap;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
@@ -65,6 +67,10 @@ public class DemandeCongeService {
             throw new AccessDeniedException("Vous ne pouvez soumettre une demande que pour votre propre compte.");
         }
 
+        if (demande.getDateDebut() == null || demande.getDateFin() == null) {
+            throw new IllegalArgumentException("Les dates de début et de fin sont obligatoires.");
+        }
+
         demande.setUtilisateurId(utilisateurId);
         demande.setStatut("EN_ATTENTE");
         demande.setDateCreation(LocalDate.now());
@@ -74,7 +80,9 @@ public class DemandeCongeService {
                 throw new IllegalArgumentException("La date de fin ne peut pas être antérieure à la date de début.");
             }
 
-            int joursOuvres = calculerJoursOuvres(demande.getDateDebut(), demande.getDateFin());
+            Map<Integer, Integer> joursParAnnee = calculerJoursOuvresParAnnee(
+                    demande.getDateDebut(), demande.getDateFin());
+            int joursOuvres = joursParAnnee.values().stream().mapToInt(Integer::intValue).sum();
             if (joursOuvres <= 0) {
                 throw new IllegalArgumentException(
                         "Cette période ne contient aucune journée ouvrée. La demande de congé doit inclure au moins un jour ouvré.");
@@ -88,13 +96,20 @@ public class DemandeCongeService {
             Type_conge typeConge = typeCongeRepo.findById(demande.getTypeCongeId())
                     .orElseThrow(() -> new IllegalArgumentException(
                             "Le type de congé sélectionné n'existe pas."));
+            if (Boolean.FALSE.equals(typeConge.getActif())) {
+                throw new IllegalArgumentException("Ce type de congé n'est plus disponible pour les nouvelles demandes.");
+            }
 
             Integer limiteJours = typeConge.getNombreJoursParAn();
-            if (limiteJours != null && limiteJours > 0 && joursOuvres > limiteJours) {
-                throw new IllegalArgumentException(
-                        "Demande non autorisée : le type « " + typeConge.getLibelle()
-                                + " » autorise au maximum " + limiteJours
-                                + " jour(s) ouvré(s), mais vous en demandez " + joursOuvres + ".");
+            if (limiteJours != null && limiteJours > 0) {
+                for (Map.Entry<Integer, Integer> entry : joursParAnnee.entrySet()) {
+                    if (entry.getValue() > limiteJours) {
+                        throw new IllegalArgumentException(
+                                "Demande non autorisée pour l'année " + entry.getKey() + " : le type « "
+                                        + typeConge.getLibelle() + " » autorise au maximum " + limiteJours
+                                        + " jour(s) ouvré(s) par an, mais vous en demandez " + entry.getValue() + ".");
+                    }
+                }
             }
 
             for (DemandeConge existing : demandeRepo.findByUtilisateurId(utilisateurId)) {
@@ -167,15 +182,18 @@ public class DemandeCongeService {
             throw new AccessDeniedException("Les employés ne sont pas habilités à traiter les demandes de congé.");
         }
 
-        DemandeConge demande = demandeRepo.findById(demandeId)
+        DemandeConge demande = demandeRepo.findByIdForUpdate(demandeId)
                 .orElseThrow(() -> new IllegalArgumentException("Demande non trouvée avec l'ID : " + demandeId));
 
         Long demandeurId = demande.getUtilisateurId();
         Utilisateur demandeur = utilisateurRepo.findById(demandeurId)
                 .orElseThrow(() -> new IllegalArgumentException("Collaborateur demandeur introuvable."));
 
-        // Si le validateur est un MANAGER, il ne peut traiter que les demandes des
-        // membres de son équipe
+        if (Objects.equals(demandeur.getId(), currentUser.getId())) {
+            throw new AccessDeniedException("Vous ne pouvez pas approuver ou refuser votre propre demande.");
+        }
+
+        // Un MANAGER ne peut traiter que les demandes des membres de son équipe.
         if (currentUser.getRole() == Role.MANAGER) {
             if (!Objects.equals(demandeur.getManager_id(), currentUser.getId())) {
                 throw new AccessDeniedException(
@@ -184,8 +202,8 @@ public class DemandeCongeService {
         }
 
         String statutNormalise = statut == null ? "" : statut.trim().toUpperCase();
-        if (!Set.of("VALIDEE", "REFUSEE", "ANNULEE").contains(statutNormalise)) {
-            throw new IllegalArgumentException("Le statut de traitement est invalide.");
+        if (!Set.of("VALIDEE", "REFUSEE").contains(statutNormalise)) {
+            throw new IllegalArgumentException("Le statut de traitement doit être VALIDEE ou REFUSEE.");
         }
 
         String motifRefusNormalise = motifRefus == null ? "" : motifRefus.trim();
@@ -196,6 +214,13 @@ public class DemandeCongeService {
 
         if (!"EN_ATTENTE".equalsIgnoreCase(demande.getStatut())) {
             throw new IllegalStateException("Seule une demande en attente peut être traitée.");
+        }
+        if (demande.getDateDebut() == null || demande.getDateFin() == null
+                || demande.getTypeCongeId() == null || demande.getUtilisateurId() == null) {
+            throw new IllegalStateException("Cette demande est incomplète et ne peut pas être traitée.");
+        }
+        if (demande.getDateFin().isBefore(demande.getDateDebut())) {
+            throw new IllegalStateException("La date de fin ne peut pas être antérieure à la date de début.");
         }
 
         Long actualValidatorId = currentUser.getId();
@@ -211,57 +236,62 @@ public class DemandeCongeService {
                 || "APPROVED".equalsIgnoreCase(statutNormalise);
 
         if (estValidee && demande.getDateDebut() != null && demande.getDateFin() != null) {
-            int jours = calculerJoursOuvres(demande.getDateDebut(), demande.getDateFin());
+            Map<Integer, Integer> joursParAnnee = calculerJoursOuvresParAnnee(
+                    demande.getDateDebut(), demande.getDateFin());
+            int jours = joursParAnnee.values().stream().mapToInt(Integer::intValue).sum();
             if (jours <= 0) {
                 throw new IllegalStateException(
                         "La période demandée ne contient aucune journée ouvrée. Aucune validation ne peut être effectuée.");
             }
             demande.setNombreJours(jours);
 
-            int annee = demande.getDateDebut().getYear();
-
             if (demande.getTypeCongeId() != null && demande.getUtilisateurId() != null) {
-                Optional<Solde_conge> soldeOpt = soldeRepo.findByUtilisateurIdAndTypeCongeIdAndPeriode(
-                        demande.getUtilisateurId(), demande.getTypeCongeId(), annee);
+                Map<Integer, Solde_conge> soldesParAnnee = new LinkedHashMap<>();
 
-                if (soldeOpt.isEmpty()) {
-                    throw new IllegalStateException(
-                            "Aucun solde trouvé pour le collaborateur #" + demande.getUtilisateurId() + ", le type #"
-                                    + demande.getTypeCongeId() + " pour l'année " + annee);
+                // Vérifier tous les exercices avant de débiter le moindre solde.
+                for (Map.Entry<Integer, Integer> entry : joursParAnnee.entrySet()) {
+                    Solde_conge solde = soldeRepo.findByUtilisateurIdAndTypeCongeIdAndPeriode(
+                            demande.getUtilisateurId(), demande.getTypeCongeId(), entry.getKey())
+                            .orElseThrow(() -> new IllegalStateException(
+                                    "Aucun solde trouvé pour le collaborateur #" + demande.getUtilisateurId()
+                                            + ", le type #" + demande.getTypeCongeId()
+                                            + " pour l'année " + entry.getKey()));
+
+                    int acquis = solde.getSoldeAquis() != null ? solde.getSoldeAquis() : 0;
+                    int pris = solde.getSoldePris() != null ? solde.getSoldePris() : 0;
+                    int disponibles = Math.max(0, acquis - pris);
+                    if (disponibles < entry.getValue()) {
+                        throw new IllegalStateException("Solde insuffisant pour l'année " + entry.getKey()
+                                + " : " + entry.getValue() + " jour(s) demandés pour "
+                                + disponibles + " jour(s) disponibles.");
+                    }
+                    soldesParAnnee.put(entry.getKey(), solde);
                 }
 
-                Solde_conge solde = soldeOpt.get();
-                int prisActuel = (solde.getSoldePris() != null) ? solde.getSoldePris() : 0;
-                int acquisActuel = (solde.getSoldeAquis() != null) ? solde.getSoldeAquis() : 0;
-                int joursDisponibles = Math.max(0, acquisActuel - prisActuel);
+                for (Map.Entry<Integer, Integer> entry : joursParAnnee.entrySet()) {
+                    Solde_conge solde = soldesParAnnee.get(entry.getKey());
+                    int pris = solde.getSoldePris() != null ? solde.getSoldePris() : 0;
+                    int acquis = solde.getSoldeAquis() != null ? solde.getSoldeAquis() : 0;
+                    int nouveauPris = pris + entry.getValue();
 
-                if (joursDisponibles < jours) {
-                    throw new IllegalStateException("Solde insuffisant : " + jours + " jour(s) demandés pour "
-                            + joursDisponibles + " jour(s) disponibles.");
-                }
+                    solde.setSoldePris(nouveauPris);
+                    solde.setSoldeRestant(Math.max(0, acquis - nouveauPris));
+                    solde.setDate_maj(new Timestamp(System.currentTimeMillis()));
+                    soldeRepo.save(solde);
 
-                int nouveauSoldePris = prisActuel + jours;
-                solde.setSoldePris(nouveauSoldePris);
-                solde.setSoldeRestant(Math.max(0, acquisActuel - nouveauSoldePris));
-                solde.setDate_maj(new Timestamp(System.currentTimeMillis()));
-
-                soldeRepo.save(solde);
-
-                try {
-                    historiqueService.enregistrerMouvement(demande.getUtilisateurId(), "DEBIT_CONGE", jours,
+                    historiqueService.enregistrerMouvement(
+                            demande.getUtilisateurId(), "DEBIT_CONGE", entry.getValue(),
                             demande.getTypeCongeId(), demande.getId(),
-                            "Congé validé par le responsable #" + actualValidatorId, actualValidatorId);
-                } catch (Exception e) {
-                    log.warn("Impossible d'enregistrer le mouvement d'historique : {}", e.getMessage());
+                            "Congé validé par le responsable #" + actualValidatorId
+                                    + " (exercice " + entry.getKey() + ")", actualValidatorId);
                 }
             }
 
             try {
-                notificationService
-                        .creerNotification(
-                                demande.getUtilisateurId(), "Votre demande de congé du " + demande.getDateDebut()
-                                        + " au " + demande.getDateFin() + " a été VALIDÉE.",
-                                "VALIDATION", "/dashboard/demande");
+                notificationService.creerNotification(
+                        demande.getUtilisateurId(), "Votre demande de congé du " + demande.getDateDebut()
+                                + " au " + demande.getDateFin() + " a été VALIDÉE.",
+                        "VALIDATION", "/dashboard/demande");
             } catch (Exception e) {
                 log.warn("Échec d'envoi notification validation : {}", e.getMessage());
             }
@@ -287,7 +317,7 @@ public class DemandeCongeService {
             throw new AccessDeniedException("Authentification requise.");
         }
 
-        DemandeConge demande = demandeRepo.findById(demandeId)
+        DemandeConge demande = demandeRepo.findByIdForUpdate(demandeId)
                 .orElseThrow(() -> new IllegalArgumentException("Demande non trouvée avec l'ID : " + demandeId));
 
         if (currentUser.getRole() != Role.ADMIN && !Objects.equals(currentUser.getId(), demande.getUtilisateurId())) {
@@ -299,38 +329,42 @@ public class DemandeCongeService {
         }
 
         if ("VALIDEE".equalsIgnoreCase(demande.getStatut())) {
-            int joursAReintegrer = demande.getNombreJours() != null ? demande.getNombreJours()
-                    : calculerJoursOuvres(demande.getDateDebut(), demande.getDateFin());
-            if (demande.getTypeCongeId() != null && demande.getUtilisateurId() != null && demande.getDateDebut() != null
-                    && demande.getDateFin() != null) {
-                int annee = demande.getDateDebut().getYear();
-                Optional<Solde_conge> soldeOpt = soldeRepo.findByUtilisateurIdAndTypeCongeIdAndPeriode(
-                        demande.getUtilisateurId(), demande.getTypeCongeId(), annee);
-                if (soldeOpt.isEmpty()) {
-                    throw new IllegalStateException(
-                            "Annulation impossible : solde de congé introuvable.");
-                }
-                {
-                    Solde_conge solde = soldeOpt.get();
-                    int prisActuel = solde.getSoldePris() != null ? solde.getSoldePris() : 0;
-                    int acquisActuel = solde.getSoldeAquis() != null ? solde.getSoldeAquis() : 0;
-                    int nouveauPris = Math.max(0, prisActuel - joursAReintegrer);
-                    solde.setSoldePris(nouveauPris);
-                    solde.setSoldeRestant(Math.max(0, acquisActuel - nouveauPris));
-                    solde.setDate_maj(new Timestamp(System.currentTimeMillis()));
-                    soldeRepo.save(solde);
+            if (demande.getDateDebut() == null || demande.getDateFin() == null
+                    || demande.getTypeCongeId() == null || demande.getUtilisateurId() == null) {
+                throw new IllegalStateException("Annulation impossible : les informations de la demande sont incomplètes.");
+            }
 
-                    int joursRestitues = prisActuel - nouveauPris;
-                    if (joursRestitues > 0) {
-                        historiqueService.enregistrerMouvement(
-                                demande.getUtilisateurId(),
-                                "CREDIT_CONGE",
-                                joursRestitues,
-                                demande.getTypeCongeId(),
-                                demande.getId(),
-                                "Restitution des jours suite à l'annulation du congé",
-                                currentUser.getId());
-                    }
+            Map<Integer, Integer> joursParAnnee = calculerJoursOuvresParAnnee(
+                    demande.getDateDebut(), demande.getDateFin());
+            Map<Integer, Solde_conge> soldesParAnnee = new LinkedHashMap<>();
+
+            // Vérifier la présence de tous les soldes avant de réintégrer les jours.
+            for (Map.Entry<Integer, Integer> entry : joursParAnnee.entrySet()) {
+                Solde_conge solde = soldeRepo.findByUtilisateurIdAndTypeCongeIdAndPeriode(
+                        demande.getUtilisateurId(), demande.getTypeCongeId(), entry.getKey())
+                        .orElseThrow(() -> new IllegalStateException(
+                                "Annulation impossible : solde de congé introuvable pour l'année " + entry.getKey() + "."));
+                soldesParAnnee.put(entry.getKey(), solde);
+            }
+
+            for (Map.Entry<Integer, Integer> entry : joursParAnnee.entrySet()) {
+                Solde_conge solde = soldesParAnnee.get(entry.getKey());
+                int prisActuel = solde.getSoldePris() != null ? solde.getSoldePris() : 0;
+                int acquis = solde.getSoldeAquis() != null ? solde.getSoldeAquis() : 0;
+                int joursRestitues = Math.min(prisActuel, entry.getValue());
+                int nouveauPris = prisActuel - joursRestitues;
+
+                solde.setSoldePris(nouveauPris);
+                solde.setSoldeRestant(Math.max(0, acquis - nouveauPris));
+                solde.setDate_maj(new Timestamp(System.currentTimeMillis()));
+                soldeRepo.save(solde);
+
+                if (joursRestitues > 0) {
+                    historiqueService.enregistrerMouvement(
+                            demande.getUtilisateurId(), "CREDIT_CONGE", joursRestitues,
+                            demande.getTypeCongeId(), demande.getId(),
+                            "Restitution des jours suite à l'annulation du congé (exercice " + entry.getKey() + ")",
+                            currentUser.getId());
                 }
             }
         }
@@ -361,6 +395,21 @@ public class DemandeCongeService {
 
     private int calculerJoursOuvres(LocalDate dateDebut, LocalDate dateFin) {
         return jourFerieService.compterJoursOuvres(dateDebut, dateFin);
+    }
+
+    private Map<Integer, Integer> calculerJoursOuvresParAnnee(LocalDate dateDebut, LocalDate dateFin) {
+        Map<Integer, Integer> result = new LinkedHashMap<>();
+        for (int annee = dateDebut.getYear(); annee <= dateFin.getYear(); annee++) {
+            LocalDate debutAnnee = LocalDate.of(annee, 1, 1);
+            LocalDate finAnnee = LocalDate.of(annee, 12, 31);
+            LocalDate debutPeriode = dateDebut.isAfter(debutAnnee) ? dateDebut : debutAnnee;
+            LocalDate finPeriode = dateFin.isBefore(finAnnee) ? dateFin : finAnnee;
+            int jours = calculerJoursOuvres(debutPeriode, finPeriode);
+            if (jours > 0) {
+                result.put(annee, jours);
+            }
+        }
+        return result;
     }
 
     // Récupérer les demandes d'un utilisateur avec contrôle d'accès

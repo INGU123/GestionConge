@@ -230,7 +230,29 @@ public class UtilisateurService {
                         throw new IllegalArgumentException("Le numéro CIN est déjà utilisé.");
                 }
 
-                Role assignedRole = request.getRole() != null ? request.getRole() : Role.EMPLOYE;
+                if (request.getNumeroCin() == null || request.getNumeroCin().isBlank()
+                                || request.getDateNaissance() == null
+                                || request.getTelephone() == null || request.getTelephone().isBlank()
+                                || request.getAdresse() == null || request.getAdresse().isBlank()
+                                || request.getFonction() == null || request.getFonction().isBlank()
+                                || request.getTypeContrat() == null || request.getTypeContrat().isBlank()
+                                || request.getService_id() == null || request.getManager_id() == null
+                                || request.getDate_embauche() == null || request.getRole() == null) {
+                        throw new IllegalArgumentException("Compléter toutes les informations de l'utilisateur");
+                }
+
+                if (!serviceRepository.existsById(request.getService_id())) {
+                        throw new IllegalArgumentException("Le service sélectionné n'existe pas.");
+                }
+
+                Utilisateur manager = utilisateurRepository.findById(request.getManager_id())
+                                .orElseThrow(() -> new IllegalArgumentException("Le responsable hiérarchique sélectionné n'existe pas."));
+                if (manager.getRole() != Role.MANAGER || !manager.isActif()) {
+                        throw new IllegalArgumentException(
+                                        "Le responsable hiérarchique doit être un compte MANAGER actif.");
+                }
+
+                Role assignedRole = request.getRole();
 
                 if (assignedRole == Role.ADMIN) {
 

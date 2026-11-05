@@ -3,7 +3,9 @@ package com.fruvio.GestionConge.solde_conge.repository;
 import java.util.List;
 import java.util.Optional;
 
+import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.stereotype.Repository;
 
 import com.fruvio.GestionConge.solde_conge.entity.Solde_conge;
@@ -23,6 +25,7 @@ public interface Solde_congeRepository extends JpaRepository<Solde_conge, Long> 
     List<Solde_conge> findByUtilisateurIdAndTypeCongeId(Long utilisateurId, Long typeCongeId);
 
     // Récupérer un solde précis pour un utilisateur, un type de congé et une période
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
     Optional<Solde_conge> findByUtilisateurIdAndTypeCongeIdAndPeriode(Long utilisateurId, Long typeCongeId, int periode);
 
     // Récupérer tous les soldes d’un utilisateur pour une année/période

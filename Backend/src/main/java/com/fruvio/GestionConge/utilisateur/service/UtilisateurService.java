@@ -247,8 +247,9 @@ public class UtilisateurService {
 
                 Utilisateur manager = utilisateurRepository.findById(request.getManager_id())
                                 .orElseThrow(() -> new IllegalArgumentException("Le responsable hiérarchique sélectionné n'existe pas."));
-                if (manager.getRole() != Role.MANAGER) {
-                        throw new IllegalArgumentException("Le responsable hiérarchique doit avoir le rôle MANAGER.");
+                if (manager.getRole() != Role.MANAGER || !manager.isActif()) {
+                        throw new IllegalArgumentException(
+                                        "Le responsable hiérarchique doit être un compte MANAGER actif.");
                 }
 
                 Role assignedRole = request.getRole();

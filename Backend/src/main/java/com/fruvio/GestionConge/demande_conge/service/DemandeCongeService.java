@@ -179,12 +179,12 @@ public class DemandeCongeService {
         Utilisateur demandeur = utilisateurRepo.findById(demandeurId)
                 .orElseThrow(() -> new IllegalArgumentException("Collaborateur demandeur introuvable."));
 
-        // Si le validateur est un MANAGER, il ne peut traiter que les demandes des
-        // membres de son équipe
+        if (Objects.equals(demandeur.getId(), currentUser.getId())) {
+            throw new AccessDeniedException("Vous ne pouvez pas approuver ou refuser votre propre demande.");
+        }
+
+        // Un MANAGER ne peut traiter que les demandes des membres de son équipe.
         if (currentUser.getRole() == Role.MANAGER) {
-            if (Objects.equals(demandeur.getId(), currentUser.getId())) {
-                throw new AccessDeniedException("Un manager ne peut pas approuver ou refuser sa propre demande.");
-            }
             if (!Objects.equals(demandeur.getManager_id(), currentUser.getId())) {
                 throw new AccessDeniedException(
                         "Accès refusé : vous n'êtes pas le manager responsable de ce collaborateur.");
@@ -204,6 +204,13 @@ public class DemandeCongeService {
 
         if (!"EN_ATTENTE".equalsIgnoreCase(demande.getStatut())) {
             throw new IllegalStateException("Seule une demande en attente peut être traitée.");
+        }
+        if (demande.getDateDebut() == null || demande.getDateFin() == null
+                || demande.getTypeCongeId() == null || demande.getUtilisateurId() == null) {
+            throw new IllegalStateException("Cette demande est incomplète et ne peut pas être traitée.");
+        }
+        if (demande.getDateFin().isBefore(demande.getDateDebut())) {
+            throw new IllegalStateException("La date de fin ne peut pas être antérieure à la date de début.");
         }
 
         Long actualValidatorId = currentUser.getId();

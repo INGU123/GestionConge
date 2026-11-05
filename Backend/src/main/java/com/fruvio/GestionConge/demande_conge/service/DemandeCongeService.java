@@ -273,7 +273,7 @@ public class DemandeCongeService {
                 log.warn("Échec d'envoi notification validation : {}", e.getMessage());
             }
 
-        }        } else if ("REFUSEE".equalsIgnoreCase(statutNormalise)) {
+        } else if ("REFUSEE".equalsIgnoreCase(statutNormalise)) {
             try {
                 notificationService.creerNotification(demande.getUtilisateurId(),
                         "Votre demande de congé du " + demande.getDateDebut() + " a été REFUSÉE"

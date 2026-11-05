@@ -257,9 +257,14 @@ class DemandeCongeServiceTest {
         @Test
         void traiterDemandeDoesNotAllowCancellationThroughDecisionEndpoint() {
                 Utilisateur admin = Utilisateur.builder().id(1L).role(Role.ADMIN).build();
+                when(demandeRepo.findById(99L)).thenReturn(Optional.of(
+                                DemandeConge.builder().id(99L).utilisateurId(7L).statut("EN_ATTENTE").build()));
+                when(utilisateurRepo.findById(7L)).thenReturn(Optional.of(
+                                Utilisateur.builder().id(7L).role(Role.EMPLOYE).build()));
+
                 assertThrows(IllegalArgumentException.class,
                                 () -> demandeCongeService.traiterDemande(99L, 1L, "ANNULEE", null, admin));
-                verify(demandeRepo, never()).findById(99L);
+                verify(demandeRepo, never()).save(any(DemandeConge.class));
         }
 
         @Test

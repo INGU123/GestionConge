@@ -138,11 +138,12 @@ public class Solde_congeService {
         }
 
         int ancienRestant = solde.getSoldeRestant() != null ? solde.getSoldeRestant() : 0;
-        int acquis = solde.getSoldeAquis() != null ? solde.getSoldeAquis() : 0;
-        int pris = Math.max(0, acquis - nouveauNombreJoursRestants);
+        int joursDejaPris = solde.getSoldePris() != null ? solde.getSoldePris() : 0;
 
+        // Une correction administrative ne doit jamais réécrire l'historique des jours consommés.
+        // Le quota acquis est ajusté pour conserver : acquis = pris + restant.
+        solde.setSoldeAquis(joursDejaPris + nouveauNombreJoursRestants);
         solde.setSoldeRestant(nouveauNombreJoursRestants);
-        solde.setSoldePris(pris);
         solde.setDate_maj(new Timestamp(System.currentTimeMillis()));
 
         Solde_conge saved = soldeCongeRepository.save(solde);

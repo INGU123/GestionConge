@@ -80,7 +80,9 @@ public class DemandeCongeService {
                 throw new IllegalArgumentException("La date de fin ne peut pas être antérieure à la date de début.");
             }
 
-            int joursOuvres = calculerJoursOuvres(demande.getDateDebut(), demande.getDateFin());
+            Map<Integer, Integer> joursParAnnee = calculerJoursOuvresParAnnee(
+                    demande.getDateDebut(), demande.getDateFin());
+            int joursOuvres = joursParAnnee.values().stream().mapToInt(Integer::intValue).sum();
             if (joursOuvres <= 0) {
                 throw new IllegalArgumentException(
                         "Cette période ne contient aucune journée ouvrée. La demande de congé doit inclure au moins un jour ouvré.");
@@ -99,11 +101,15 @@ public class DemandeCongeService {
             }
 
             Integer limiteJours = typeConge.getNombreJoursParAn();
-            if (limiteJours != null && limiteJours > 0 && joursOuvres > limiteJours) {
-                throw new IllegalArgumentException(
-                        "Demande non autorisée : le type « " + typeConge.getLibelle()
-                                + " » autorise au maximum " + limiteJours
-                                + " jour(s) ouvré(s), mais vous en demandez " + joursOuvres + ".");
+            if (limiteJours != null && limiteJours > 0) {
+                for (Map.Entry<Integer, Integer> entry : joursParAnnee.entrySet()) {
+                    if (entry.getValue() > limiteJours) {
+                        throw new IllegalArgumentException(
+                                "Demande non autorisée pour l'année " + entry.getKey() + " : le type « "
+                                        + typeConge.getLibelle() + " » autorise au maximum " + limiteJours
+                                        + " jour(s) ouvré(s) par an, mais vous en demandez " + entry.getValue() + ".");
+                    }
+                }
             }
 
             for (DemandeConge existing : demandeRepo.findByUtilisateurId(utilisateurId)) {
@@ -347,7 +353,28 @@ public class DemandeCongeService {
         }
 
         demande.setStatut("ANNULEE");
-        return demandeRepo.save(demande);
+        DemandeConge saved = demandeRepo.save(demande);
+        try {
+            notificationService.creerNotification(
+                    demande.getUtilisateurId(),
+                    "Votre demande de congé du " + demande.getDateDebut() + " au "
+                            + demande.getDateFin() + " a été annulée.",
+                    "INFO", "/dashboard/demande");
+
+            Utilisateur demandeur = utilisateurRepo.findById(demande.getUtilisateurId()).orElse(null);
+            if (demandeur != null && demandeur.getManager_id() != null
+                    && !Objects.equals(demandeur.getManager_id(), demande.getUtilisateurId())) {
+                notificationService.creerNotification(
+                        demandeur.getManager_id(),
+                        "La demande de congé du collaborateur " + demandeur.getPrenom() + " "
+                                + demandeur.getNom() + " a été annulée.",
+                        "INFO", "/dashboard/validation");
+            }
+        } catch (Exception e) {
+            log.warn("Impossible de créer les notifications d'annulation pour la demande #{} : {}",
+                    demande.getId(), e.getMessage());
+        }
+        return saved;
     }
 
     private int calculerJoursOuvres(LocalDate dateDebut, LocalDate dateFin) {

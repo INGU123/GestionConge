@@ -71,7 +71,7 @@ public class UtilisateurCreateRequest {
     )
     private String email;
 
-    @Size(min = 6, message = "Le mot de passe doit comporter au moins 6 caractères.")
+    @Pattern(regexp = "^$|.{6,}$", message = "Le mot de passe doit comporter au moins 6 caractères lorsqu'il est renseigné.")
     private String password;
 
     @NotNull(message = "Le rôle est obligatoire.")

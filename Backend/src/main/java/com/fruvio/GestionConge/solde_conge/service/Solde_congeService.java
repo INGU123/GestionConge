@@ -5,6 +5,8 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
@@ -55,7 +57,7 @@ public class Solde_congeService {
             }
         }
 
-        return soldeCongeRepository.findByUtilisateurId(utilisateurId);
+        return filtrerSoldesAvecTypeExistant(soldeCongeRepository.findByUtilisateurId(utilisateurId));
     }
 
     // Récupérer tous les soldes selon le rôle
@@ -65,7 +67,7 @@ public class Solde_congeService {
         }
 
         if (currentUser.getRole() == Role.ADMIN) {
-            return soldeCongeRepository.findAll();
+            return filtrerSoldesAvecTypeExistant(soldeCongeRepository.findAll());
         }
 
         if (currentUser.getRole() == Role.MANAGER) {
@@ -77,11 +79,26 @@ public class Solde_congeService {
             if (ids.isEmpty()) {
                 return Collections.emptyList();
             }
-            return soldeCongeRepository.findByUtilisateurIdIn(ids);
+            return filtrerSoldesAvecTypeExistant(soldeCongeRepository.findByUtilisateurIdIn(ids));
         }
 
         throw new AccessDeniedException(
                 "Accès refusé : consultation globale réservée aux managers et administrateurs.");
+    }
+
+
+    /**
+     * Ignore les anciens soldes dont le type de congé a été supprimé.
+     * Les lignes restent en base afin de préserver l'historique.
+     */
+    private List<Solde_conge> filtrerSoldesAvecTypeExistant(List<Solde_conge> soldes) {
+        Set<Long> typesExistants = typeCongeRepository.findAll().stream()
+                .map(Type_conge::getId)
+                .collect(Collectors.toSet());
+
+        return soldes.stream()
+                .filter(solde -> typesExistants.contains(solde.getTypeCongeId()))
+                .toList();
     }
 
     // Initialiser les soldes annuels pour un utilisateur (Admin)

@@ -199,7 +199,7 @@ export default function UtilisateursPage() {
     }
   };
 
-  const handleDelete = async () => {
+  const handleArchive = async () => {
     if (!userToDelete) return;
     const user = userToDelete;
     setDeletingUserId(user.id);
@@ -215,7 +215,7 @@ export default function UtilisateursPage() {
           const parsed = JSON.parse(text);
           errorMessage = parsed.message || errorMessage;
         } catch { }
-        showToast(errorMessage || "Erreur lors de la suppression du collaborateur.", "error");
+        showToast(errorMessage || "Erreur lors de l'archivage du collaborateur.", "error");
         return;
       }
 
@@ -998,7 +998,7 @@ export default function UtilisateursPage() {
               <button
                 type="button"
                 disabled={deletingUserId === userToDelete.id}
-                onClick={handleDelete}
+                onClick={handleArchive}
                 className="btn btn-error btn-sm text-white"
               >
                 {deletingUserId === userToDelete.id ? "Archivage..." : "Confirmer l'archivage"}

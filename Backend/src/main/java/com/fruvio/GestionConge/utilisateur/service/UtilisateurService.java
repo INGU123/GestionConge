@@ -17,8 +17,6 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.support.TransactionSynchronization;
-import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import com.fruvio.GestionConge.demande_conge.repository.DemandeCongeRepository;
 import com.fruvio.GestionConge.historique_mouvement.repository.Historique_mouvementRepository;
@@ -160,7 +158,7 @@ public class UtilisateurService {
                 }
 
                 // Vérifier que le compte est actif
-                if (!user.isActif()) {
+                if (!user.isActif() || user.isArchived()) {
 
                         log.warn("Tentative de connexion rejetée : compte inactif [{}]", user.getMatricule());
 
@@ -349,6 +347,10 @@ public class UtilisateurService {
                         throw new AccessDeniedException("Opération non autorisée : utilisateur non authentifié.");
                 }
 
+                if (targetUser.isArchived()) {
+                        throw new IllegalStateException("Ce collaborateur est archivé. Restaurez son compte avant toute modification.");
+                }
+
                 Role currentRole = currentUser.getRole();
 
                 boolean isSelf = Objects.equals(currentUser.getId(), targetUser.getId());
@@ -511,142 +513,104 @@ public class UtilisateurService {
         }
 
         // =========================================================
-        // SUPPRESSION UTILISATEUR
-        // =========================================================
+        // ARCHIVAGE LOGIQUE D'UN COLLABORATEUR
 
         @Transactional
-        public boolean deleteUtilisateur(Long id, Utilisateur currentUser) {
+        public boolean deleteUtilisateur(Long id, String reason, Utilisateur currentUser) {
 
                 if (currentUser == null || currentUser.getRole() != Role.ADMIN) {
-
-                        throw new AccessDeniedException("Seul un administrateur peut supprimer un collaborateur.");
+                        throw new AccessDeniedException("Seul un administrateur peut archiver un collaborateur.");
                 }
 
                 Utilisateur targetUser = utilisateurRepository.findById(id).orElse(null);
-
-                if (targetUser == null) {
+                if (targetUser == null || targetUser.isArchived()) {
                         return false;
                 }
 
                 if (Objects.equals(currentUser.getId(), targetUser.getId())) {
-
-                        throw new IllegalStateException(
-                                        "Vous ne pouvez pas supprimer le compte ADMIN actuellement connecté.");
+                        throw new IllegalStateException("Vous ne pouvez pas archiver le compte ADMIN actuellement connecté.");
                 }
 
-                Long targetId = targetUser.getId();
-
-                boolean hasAssociatedData = demandeCongeRepository.existsByUtilisateurId(targetId)
-                                || demandeCongeRepository.existsByValideePar(targetId)
-                                || soldeCongeRepository.existsByUtilisateurId(targetId)
-                                || historiqueRepository.existsByUtilisateurId(targetId)
-                                || historiqueRepository.existsByActorId(targetId)
-                                || notificationRepository.existsByUtilisateurId(targetId)
-                                || !utilisateurRepository.findByManagerId(targetId).isEmpty()
-                                || (targetId <= Integer.MAX_VALUE
-                                                && serviceRepository.existsByResponsableId(targetId.intValue()));
-
-                if (hasAssociatedData) {
-
-                        throw new IllegalStateException("Ce collaborateur possède des données métier associées. "
-                                        + "Pour préserver l'historique, désactivez son compte "
-                                        + "au lieu de le supprimer.");
-                }
-
-                String email = targetUser.getEmail();
-
-                String matricule = targetUser.getMatricule();
-
-                utilisateurRepository.delete(targetUser);
-
-                Runnable sendDeletionEmail = () -> {
-
-                        try {
-
-                                emailService.sendAccountDeletedEmail(email, matricule);
-
-                                log.info("E-mail de suppression envoyé pour l'utilisateur #{} [{}]", targetId, email);
-
-                        } catch (Exception e) {
-
-                                /*
-                                 * La suppression est déjà validée. Une erreur d'envoi d'e-mail ne doit donc pas
-                                 * annuler ou remettre en cause la suppression du compte.
-                                 */
-
-                                log.error("Échec de l'envoi de l'e-mail après suppression de l'utilisateur #{} [{}]. Type: {}. Message: {}",
-                                                targetId, email, e.getClass().getSimpleName(), e.getMessage());
+                if (targetUser.getRole() == Role.ADMIN) {
+                        long activeAdmins = utilisateurRepository.findAll().stream()
+                                .filter(u -> u.getRole() == Role.ADMIN && u.isActif() && !u.isArchived())
+                                .count();
+                        if (activeAdmins <= 1) {
+                                throw new IllegalStateException("Impossible d'archiver le dernier compte administrateur actif.");
                         }
-                };
-
-                if (TransactionSynchronizationManager.isSynchronizationActive()) {
-
-                        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-
-                                @Override
-                                public void afterCommit() {
-
-                                        sendDeletionEmail.run();
-                                }
-                        });
-
-                } else {
-
-                        sendDeletionEmail.run();
                 }
 
+                LocalDateTime archivedAt = LocalDateTime.now();
+                String normalizedReason = normalizeOptional(reason);
+
+                targetUser.setActifAvantArchivage(targetUser.isActif());
+                targetUser.setActif(false);
+                targetUser.setDeletedAt(archivedAt);
+                targetUser.setDeletedBy(currentUser.getId());
+                targetUser.setDeletionReason(normalizedReason);
+
+                // Si l'e-mail échoue, la transaction est annulée : aucun archivage silencieux.
+                try {
+                        emailService.sendAccountArchivedEmail(
+                                targetUser.getEmail(), targetUser.getMatricule(),
+                                targetUser.getNom(), targetUser.getPrenom(),
+                                archivedAt, normalizedReason);
+                        targetUser.setArchiveEmailSentAt(LocalDateTime.now());
+                } catch (Exception e) {
+                        log.error("Échec de la notification d'archivage pour le collaborateur #{} [{}].",
+                                targetUser.getId(), targetUser.getEmail(), e);
+                        throw new IllegalStateException(
+                                "Le compte n'a pas été archivé : la notification par e-mail n'a pas pu être envoyée.", e);
+                }
+
+                utilisateurRepository.save(targetUser);
+                log.info("Collaborateur #{} [{}] archivé par ADMIN #{} à {}.",
+                        targetUser.getId(), targetUser.getMatricule(), currentUser.getId(), archivedAt);
                 return true;
         }
 
-        // =========================================================
-        // CHANGEMENT DE MOT DE PASSE SECURISE
-        // =========================================================
+        // RESTAURATION D'UN COLLABORATEUR ARCHIVÉ
 
         @Transactional
-        public void changePassword(Long userId, ChangePasswordRequest request, Utilisateur currentUser) {
+        public boolean restoreUtilisateur(Long id, Utilisateur currentUser) {
 
-                if (userId == null || request == null) {
-
-                        throw new IllegalArgumentException("Données de changement de mot de passe invalides.");
+                if (currentUser == null || currentUser.getRole() != Role.ADMIN) {
+                        throw new AccessDeniedException("Seul un administrateur peut restaurer un collaborateur.");
                 }
 
-                Utilisateur targetUser = utilisateurRepository.findById(userId)
-                                .orElseThrow(() -> new IllegalArgumentException("Utilisateur non trouvé."));
-
-                boolean isSelf = currentUser != null && Objects.equals(currentUser.getId(), targetUser.getId());
-
-                boolean isAdmin = currentUser != null && currentUser.getRole() == Role.ADMIN;
-
-                if (!isSelf && !isAdmin) {
-
-                        throw new AccessDeniedException(
-                                        "Vous ne pouvez pas modifier le mot de passe de cet utilisateur.");
+                Utilisateur targetUser = utilisateurRepository.findById(id).orElse(null);
+                if (targetUser == null || !targetUser.isArchived()) {
+                        return false;
                 }
 
-                // Si l'utilisateur change son propre mot de passe,
-                // l'ancien est strictement exigé.
-                if (isSelf) {
+                boolean previousActiveState = targetUser.getActifAvantArchivage() == null
+                        || targetUser.getActifAvantArchivage();
 
-                        if (request.getAncienMotDePasse() == null || request.getAncienMotDePasse().isEmpty()) {
-
-                                throw new IllegalArgumentException("L'ancien mot de passe est obligatoire.");
-                        }
-
-                        if (!passwordEncoder.matches(request.getAncienMotDePasse(), targetUser.getPassword())) {
-
-                                throw new IllegalArgumentException("L'ancien mot de passe est incorrect.");
-                        }
-                }
-
-                if (request.getNouveauMotDePasse() == null || request.getNouveauMotDePasse().length() < 6) {
-
-                        throw new IllegalArgumentException(
-                                        "Le nouveau mot de passe doit comporter au moins 6 caractères.");
-                }
-
-                targetUser.setPassword(passwordEncoder.encode(request.getNouveauMotDePasse()));
+                targetUser.setDeletedAt(null);
+                targetUser.setDeletedBy(null);
+                targetUser.setDeletionReason(null);
+                targetUser.setActifAvantArchivage(null);
+                targetUser.setArchiveEmailSentAt(null);
+                targetUser.setActif(previousActiveState);
 
                 utilisateurRepository.save(targetUser);
+                log.info("Collaborateur #{} [{}] restauré par ADMIN #{}.",
+                        targetUser.getId(), targetUser.getMatricule(), currentUser.getId());
+                return true;
+        }
+
+        // LISTE DES COLLABORATEURS ARCHIVÉS (ADMIN UNIQUEMENT)
+
+        public List<Utilisateur> getArchivedUtilisateurs(Utilisateur currentUser) {
+
+                if (currentUser == null || currentUser.getRole() != Role.ADMIN) {
+                        throw new AccessDeniedException("La consultation des collaborateurs archivés est réservée à l'administration.");
+                }
+
+                return utilisateurRepository.findAll().stream()
+                        .filter(Utilisateur::isArchived)
+                        .sorted((a, b) -> b.getDeletedAt().compareTo(a.getDeletedAt()))
+                        .toList();
         }
 
         // =========================================================
@@ -673,6 +637,10 @@ public class UtilisateurService {
                 if (currentUser.getRole() == Role.ADMIN) {
 
                         return target;
+                }
+
+                if (target.isArchived()) {
+                        throw new AccessDeniedException("Ce dossier archivé est réservé à l'administration.");
                 }
 
                 // Un employé ne peut voir que son profil
@@ -720,13 +688,17 @@ public class UtilisateurService {
 
                 if (currentUser.getRole() == Role.ADMIN) {
 
-                        return utilisateurRepository.findAll();
+                        return utilisateurRepository.findAll().stream()
+                                .filter(u -> !u.isArchived())
+                                .toList();
                 }
 
                 if (currentUser.getRole() == Role.MANAGER) {
 
                         List<Utilisateur> subordinates = new ArrayList<>(
-                                        utilisateurRepository.findByManagerId(currentUser.getId()));
+                                        utilisateurRepository.findByManagerId(currentUser.getId()).stream()
+                                                .filter(u -> !u.isArchived())
+                                                .toList());
 
                         if (subordinates.stream().noneMatch(u -> Objects.equals(u.getId(), currentUser.getId()))) {
 

@@ -2,10 +2,12 @@ package com.fruvio.GestionConge.utilisateur.service;
 
 import java.security.SecureRandom;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.UUID;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -151,6 +153,12 @@ public class UtilisateurService {
 
                 Utilisateur user = userOpt.get();
 
+                // Un compte créé avec un mot de passe automatique doit être activé par son lien personnel.
+                if (user.getResetToken() != null) {
+                        log.warn("Connexion refusée : activation initiale requise pour [{}]", user.getMatricule());
+                        return null;
+                }
+
                 // Vérifier que le compte est actif
                 if (!user.isActif()) {
 
@@ -266,16 +274,12 @@ public class UtilisateurService {
                         throw new AccessDeniedException("Seul un administrateur peut créer des utilisateurs.");
                 }
 
-                String rawPassword;
-
-                if (request.getPassword() != null && !request.getPassword().trim().isEmpty()) {
-
-                        rawPassword = request.getPassword().trim();
-
-                } else {
-
-                        rawPassword = generateRandomPassword(12);
-                }
+                boolean generatedAutomatically = request.getPassword() == null
+                                || request.getPassword().trim().isEmpty();
+                String rawPassword = generatedAutomatically
+                                ? generateRandomPassword(12)
+                                : request.getPassword().trim();
+                String initialPasswordToken = generatedAutomatically ? UUID.randomUUID().toString() : null;
 
                 Utilisateur newUser = Utilisateur.builder().matricule(matricule)
                                 .nom(request.getNom() != null ? request.getNom().trim() : "")
@@ -286,7 +290,11 @@ public class UtilisateurService {
                                 .adresse(normalizeOptional(request.getAdresse()))
                                 .fonction(normalizeOptional(request.getFonction()))
                                 .typeContrat(normalizeOptional(request.getTypeContrat()))
-                                .password(passwordEncoder.encode(rawPassword)).role(assignedRole)
+                                .password(passwordEncoder.encode(rawPassword))
+                                .resetToken(initialPasswordToken)
+                                .tokenExpiration(initialPasswordToken != null
+                                                ? LocalDateTime.now().plusHours(24) : null)
+                                .role(assignedRole)
                                 .service_id(request.getService_id()).manager_id(request.getManager_id())
                                 .date_embauche(request.getDate_embauche() != null ? request.getDate_embauche()
                                                 : LocalDate.now())
@@ -312,7 +320,8 @@ public class UtilisateurService {
                 // Le mot de passe en clair est uniquement transmis par e-mail.
                 try {
 
-                        emailService.sendWelcomeEmail(saved.getEmail(), saved.getMatricule(), rawPassword);
+                        emailService.sendWelcomeEmail(saved.getEmail(), saved.getMatricule(), rawPassword,
+                                        generatedAutomatically, initialPasswordToken);
 
                         log.info("E-mail de bienvenue envoyé avec succès pour l'utilisateur #{} [{}]", saved.getId(),
                                         saved.getEmail());

@@ -21,6 +21,7 @@ import org.springframework.web.bind.annotation.*;
 import com.fruvio.GestionConge.notifications_conge.service.Notification_congeService;
 import com.fruvio.GestionConge.utilisateur.dto.CompletePasswordResetRequest;
 import com.fruvio.GestionConge.utilisateur.dto.ForgotPasswordRequest;
+import com.fruvio.GestionConge.utilisateur.dto.InitialPasswordSetupRequest;
 import com.fruvio.GestionConge.utilisateur.entity.PasswordResetRequestEntity;
 import com.fruvio.GestionConge.utilisateur.entity.Role;
 import com.fruvio.GestionConge.utilisateur.entity.Utilisateur;
@@ -144,6 +145,9 @@ public class PasswordResetController {
         Utilisateur user = request.getUtilisateur();
         String temporaryPassword = generateTemporaryPassword();
         user.setPassword(passwordEncoder.encode(temporaryPassword));
+        // Une nouvelle réinitialisation admin remplace toute activation initiale précédente.
+        user.setResetToken(null);
+        user.setTokenExpiration(null);
         utilisateurRepository.save(user);
 
         request.setStatut("ACCEPTEE");
@@ -241,6 +245,37 @@ public class PasswordResetController {
 
         return ResponseEntity.ok(Map.of("success", true,
                 "message", "Votre mot de passe a été modifié avec succès. Vous pouvez maintenant vous connecter."));
+    }
+
+    /**
+     * Active un compte créé avec un mot de passe généré automatiquement.
+     * Le lien contient un jeton individuel, temporaire et utilisable une seule fois.
+     */
+    @PostMapping("/initial-password")
+    @Transactional
+    public ResponseEntity<Map<String, Object>> setInitialPassword(
+            @Valid @RequestBody InitialPasswordSetupRequest body) {
+        String token = body.getToken().trim();
+        Utilisateur user = utilisateurRepository.findByResetToken(token).orElse(null);
+
+        if (user == null || !user.isActif() || user.getTokenExpiration() == null
+                || user.getTokenExpiration().isBefore(LocalDateTime.now())) {
+            return ResponseEntity.badRequest().body(Map.of("success", false,
+                    "message", "Ce lien de changement de mot de passe est invalide ou expiré."));
+        }
+
+        if (!body.getNewPassword().equals(body.getConfirmation())) {
+            return ResponseEntity.badRequest().body(Map.of("success", false,
+                    "message", "La confirmation ne correspond pas au nouveau mot de passe."));
+        }
+
+        user.setPassword(passwordEncoder.encode(body.getNewPassword()));
+        user.setResetToken(null);
+        user.setTokenExpiration(null);
+        utilisateurRepository.save(user);
+
+        return ResponseEntity.ok(Map.of("success", true,
+                "message", "Votre mot de passe personnel est enregistré. Vous pouvez maintenant vous connecter."));
     }
 
     private String frontendUrl() {

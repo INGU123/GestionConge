@@ -12,6 +12,7 @@ import org.springframework.lang.Nullable;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
+import org.springframework.web.util.UriComponentsBuilder;
 
 import jakarta.mail.internet.MimeMessage;
 
@@ -93,28 +94,59 @@ public class EmailService {
         // =========================================================
 
         public void sendWelcomeEmail(String toEmail, String matricule, String rawPassword) {
+                sendWelcomeEmail(toEmail, matricule, rawPassword, false, null);
+        }
+
+        /**
+         * Envoie les identifiants en indiquant explicitement l'origine du mot de passe.
+         * Le lien d'activation est réservé aux mots de passe générés par le système.
+         */
+        public void sendWelcomeEmail(String toEmail, String matricule, String rawPassword,
+                        boolean generatedAutomatically, String token) {
 
                 if (toEmail == null || toEmail.isBlank()) {
                         throw new IllegalArgumentException("L'adresse e-mail est obligatoire.");
                 }
-
                 if (matricule == null || matricule.isBlank()) {
                         throw new IllegalArgumentException("Le matricule est obligatoire pour l'e-mail de bienvenue.");
                 }
-
                 if (rawPassword == null || rawPassword.isBlank()) {
-                        throw new IllegalArgumentException("Le mot de passe temporaire est obligatoire.");
+                        throw new IllegalArgumentException("Le mot de passe est obligatoire.");
                 }
 
                 String subject = "Création de votre compte - Gestion des Congés";
+                StringBuilder text = new StringBuilder("Bonjour,\\n\\n");
+                if (generatedAutomatically) {
+                        if (token == null || token.isBlank()) {
+                                throw new IllegalArgumentException("Le lien de première activation est obligatoire.");
+                        }
+                        String resetUrl = UriComponentsBuilder.fromUriString(frontendUrl)
+                                        .path("/Components/mdpReset")
+                                        .queryParam("token", token)
+                                        .build().encode().toUriString();
 
-                String text = "Bonjour,\n\n" + "Votre compte sur la plateforme de Gestion des Congés "
-                                + "a été créé avec succès.\n\n" + "Voici vos identifiants de connexion :\n"
-                                + " - Matricule / Identifiant : " + matricule + "\n" + " - Mot de passe temporaire : "
-                                + rawPassword + "\n\n" + "Veuillez vous connecter à l'application et modifier "
-                                + "votre mot de passe dès que possible.\n\n" + "Cordialement,\n" + "L'équipe RH";
+                        text.append("IMPORTANT : CE MOT DE PASSE A ÉTÉ GÉNÉRÉ AUTOMATIQUEMENT PAR LE SYSTÈME.\\n")
+                                        .append("Pour le remplacer immédiatement par votre mot de passe personnel, utilisez ce lien sécurisé :\\n")
+                                        .append(resetUrl).append("\\n")
+                                        .append("Ce lien est valable 24 heures et ne peut être utilisé qu'une seule fois.\\n\\n");
+                } else {
+                        text.append("INFORMATION : CE MOT DE PASSE A ÉTÉ DÉFINI MANUELLEMENT PAR L'ADMINISTRATEUR.\\n")
+                                        .append("Il ne s'agit pas d'un mot de passe généré automatiquement.\\n\\n");
+                }
 
-                sendEmail(toEmail, subject, text);
+                text.append("Votre compte sur la plateforme de Gestion des Congés a été créé avec succès.\\n\\n")
+                                .append("Vos identifiants :\\n")
+                                .append(" - Matricule / Identifiant : ").append(matricule).append("\\n")
+                                .append(" - Mot de passe initial : ").append(rawPassword).append("\\n\\n");
+
+                if (generatedAutomatically) {
+                        text.append("Nous vous recommandons de définir votre mot de passe personnel dès maintenant en utilisant le lien ci-dessus.\\n\\n");
+                } else {
+                        text.append("Conservez ce mot de passe en sécurité. Vous pourrez le modifier depuis votre espace personnel.\\n\\n");
+                }
+                text.append("Cordialement,\\nL'équipe RH");
+
+                sendEmail(toEmail, subject, text.toString());
         }
 
         // =========================================================

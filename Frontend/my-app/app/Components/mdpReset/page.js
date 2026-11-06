@@ -29,6 +29,7 @@ export default function ResetPasswordPage() {
 
 function ResetPasswordForm() {
   const searchParams = useSearchParams();
+  const initialToken = searchParams.get("token") || "";
   const [matricule, setMatricule] = useState(searchParams.get("matricule") || "");
   const [ancienMotDePasse, setAncienMotDePasse] = useState("");
   const [nouveauMotDePasse, setNouveauMotDePasse] = useState("");
@@ -53,7 +54,7 @@ function ResetPasswordForm() {
     event.preventDefault();
     const normalizedMatricule = matricule.trim();
 
-    if (!normalizedMatricule || !ancienMotDePasse || !nouveauMotDePasse || !confirmation) {
+    if ((!initialToken && (!normalizedMatricule || !ancienMotDePasse)) || !nouveauMotDePasse || !confirmation) {
       setMessage({ text: "Veuillez remplir tous les champs.", type: "error" });
       return;
     }
@@ -65,7 +66,7 @@ function ResetPasswordForm() {
       setMessage({ text: "La confirmation ne correspond pas au nouveau mot de passe.", type: "error" });
       return;
     }
-    if (nouveauMotDePasse === ancienMotDePasse) {
+    if (!initialToken && nouveauMotDePasse === ancienMotDePasse) {
       setMessage({ text: "Choisissez un mot de passe différent du mot de passe temporaire.", type: "error" });
       return;
     }
@@ -73,15 +74,16 @@ function ResetPasswordForm() {
     setLoading(true);
     setMessage({ text: "", type: "" });
     try {
-      const response = await fetch(`${API_URL}/auth/complete-password-reset`, {
+      const endpoint = initialToken
+        ? `${API_URL}/auth/initial-password`
+        : `${API_URL}/auth/complete-password-reset`;
+      const payload = initialToken
+        ? { token: initialToken, newPassword: nouveauMotDePasse, confirmation }
+        : { matricule: normalizedMatricule, ancienMotDePasse, nouveauMotDePasse, confirmation };
+      const response = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          matricule: normalizedMatricule,
-          ancienMotDePasse,
-          nouveauMotDePasse,
-          confirmation,
-        }),
+        body: JSON.stringify(payload),
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) {
@@ -147,7 +149,9 @@ function ResetPasswordForm() {
               <span className="login-heading-mark" />
               <p className="login-overline">CHANGEMENT DE MOT DE PASSE</p>
               <h2>Définissez votre mot de passe</h2>
-              <p>Saisissez votre matricule et le mot de passe temporaire reçu, puis choisissez et confirmez votre nouveau mot de passe.</p>
+              <p>{initialToken
+                ? "Votre compte a reçu un mot de passe généré automatiquement. Définissez maintenant votre mot de passe personnel."
+                : "Saisissez votre matricule et le mot de passe temporaire reçu, puis choisissez et confirmez votre nouveau mot de passe."}</p>
             </div>
 
             {message.text && (
@@ -165,6 +169,8 @@ function ResetPasswordForm() {
             )}
 
             <form onSubmit={handleSubmit} className="login-form">
+              {!initialToken && (
+                <>
               <div className="login-field">
                 <label htmlFor="matricule">Matricule professionnel</label>
                 <div className="login-input-wrap">
@@ -209,6 +215,9 @@ function ResetPasswordForm() {
                   </button>
                 </div>
               </div>
+
+                </>
+              )}
 
               <div className="login-field">
                 <label htmlFor="nouveauMotDePasse">Nouveau mot de passe</label>
@@ -290,7 +299,9 @@ function ResetPasswordForm() {
 
             <div className="login-security-note">
               <FiLock aria-hidden="true" />
-              <span>Le mot de passe temporaire ne sera plus utilisable après la modification.</span>
+              <span>{initialToken
+                ? "Ce lien personnel est temporaire et ne peut être utilisé qu'une seule fois."
+                : "Le mot de passe temporaire ne sera plus utilisable après la modification."}</span>
             </div>
 
             <div className="login-forgot-row" style={{ justifyContent: "flex-start", marginTop: "24px" }}>

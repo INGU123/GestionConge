@@ -237,8 +237,10 @@ export default function UtilisateursPage() {
       if (!res.ok) throw new Error(await res.text());
       const data = await res.json();
       setArchivedUsers(Array.isArray(data) ? data : []);
+      return true;
     } catch (err) {
       showToast(err.message || "Impossible de charger les collaborateurs archivés.", "error");
+      return false;
     } finally {
       setArchivedLoading(false);
     }
@@ -246,7 +248,8 @@ export default function UtilisateursPage() {
 
   const toggleArchivedView = async () => {
     if (!showArchived) {
-      await loadArchivedUsers();
+      const loaded = await loadArchivedUsers();
+      if (!loaded) return;
       setShowArchived(true);
       setSearch("");
     } else {
@@ -521,8 +524,14 @@ export default function UtilisateursPage() {
                       </td>
                       <td className="py-3.5">
                         {u.archived ? (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-bold bg-slate-100 text-slate-700 border border-slate-200">
-                            Archivé
+                          <span
+                            title={u.deletion_reason || "Aucun motif renseigné"}
+                            className="inline-flex flex-col items-start gap-0.5 px-2 py-0.5 rounded text-xs font-bold bg-slate-100 text-slate-700 border border-slate-200"
+                          >
+                            <span>Archivé</span>
+                            <span className="font-normal text-[10px]">
+                              {u.deleted_at ? new Date(u.deleted_at).toLocaleString("fr-FR") : ""}
+                            </span>
                           </span>
                         ) : u.actif !== false ? (
                           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
@@ -602,7 +611,8 @@ export default function UtilisateursPage() {
                                 type="button"
                                 onClick={() => {
                                   setActiveMenuId(null);
-                                  setUserToDelete(u);
+                                  setArchiveReason("");
+                                   setUserToDelete(u);
                                 }}
                                 disabled={isSelf}
                                 className={`w-full text-left px-4 py-2 flex items-center gap-2.5 transition-colors ${

@@ -34,6 +34,7 @@ import com.fruvio.GestionConge.utilisateur.entity.PasswordResetRequestEntity;
 import com.fruvio.GestionConge.utilisateur.repository.PasswordResetRequestRepository;
 import com.fruvio.GestionConge.utilisateur.entity.Role;
 import com.fruvio.GestionConge.utilisateur.entity.Utilisateur;
+import com.fruvio.GestionConge.utilisateur.repository.HistoriqueCompteRepository;
 import com.fruvio.GestionConge.utilisateur.repository.UtilisateurRepository;
 
 @ExtendWith(MockitoExtension.class)
@@ -41,6 +42,9 @@ class UtilisateurServiceTest {
 
     @Mock
     private UtilisateurRepository utilisateurRepository;
+
+    @Mock
+    private HistoriqueCompteRepository historiqueCompteRepository;
 
     @Mock
     private Solde_congeService soldeCongeService;

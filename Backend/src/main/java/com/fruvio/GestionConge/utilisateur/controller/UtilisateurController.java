@@ -160,7 +160,7 @@ public class UtilisateurController {
         Utilisateur currentUser = getCurrentAuthenticatedUser();
         String reason = request != null ? request.getMotif() : null;
 
-        if (!utilisateurService.deleteUtilisateur(id, reason, currentUser)) {
+        if (!utilisateurService.archiveUtilisateur(id, reason, currentUser)) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(Map.of("message", "Collaborateur introuvable ou déjà archivé."));
         }

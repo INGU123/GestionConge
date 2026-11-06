@@ -26,6 +26,7 @@ import com.fruvio.GestionConge.utilisateur.dto.LoginResponse;
 import com.fruvio.GestionConge.utilisateur.dto.UtilisateurCreateRequest;
 import com.fruvio.GestionConge.utilisateur.dto.UtilisateurResponse;
 import com.fruvio.GestionConge.utilisateur.dto.UtilisateurUpdateRequest;
+import com.fruvio.GestionConge.utilisateur.entity.HistoriqueCompte;
 import com.fruvio.GestionConge.utilisateur.entity.Role;
 import com.fruvio.GestionConge.utilisateur.entity.Utilisateur;
 import com.fruvio.GestionConge.utilisateur.service.UtilisateurService;
@@ -167,6 +168,13 @@ public class UtilisateurController {
         return ResponseEntity.ok(Map.of(
                 "message", "Collaborateur archivé. La notification a été envoyée à son adresse e-mail.",
                 "emailNotification", "envoyée"));
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @GetMapping("/audit/{id}")
+    public ResponseEntity<List<HistoriqueCompte>> getAccountAudit(@PathVariable Long id) {
+        Utilisateur currentUser = getCurrentAuthenticatedUser();
+        return ResponseEntity.ok(utilisateurService.getHistoriqueCompte(id, currentUser));
     }
 
     @PreAuthorize("hasRole('ADMIN')")

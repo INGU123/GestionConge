@@ -79,6 +79,22 @@ public class Utilisateur implements UserDetails {
     @Builder.Default
     private boolean actif = true;
 
+    // Archivage logique : les références historiques continuent de pointer vers ce compte.
+    @Column(name = "deleted_at")
+    private LocalDateTime deletedAt;
+
+    @Column(name = "deleted_by")
+    private Long deletedBy;
+
+    @Column(name = "deletion_reason", length = 1000)
+    private String deletionReason;
+
+    @Column(name = "actif_avant_archivage")
+    private Boolean actifAvantArchivage;
+
+    @Column(name = "archive_email_sent_at")
+    private LocalDateTime archiveEmailSentAt;
+
     @Column(nullable = false)
     private LocalDate date_creation;
 
@@ -152,9 +168,15 @@ public class Utilisateur implements UserDetails {
         return true;
     }
 
+    @Transient
+    @JsonProperty("archived")
+    public boolean isArchived() {
+        return deletedAt != null;
+    }
+
     @Override
     @JsonIgnore
     public boolean isEnabled() {
-        return actif;
+        return actif && !isArchived();
     }
 }

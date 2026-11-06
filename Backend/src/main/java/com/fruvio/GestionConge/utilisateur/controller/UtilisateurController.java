@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.fruvio.GestionConge.utilisateur.config.CustomUserDetails;
 import com.fruvio.GestionConge.utilisateur.config.JwtUtil;
+import com.fruvio.GestionConge.utilisateur.dto.ArchiveUtilisateurRequest;
 import com.fruvio.GestionConge.utilisateur.dto.ChangePasswordRequest;
 import com.fruvio.GestionConge.utilisateur.dto.LoginRequest;
 import com.fruvio.GestionConge.utilisateur.dto.LoginResponse;
@@ -149,15 +150,43 @@ public class UtilisateurController {
         return ResponseEntity.ok(UtilisateurResponse.fromEntity(user));
     }
 
+    // Archivage logique : les données et références historiques sont conservées.
     @PreAuthorize("hasRole('ADMIN')")
     @DeleteMapping("/{id}")
-    public ResponseEntity<?> delete(@PathVariable Long id) {
+    public ResponseEntity<?> archive(
+            @PathVariable Long id,
+            @Valid @RequestBody(required = false) ArchiveUtilisateurRequest request) {
         Utilisateur currentUser = getCurrentAuthenticatedUser();
-        if (!utilisateurService.deleteUtilisateur(id, currentUser)) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Collaborateur non trouvé."));
+        String reason = request != null ? request.getMotif() : null;
+
+        if (!utilisateurService.deleteUtilisateur(id, reason, currentUser)) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("message", "Collaborateur introuvable ou déjà archivé."));
         }
 
-        return ResponseEntity.ok(Map.of("message", "Collaborateur supprimé avec succès."));
+        return ResponseEntity.ok(Map.of(
+                "message", "Collaborateur archivé. La notification a été envoyée à son adresse e-mail.",
+                "emailNotification", "envoyée"));
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @GetMapping("/archived")
+    public ResponseEntity<List<UtilisateurResponse>> getArchived() {
+        Utilisateur currentUser = getCurrentAuthenticatedUser();
+        List<UtilisateurResponse> response = utilisateurService.getArchivedUtilisateurs(currentUser)
+                .stream().map(UtilisateurResponse::fromEntity).toList();
+        return ResponseEntity.ok(response);
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @PutMapping("/restore/{id}")
+    public ResponseEntity<?> restore(@PathVariable Long id) {
+        Utilisateur currentUser = getCurrentAuthenticatedUser();
+        if (!utilisateurService.restoreUtilisateur(id, currentUser)) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("message", "Collaborateur archivé introuvable."));
+        }
+        return ResponseEntity.ok(Map.of("message", "Collaborateur restauré avec succès."));
     }
 
     // =========================================================

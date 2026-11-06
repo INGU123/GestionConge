@@ -371,6 +371,11 @@ public class UtilisateurService {
                         throw new AccessDeniedException("Opération non autorisée : utilisateur non authentifié.");
                 }
 
+                if (targetUser.getRole() == Role.ADMIN) {
+                        throw new IllegalStateException(
+                                        "Le compte administrateur est protégé et ne peut pas être modifié depuis l'application.");
+                }
+
                 Role currentRole = currentUser.getRole();
 
                 boolean isSelf = Objects.equals(currentUser.getId(), targetUser.getId());
@@ -548,6 +553,11 @@ public class UtilisateurService {
 
                 if (targetUser == null) {
                         return false;
+                }
+
+                if (targetUser.getRole() == Role.ADMIN) {
+                        throw new IllegalStateException(
+                                        "Le compte administrateur est protégé et ne peut pas être supprimé depuis l'application.");
                 }
 
                 if (Objects.equals(currentUser.getId(), targetUser.getId())) {

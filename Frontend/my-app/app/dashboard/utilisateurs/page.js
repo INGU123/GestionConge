@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef } from "react";
 import { authFetch, getCurrentUser } from "@/lib/apiClient";
 import { useToast } from "../../components/ToastProvider";
-import ConfirmDialog from "../../components/ConfirmDialog";
+import ConfirmDialog from "../../Components/ConfirmDialog";
 import {
   Users,
   UserPlus,
@@ -434,6 +434,7 @@ export default function UtilisateursPage() {
                 {filteredUsers.map((u) => {
                   const isMenuOpen = activeMenuId === u.id;
                   const isSelf = u.id === currentUser?.id;
+                  const isProtectedAdmin = u.role?.toUpperCase() === "ADMIN";
 
                   return (
                     <tr key={u.id} className="hover:bg-slate-50/80 transition-colors border-b border-slate-100">
@@ -504,16 +505,20 @@ export default function UtilisateursPage() {
                               <button
                                 type="button"
                                 onClick={() => startEdit(u)}
-                                className="w-full text-left px-4 py-2 hover:bg-slate-50 flex items-center gap-2.5 text-slate-700 transition-colors"
+                                disabled={isProtectedAdmin}
+                                title={isProtectedAdmin ? "Le compte administrateur est protégé" : ""}
+                                className={`w-full text-left px-4 py-2 flex items-center gap-2.5 transition-colors ${isProtectedAdmin ? "cursor-not-allowed opacity-40 text-slate-400" : "hover:bg-slate-50 text-slate-700"}`}
                               >
                                 <FiEdit2 className="w-3.5 h-3.5 text-amber-600" />
-                                Modifier
+                                {isProtectedAdmin ? "Modification protégée" : "Modifier"}
                               </button>
 
                               <button
                                 type="button"
                                 onClick={() => handleToggleActive(u)}
-                                className="w-full text-left px-4 py-2 hover:bg-slate-50 flex items-center gap-2.5 text-slate-700 transition-colors"
+                                disabled={isProtectedAdmin}
+                                title={isProtectedAdmin ? "Le compte administrateur ne peut pas être désactivé" : ""}
+                                className={`w-full text-left px-4 py-2 flex items-center gap-2.5 transition-colors ${isProtectedAdmin ? "cursor-not-allowed opacity-40 text-slate-400" : "hover:bg-slate-50 text-slate-700"}`}
                               >
                                 {u.actif !== false ? (
                                   <>
@@ -536,11 +541,11 @@ export default function UtilisateursPage() {
                                   setActiveMenuId(null);
                                   setUserToDelete(u);
                                 }}
-                                disabled={isSelf}
+                                disabled={isSelf || isProtectedAdmin}
                                 className={`w-full text-left px-4 py-2 flex items-center gap-2.5 transition-colors ${
-                                  isSelf ? "opacity-40 cursor-not-allowed text-slate-400" : "hover:bg-rose-50 text-rose-600"
+                                  isSelf || isProtectedAdmin ? "opacity-40 cursor-not-allowed text-slate-400" : "hover:bg-rose-50 text-rose-600"
                                 }`}
-                                title={isSelf ? "Impossible de supprimer votre propre compte" : ""}
+                                title={isProtectedAdmin ? "Le compte administrateur ne peut pas être supprimé" : isSelf ? "Impossible de supprimer votre propre compte" : ""}
                               >
                                 <FiTrash2 className="w-3.5 h-3.5" />
                                 Supprimer
@@ -900,8 +905,10 @@ export default function UtilisateursPage() {
       {userToDelete && (
         <ConfirmDialog
           title="Supprimer ce collaborateur ?"
-          message={`Le compte de ${userToDelete.prenom} ${userToDelete.nom} sera supprimé. Cette action ne peut pas être annulée.`}
+          message={`Le compte de ${userToDelete.prenom} ${userToDelete.nom} sera supprimé définitivement si aucune donnée RH ne dépend de ce compte. Vérifiez son identité avant de confirmer.`}
           pending={deletingUserId === userToDelete.id}
+          countdownSeconds={10}
+          variant="toast"
           onCancel={() => {
             if (deletingUserId === null) setUserToDelete(null);
           }}

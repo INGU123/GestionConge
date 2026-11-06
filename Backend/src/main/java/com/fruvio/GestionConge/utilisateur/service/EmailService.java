@@ -166,9 +166,11 @@ public class EmailService {
 
                 String subject = "Suppression de votre compte - Gestion des Congés";
 
-                String text = "Bonjour,\n\n" + "Votre compte associé au matricule " + matricule
-                                + " a été supprimé de la plateforme de Gestion des Congés.\n\n" + "Cordialement,\n"
-                                + "L'équipe RH";
+                String text = "Bonjour,\n\n"
+                                + "Nous vous informons que votre compte associé au matricule " + matricule
+                                + " a été supprimé de la plateforme de Gestion des Congés.\n\n"
+                                + "Si vous pensez que cette suppression résulte d'une erreur, veuillez contacter sans délai l'administrateur RH de la SPAT par le canal de contact habituel, en communiquant votre matricule. Votre demande permettra de vérifier la situation et, si nécessaire, d'engager la procédure de rétablissement de vos accès.\n\n"
+                                + "Cordialement,\nL'équipe RH — SPAT";
 
                 sendEmail(toEmail, subject, text);
         }

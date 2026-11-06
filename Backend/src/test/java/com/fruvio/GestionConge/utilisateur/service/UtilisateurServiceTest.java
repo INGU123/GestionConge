@@ -247,4 +247,31 @@ class UtilisateurServiceTest {
 
         verify(utilisateurRepository, never()).findById(2L);
     }
+    @Test
+    void updateUtilisateurRejectsAdminAccountModification() {
+        Utilisateur currentAdmin = Utilisateur.builder().id(1L).role(Role.ADMIN).build();
+        Utilisateur protectedAdmin = Utilisateur.builder().id(2L).role(Role.ADMIN).nom("Administrateur").build();
+        when(utilisateurRepository.findById(2L)).thenReturn(Optional.of(protectedAdmin));
+
+        var request = com.fruvio.GestionConge.utilisateur.dto.UtilisateurUpdateRequest.builder()
+                .id(2L).nom("Nom modifié").build();
+
+        assertThrows(IllegalStateException.class,
+                () -> utilisateurService.updateUtilisateur(request, currentAdmin));
+
+        verify(utilisateurRepository, never()).save(any(Utilisateur.class));
+    }
+
+    @Test
+    void deleteUtilisateurRejectsAnotherAdminAccount() {
+        Utilisateur currentAdmin = Utilisateur.builder().id(1L).role(Role.ADMIN).build();
+        Utilisateur protectedAdmin = Utilisateur.builder().id(2L).role(Role.ADMIN).build();
+        when(utilisateurRepository.findById(2L)).thenReturn(Optional.of(protectedAdmin));
+
+        assertThrows(IllegalStateException.class,
+                () -> utilisateurService.deleteUtilisateur(2L, currentAdmin));
+
+        verify(utilisateurRepository, never()).delete(any(Utilisateur.class));
+    }
+
 }

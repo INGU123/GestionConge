@@ -248,6 +248,7 @@ class UtilisateurServiceTest {
         assertEquals("Fin de contrat", collaborator.getDeletionReason());
         assertEquals(true, collaborator.getArchiveEmailSentAt() != null);
         verify(utilisateurRepository).save(collaborator);
+        verify(historiqueCompteRepository).save(any(com.fruvio.GestionConge.utilisateur.entity.HistoriqueCompte.class));
         verify(emailService).sendAccountArchivedEmail(
                 "employee@example.com", "EMP-002", "Agent", "Test",
                 collaborator.getDeletedAt(), "Fin de contrat");
@@ -286,6 +287,7 @@ class UtilisateurServiceTest {
         assertEquals(false, collaborator.isActif());
         assertEquals(false, collaborator.isArchived());
         verify(utilisateurRepository).save(collaborator);
+        verify(historiqueCompteRepository).save(any(com.fruvio.GestionConge.utilisateur.entity.HistoriqueCompte.class));
     }
 
     @Test

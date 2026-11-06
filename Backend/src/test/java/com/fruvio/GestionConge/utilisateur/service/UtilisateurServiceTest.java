@@ -227,7 +227,7 @@ class UtilisateurServiceTest {
         Utilisateur admin = Utilisateur.builder().id(1L).role(Role.ADMIN).build();
         when(utilisateurRepository.findById(1L)).thenReturn(Optional.of(admin));
 
-        assertThrows(IllegalStateException.class, () -> utilisateurService.deleteUtilisateur(1L, null, admin));
+        assertThrows(IllegalStateException.class, () -> utilisateurService.archiveUtilisateur(1L, null, admin));
 
         verify(utilisateurRepository, never()).delete(any(Utilisateur.class));
     }
@@ -240,7 +240,7 @@ class UtilisateurServiceTest {
                 .nom("Agent").prenom("Test").actif(true).build();
         when(utilisateurRepository.findById(2L)).thenReturn(Optional.of(collaborator));
 
-        assertEquals(true, utilisateurService.deleteUtilisateur(2L, "Fin de contrat", admin));
+        assertEquals(true, utilisateurService.archiveUtilisateur(2L, "Fin de contrat", admin));
 
         assertEquals(false, collaborator.isActif());
         assertEquals(true, collaborator.isArchived());
@@ -270,7 +270,7 @@ class UtilisateurServiceTest {
                         org.mockito.ArgumentMatchers.isNull());
 
         assertThrows(IllegalStateException.class,
-                () -> utilisateurService.deleteUtilisateur(3L, null, admin));
+                () -> utilisateurService.archiveUtilisateur(3L, null, admin));
         verify(utilisateurRepository, never()).save(collaborator);
     }
 
@@ -292,7 +292,7 @@ class UtilisateurServiceTest {
     void deleteUtilisateurRequiresAdmin() {
         Utilisateur employee = Utilisateur.builder().id(1L).role(Role.EMPLOYE).build();
 
-        assertThrows(AccessDeniedException.class, () -> utilisateurService.deleteUtilisateur(2L, null, employee));
+        assertThrows(AccessDeniedException.class, () -> utilisateurService.archiveUtilisateur(2L, null, employee));
 
         verify(utilisateurRepository, never()).findById(2L);
     }

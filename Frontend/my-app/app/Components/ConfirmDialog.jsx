@@ -9,10 +9,12 @@ export default function ConfirmDialog({
   confirmLabel = "Confirmer la suppression",
   pending = false,
   countdownSeconds = 0,
+  variant = "modal",
   onCancel,
   onConfirm,
 }) {
   const [remaining, setRemaining] = useState(countdownSeconds);
+  const isToast = variant === "toast";
 
   useEffect(() => {
     if (countdownSeconds <= 0) return undefined;
@@ -28,18 +30,24 @@ export default function ConfirmDialog({
 
   return (
     <div
-      className="fixed right-4 top-4 z-[100] w-[calc(100%-2rem)] max-w-md"
+      className={isToast
+        ? "fixed right-4 top-4 z-[100] w-[calc(100%-2rem)] max-w-md"
+        : "fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/55 p-4"}
       onKeyDown={(event) => {
         if (event.key === "Escape" && !pending) onCancel();
       }}
     >
       <section
         role="alertdialog"
-        aria-modal="false"
+        aria-modal={!isToast}
         aria-labelledby="confirm-dialog-title"
         aria-describedby="confirm-dialog-message"
-        className="overflow-hidden rounded-2xl border bg-white p-5 text-slate-800 shadow-2xl"
-        style={{ borderColor: "var(--border)" }}
+        className={isToast
+          ? "overflow-hidden rounded-2xl border bg-white p-5 text-slate-800 shadow-2xl"
+          : "w-full max-w-md rounded-2xl border p-6 shadow-2xl"}
+        style={isToast
+          ? { borderColor: "var(--border)" }
+          : { background: "var(--panel)", color: "var(--text-main)", borderColor: "var(--border)" }}
       >
         <div className="flex items-start gap-3">
           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-rose-50 text-rose-700">
@@ -69,7 +77,7 @@ export default function ConfirmDialog({
           </div>
         )}
 
-        <div className="mt-5 flex justify-end gap-2">
+        <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
           <button
             type="button"
             onClick={onCancel}

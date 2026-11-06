@@ -27,8 +27,10 @@ import com.fruvio.GestionConge.solde_conge.service.Solde_congeService;
 import com.fruvio.GestionConge.utilisateur.dto.ChangePasswordRequest;
 import com.fruvio.GestionConge.utilisateur.dto.UtilisateurCreateRequest;
 import com.fruvio.GestionConge.utilisateur.dto.UtilisateurUpdateRequest;
+import com.fruvio.GestionConge.utilisateur.entity.HistoriqueCompte;
 import com.fruvio.GestionConge.utilisateur.entity.Role;
 import com.fruvio.GestionConge.utilisateur.entity.Utilisateur;
+import com.fruvio.GestionConge.utilisateur.repository.HistoriqueCompteRepository;
 import com.fruvio.GestionConge.utilisateur.repository.UtilisateurRepository;
 
 @Service
@@ -54,6 +56,8 @@ public class UtilisateurService {
 
         private final Service_congeRepository serviceRepository;
 
+        private final HistoriqueCompteRepository historiqueCompteRepository;
+
         private static final String CHAR_LOWER = "abcdefghijklmnopqrstuvwxyz";
 
         private static final String CHAR_UPPER = CHAR_LOWER.toUpperCase();
@@ -70,7 +74,8 @@ public class UtilisateurService {
                         @Lazy Solde_congeService soldeCongeService, EmailService emailService,
                         DemandeCongeRepository demandeCongeRepository, Solde_congeRepository soldeCongeRepository,
                         Historique_mouvementRepository historiqueRepository,
-                        NotificationRepository notificationRepository, Service_congeRepository serviceRepository) {
+                        NotificationRepository notificationRepository, Service_congeRepository serviceRepository,
+                        HistoriqueCompteRepository historiqueCompteRepository) {
 
                 this.utilisateurRepository = utilisateurRepository;
                 this.passwordEncoder = passwordEncoder;
@@ -81,6 +86,7 @@ public class UtilisateurService {
                 this.historiqueRepository = historiqueRepository;
                 this.notificationRepository = notificationRepository;
                 this.serviceRepository = serviceRepository;
+                this.historiqueCompteRepository = historiqueCompteRepository;
         }
 
         // =========================================================
@@ -564,6 +570,13 @@ public class UtilisateurService {
                 }
 
                 utilisateurRepository.save(targetUser);
+                historiqueCompteRepository.save(HistoriqueCompte.builder()
+                        .utilisateurId(targetUser.getId())
+                        .acteurId(currentUser.getId())
+                        .action("ARCHIVAGE")
+                        .motif(normalizedReason)
+                        .dateAction(archivedAt)
+                        .build());
                 log.info("Collaborateur #{} [{}] archivé par ADMIN #{} à {}.",
                         targetUser.getId(), targetUser.getMatricule(), currentUser.getId(), archivedAt);
                 return true;
@@ -594,6 +607,12 @@ public class UtilisateurService {
                 targetUser.setActif(previousActiveState);
 
                 utilisateurRepository.save(targetUser);
+                historiqueCompteRepository.save(HistoriqueCompte.builder()
+                        .utilisateurId(targetUser.getId())
+                        .acteurId(currentUser.getId())
+                        .action("RESTAURATION")
+                        .dateAction(LocalDateTime.now())
+                        .build());
                 log.info("Collaborateur #{} [{}] restauré par ADMIN #{}.",
                         targetUser.getId(), targetUser.getMatricule(), currentUser.getId());
                 return true;
@@ -611,6 +630,13 @@ public class UtilisateurService {
                         .filter(Utilisateur::isArchived)
                         .sorted((a, b) -> b.getDeletedAt().compareTo(a.getDeletedAt()))
                         .toList();
+        }
+
+        public List<HistoriqueCompte> getHistoriqueCompte(Long utilisateurId, Utilisateur currentUser) {
+                if (currentUser == null || currentUser.getRole() != Role.ADMIN) {
+                        throw new AccessDeniedException("La consultation de l'audit des comptes est réservée à l'administration.");
+                }
+                return historiqueCompteRepository.findByUtilisateurIdOrderByDateActionDesc(utilisateurId);
         }
 
         // =========================================================

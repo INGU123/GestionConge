@@ -522,7 +522,7 @@ public class UtilisateurService {
         // ARCHIVAGE LOGIQUE D'UN COLLABORATEUR
 
         @Transactional
-        public boolean deleteUtilisateur(Long id, String reason, Utilisateur currentUser) {
+        public boolean archiveUtilisateur(Long id, String reason, Utilisateur currentUser) {
 
                 if (currentUser == null || currentUser.getRole() != Role.ADMIN) {
                         throw new AccessDeniedException("Seul un administrateur peut archiver un collaborateur.");

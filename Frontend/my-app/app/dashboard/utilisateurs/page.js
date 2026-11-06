@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef } from "react";
 import { authFetch, getCurrentUser } from "@/lib/apiClient";
 import { useToast } from "../../components/ToastProvider";
-import ConfirmDialog from "../../components/ConfirmDialog";
+import ConfirmDialog from "../../Components/ConfirmDialog";
 import {
   Users,
   UserPlus,
@@ -886,6 +886,7 @@ export default function UtilisateursPage() {
           message={`Le compte de ${userToDelete.prenom} ${userToDelete.nom} sera supprimé définitivement si aucune donnée RH ne dépend de ce compte. Vérifiez son identité avant de confirmer.`}
           pending={deletingUserId === userToDelete.id}
           countdownSeconds={10}
+          variant="toast"
           onCancel={() => {
             if (deletingUserId === null) setUserToDelete(null);
           }}

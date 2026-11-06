@@ -3,7 +3,6 @@
 import { useEffect, useState, useRef } from "react";
 import { authFetch, getCurrentUser } from "@/lib/apiClient";
 import { useToast } from "../../components/ToastProvider";
-import ConfirmDialog from "../../Components/ConfirmDialog";
 import {
   Users,
   UserPlus,
@@ -38,6 +37,10 @@ export default function UtilisateursPage() {
   const [editingUser, setEditingUser] = useState(null);
   const [deletingUserId, setDeletingUserId] = useState(null);
   const [userToDelete, setUserToDelete] = useState(null);
+  const [archiveReason, setArchiveReason] = useState("");
+  const [showArchived, setShowArchived] = useState(false);
+  const [archivedUsers, setArchivedUsers] = useState([]);
+  const [archivedLoading, setArchivedLoading] = useState(false);
   
   // État pour la modale de visualisation complète (Voir tout)
   const [viewUserModal, setViewUserModal] = useState(null);
@@ -208,13 +211,14 @@ export default function UtilisateursPage() {
     }
   };
 
-  const handleDelete = async () => {
+  const handleArchive = async () => {
     if (!userToDelete) return;
     const user = userToDelete;
     setDeletingUserId(user.id);
     try {
       const res = await authFetch(`http://localhost:8080/utilisateur/${user.id}`, {
         method: "DELETE",
+        body: JSON.stringify({ motif: archiveReason.trim() || null }),
       });
       if (!res.ok) {
         const text = await res.text();
@@ -223,17 +227,70 @@ export default function UtilisateursPage() {
           const parsed = JSON.parse(text);
           errorMessage = parsed.message || errorMessage;
         } catch { }
-        showToast(errorMessage || "Erreur lors de la suppression du collaborateur.", "error");
+        showToast(errorMessage || "Erreur lors de l'archivage du collaborateur.", "error");
         return;
       }
 
       setUsers((prev) => prev.filter((item) => item.id !== user.id));
       setUserToDelete(null);
-      showToast("Collaborateur supprimé avec succès.", "success");
+      setArchiveReason("");
+      showToast("Collaborateur archivé. La notification e-mail a été envoyée.", "success");
     } catch (err) {
       showToast(`Erreur : ${err.message}`, "error");
     } finally {
       setDeletingUserId(null);
+    }
+  };
+
+  const loadArchivedUsers = async () => {
+    setArchivedLoading(true);
+    try {
+      const res = await authFetch("http://localhost:8080/utilisateur/archived");
+      if (!res.ok) throw new Error(await res.text());
+      const data = await res.json();
+      setArchivedUsers(Array.isArray(data) ? data : []);
+      return true;
+    } catch (err) {
+      showToast(err.message || "Impossible de charger les collaborateurs archivés.", "error");
+      return false;
+    } finally {
+      setArchivedLoading(false);
+    }
+  };
+
+  const toggleArchivedView = async () => {
+    if (!showArchived) {
+      const loaded = await loadArchivedUsers();
+      if (!loaded) return;
+      setShowArchived(true);
+      setSearch("");
+    } else {
+      setShowArchived(false);
+      setSearch("");
+    }
+  };
+
+  const handleRestore = async (user) => {
+    try {
+      const res = await authFetch(`http://localhost:8080/utilisateur/restore/${user.id}`, {
+        method: "PUT",
+      });
+      if (!res.ok) {
+        const text = await res.text();
+        let message = text;
+        try { message = JSON.parse(text).message || text; } catch {}
+        throw new Error(message || "Impossible de restaurer ce collaborateur.");
+      }
+
+      const [activeResponse, archivedResponse] = await Promise.all([
+        authFetch("http://localhost:8080/utilisateur/all"),
+        authFetch("http://localhost:8080/utilisateur/archived"),
+      ]);
+      if (activeResponse.ok) setUsers(await activeResponse.json());
+      if (archivedResponse.ok) setArchivedUsers(await archivedResponse.json());
+      showToast("Collaborateur restauré avec succès.", "success");
+    } catch (err) {
+      showToast(err.message || "Erreur lors de la restauration.", "error");
     }
   };
 
@@ -319,7 +376,8 @@ export default function UtilisateursPage() {
     );
   }
 
-  const filteredUsers = users.filter((u) => {
+  const sourceUsers = showArchived ? archivedUsers : users;
+  const filteredUsers = sourceUsers.filter((u) => {
     const term = search.toLowerCase();
     return (
       (u.matricule && u.matricule.toLowerCase().includes(term)) ||
@@ -380,13 +438,24 @@ export default function UtilisateursPage() {
           </p>
         </div>
 
-        <button
-          onClick={startCreate}
-          className="btn btn-primary text-white font-semibold gap-2 shadow-xs"
-        >
-          <UserPlus className="w-4 h-4" />
-          Nouveau Collaborateur
-        </button>
+        <div className="flex items-center gap-2 flex-wrap">
+          <button
+            type="button"
+            onClick={toggleArchivedView}
+            className="btn btn-outline btn-sm border-slate-500 text-white hover:bg-slate-700"
+          >
+            {showArchived ? "Retour aux collaborateurs" : "Collaborateurs archivés"}
+          </button>
+          {!showArchived && (
+            <button
+              onClick={startCreate}
+              className="btn btn-primary text-white font-semibold gap-2 shadow-xs"
+            >
+              <UserPlus className="w-4 h-4" />
+              Nouveau Collaborateur
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Main Table Container */}
@@ -403,11 +472,11 @@ export default function UtilisateursPage() {
             />
           </div>
           <span className="text-xs text-slate-500 font-medium bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200">
-            Total : <strong className="text-slate-800">{filteredUsers.length}</strong> collaborateur(s)
+            {showArchived ? "Archivés" : "Total"} : <strong className="text-slate-800">{filteredUsers.length}</strong> collaborateur(s)
           </span>
         </div>
 
-        {loading ? (
+        {(loading || (showArchived && archivedLoading)) ? (
           <div className="flex justify-center items-center py-16">
             <span className="loading loading-spinner loading-lg text-primary"></span>
           </div>
@@ -467,7 +536,17 @@ export default function UtilisateursPage() {
                         </div>
                       </td>
                       <td className="py-3.5">
-                        {u.actif !== false ? (
+                        {u.archived ? (
+                          <span
+                            title={u.deletion_reason || "Aucun motif renseigné"}
+                            className="inline-flex flex-col items-start gap-0.5 px-2 py-0.5 rounded text-xs font-bold bg-slate-100 text-slate-700 border border-slate-200"
+                          >
+                            <span>Archivé</span>
+                            <span className="font-normal text-[10px]">
+                              {u.deleted_at ? new Date(u.deleted_at).toLocaleString("fr-FR") : ""}
+                            </span>
+                          </span>
+                        ) : u.actif !== false ? (
                           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
                             <CheckCircle2 className="w-3 h-3" />
                             Actif
@@ -480,6 +559,16 @@ export default function UtilisateursPage() {
                         )}
                       </td>
                       <td className="py-3.5 text-right relative">
+                        {showArchived ? (
+                          <button
+                            type="button"
+                            onClick={() => handleRestore(u)}
+                            className="btn btn-success btn-sm text-white gap-2"
+                          >
+                            <FiUserCheck className="w-4 h-4" />
+                            Restaurer
+                          </button>
+                        ) : (
                         <div className="inline-block text-left" ref={isMenuOpen ? menuRef : null}>
                           <button
                             type="button"
@@ -539,20 +628,22 @@ export default function UtilisateursPage() {
                                 type="button"
                                 onClick={() => {
                                   setActiveMenuId(null);
-                                  setUserToDelete(u);
+                                  setArchiveReason("");
+                                   setUserToDelete(u);
                                 }}
                                 disabled={isSelf || isProtectedAdmin}
                                 className={`w-full text-left px-4 py-2 flex items-center gap-2.5 transition-colors ${
                                   isSelf || isProtectedAdmin ? "opacity-40 cursor-not-allowed text-slate-400" : "hover:bg-rose-50 text-rose-600"
                                 }`}
-                                title={isProtectedAdmin ? "Le compte administrateur ne peut pas être supprimé" : isSelf ? "Impossible de supprimer votre propre compte" : ""}
+                                title={isSelf ? "Impossible d'archiver votre propre compte" : ""}
                               >
                                 <FiTrash2 className="w-3.5 h-3.5" />
-                                Supprimer
+                                Archiver
                               </button>
                             </div>
                           )}
                         </div>
+                        )}
                       </td>
                     </tr>
                   );
@@ -903,17 +994,45 @@ export default function UtilisateursPage() {
       )}
 
       {userToDelete && (
-        <ConfirmDialog
-          title="Supprimer ce collaborateur ?"
-          message={`Le compte de ${userToDelete.prenom} ${userToDelete.nom} sera supprimé définitivement si aucune donnée RH ne dépend de ce compte. Vérifiez son identité avant de confirmer.`}
-          pending={deletingUserId === userToDelete.id}
-          countdownSeconds={10}
-          variant="toast"
-          onCancel={() => {
-            if (deletingUserId === null) setUserToDelete(null);
-          }}
-          onConfirm={handleDelete}
-        />
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
+            <h2 className="text-lg font-bold text-slate-900">Archiver ce collaborateur ?</h2>
+            <p className="mt-2 text-sm text-slate-600">
+              Le compte de {userToDelete.prenom} {userToDelete.nom} sera désactivé. Ses demandes de congé,
+              soldes et historiques seront conservés. Une notification sera envoyée à son adresse e-mail.
+            </p>
+            <label className="mt-4 block text-xs font-bold uppercase text-slate-600">
+              Motif (facultatif)
+            </label>
+            <textarea
+              value={archiveReason}
+              onChange={(e) => setArchiveReason(e.target.value)}
+              maxLength={1000}
+              rows={3}
+              placeholder="Vous pouvez préciser le motif de l'archivage..."
+              className="textarea textarea-bordered mt-1 w-full bg-white text-slate-800"
+            />
+            <div className="mt-1 text-right text-xs text-slate-400">{archiveReason.length}/1000</div>
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                type="button"
+                disabled={deletingUserId === userToDelete.id}
+                onClick={() => { setUserToDelete(null); setArchiveReason(""); }}
+                className="btn btn-ghost btn-sm"
+              >
+                Annuler
+              </button>
+              <button
+                type="button"
+                disabled={deletingUserId === userToDelete.id}
+                onClick={handleArchive}
+                className="btn btn-error btn-sm text-white"
+              >
+                {deletingUserId === userToDelete.id ? "Archivage..." : "Confirmer l'archivage"}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

@@ -11,6 +11,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.util.Optional;
+import java.time.LocalDateTime;
 
 
 import org.junit.jupiter.api.Test;
@@ -33,6 +34,7 @@ import com.fruvio.GestionConge.utilisateur.entity.PasswordResetRequestEntity;
 import com.fruvio.GestionConge.utilisateur.repository.PasswordResetRequestRepository;
 import com.fruvio.GestionConge.utilisateur.entity.Role;
 import com.fruvio.GestionConge.utilisateur.entity.Utilisateur;
+import com.fruvio.GestionConge.utilisateur.repository.HistoriqueCompteRepository;
 import com.fruvio.GestionConge.utilisateur.repository.UtilisateurRepository;
 
 @ExtendWith(MockitoExtension.class)
@@ -40,6 +42,9 @@ class UtilisateurServiceTest {
 
     @Mock
     private UtilisateurRepository utilisateurRepository;
+
+    @Mock
+    private HistoriqueCompteRepository historiqueCompteRepository;
 
     @Mock
     private Solde_congeService soldeCongeService;
@@ -222,28 +227,74 @@ class UtilisateurServiceTest {
         Utilisateur admin = Utilisateur.builder().id(1L).role(Role.ADMIN).build();
         when(utilisateurRepository.findById(1L)).thenReturn(Optional.of(admin));
 
-        assertThrows(IllegalStateException.class, () -> utilisateurService.deleteUtilisateur(1L, admin));
+        assertThrows(IllegalStateException.class, () -> utilisateurService.archiveUtilisateur(1L, null, admin));
 
         verify(utilisateurRepository, never()).delete(any(Utilisateur.class));
     }
 
     @Test
-    void deleteUtilisateurRejectsCollaboratorWithLeaveHistory() {
+    void archiveUtilisateurKeepsLeaveHistoryAndSendsNotification() {
         Utilisateur admin = Utilisateur.builder().id(1L).role(Role.ADMIN).build();
-        Utilisateur collaborator = Utilisateur.builder().id(2L).role(Role.EMPLOYE).build();
+        Utilisateur collaborator = Utilisateur.builder().id(2L).role(Role.EMPLOYE)
+                .matricule("EMP-002").email("employee@example.com")
+                .nom("Agent").prenom("Test").actif(true).build();
         when(utilisateurRepository.findById(2L)).thenReturn(Optional.of(collaborator));
-        when(demandeCongeRepository.existsByUtilisateurId(2L)).thenReturn(true);
 
-        assertThrows(IllegalStateException.class, () -> utilisateurService.deleteUtilisateur(2L, admin));
+        assertEquals(true, utilisateurService.archiveUtilisateur(2L, "Fin de contrat", admin));
 
-        verify(utilisateurRepository, never()).delete(any(Utilisateur.class));
+        assertEquals(false, collaborator.isActif());
+        assertEquals(true, collaborator.isArchived());
+        assertEquals(1L, collaborator.getDeletedBy());
+        assertEquals("Fin de contrat", collaborator.getDeletionReason());
+        assertEquals(true, collaborator.getArchiveEmailSentAt() != null);
+        verify(utilisateurRepository).save(collaborator);
+        verify(historiqueCompteRepository).save(any(com.fruvio.GestionConge.utilisateur.entity.HistoriqueCompte.class));
+        verify(emailService).sendAccountArchivedEmail(
+                "employee@example.com", "EMP-002", "Agent", "Test",
+                collaborator.getDeletedAt(), "Fin de contrat");
+        verify(demandeCongeRepository, never()).existsByUtilisateurId(2L);
+    }
+
+    @Test
+    void archiveUtilisateurRejectsWhenNotificationCannotBeSent() {
+        Utilisateur admin = Utilisateur.builder().id(1L).role(Role.ADMIN).build();
+        Utilisateur collaborator = Utilisateur.builder().id(3L).role(Role.EMPLOYE)
+                .matricule("EMP-003").email("employee@example.com").actif(true).build();
+        when(utilisateurRepository.findById(3L)).thenReturn(Optional.of(collaborator));
+        org.mockito.Mockito.doThrow(new IllegalStateException("SMTP indisponible"))
+                .when(emailService).sendAccountArchivedEmail(
+                        org.mockito.ArgumentMatchers.eq("employee@example.com"),
+                        org.mockito.ArgumentMatchers.eq("EMP-003"),
+                        org.mockito.ArgumentMatchers.isNull(),
+                        org.mockito.ArgumentMatchers.isNull(),
+                        any(LocalDateTime.class),
+                        org.mockito.ArgumentMatchers.isNull());
+
+        assertThrows(IllegalStateException.class,
+                () -> utilisateurService.archiveUtilisateur(3L, null, admin));
+        verify(utilisateurRepository, never()).save(collaborator);
+    }
+
+    @Test
+    void restoreUtilisateurRestoresPreviousActiveState() {
+        Utilisateur admin = Utilisateur.builder().id(1L).role(Role.ADMIN).build();
+        Utilisateur collaborator = Utilisateur.builder().id(4L).role(Role.EMPLOYE)
+                .actif(false).actifAvantArchivage(false)
+                .deletedAt(LocalDateTime.now()).deletedBy(1L).build();
+        when(utilisateurRepository.findById(4L)).thenReturn(Optional.of(collaborator));
+
+        assertEquals(true, utilisateurService.restoreUtilisateur(4L, admin));
+        assertEquals(false, collaborator.isActif());
+        assertEquals(false, collaborator.isArchived());
+        verify(utilisateurRepository).save(collaborator);
+        verify(historiqueCompteRepository).save(any(com.fruvio.GestionConge.utilisateur.entity.HistoriqueCompte.class));
     }
 
     @Test
     void deleteUtilisateurRequiresAdmin() {
         Utilisateur employee = Utilisateur.builder().id(1L).role(Role.EMPLOYE).build();
 
-        assertThrows(AccessDeniedException.class, () -> utilisateurService.deleteUtilisateur(2L, employee));
+        assertThrows(AccessDeniedException.class, () -> utilisateurService.archiveUtilisateur(2L, null, employee));
 
         verify(utilisateurRepository, never()).findById(2L);
     }
@@ -269,7 +320,7 @@ class UtilisateurServiceTest {
         when(utilisateurRepository.findById(2L)).thenReturn(Optional.of(protectedAdmin));
 
         assertThrows(IllegalStateException.class,
-                () -> utilisateurService.deleteUtilisateur(2L, currentAdmin));
+                () -> utilisateurService.archiveUtilisateur(2L, null, currentAdmin));
 
         verify(utilisateurRepository, never()).delete(any(Utilisateur.class));
     }

@@ -1,6 +1,8 @@
 package com.fruvio.GestionConge.utilisateur.service;
 
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Objects;
 
 import org.slf4j.Logger;
@@ -150,28 +152,42 @@ public class EmailService {
         }
 
         // =========================================================
-        // E-MAIL DE SUPPRESSION DE COMPTE
+        // NOTIFICATION D'ARCHIVAGE DE COMPTE
         // =========================================================
 
-        public void sendAccountDeletedEmail(String toEmail, String matricule) {
+        public void sendAccountArchivedEmail(String toEmail, String matricule, String nom, String prenom,
+                        LocalDateTime archivedAt, String reason) {
 
                 if (toEmail == null || toEmail.isBlank()) {
                         throw new IllegalArgumentException("L'adresse e-mail est obligatoire.");
                 }
-
                 if (matricule == null || matricule.isBlank()) {
-                        throw new IllegalArgumentException(
-                                        "Le matricule est obligatoire pour l'e-mail de suppression.");
+                        throw new IllegalArgumentException("Le matricule est obligatoire pour la notification.");
+                }
+                if (archivedAt == null) {
+                        throw new IllegalArgumentException("La date d'archivage est obligatoire.");
                 }
 
-                String subject = "Suppression de votre compte - Gestion des Congés";
+                String subject = "Notification de désactivation de votre compte - SPAT";
+                String displayName = ((prenom == null ? "" : prenom.trim()) + " "
+                        + (nom == null ? "" : nom.trim())).trim();
+                StringBuilder text = new StringBuilder("Bonjour")
+                        .append(displayName.isEmpty() ? "" : " " + displayName)
+                        .append(",\n\n")
+                        .append("Nous vous informons que votre compte GestionConge de la SPAT a été archivé par un administrateur.\n\n")
+                        .append("Matricule : ").append(matricule).append("\n")
+                        .append("Date de désactivation : ")
+                        .append(archivedAt.format(DateTimeFormatter.ofPattern("dd/MM/yyyy 'à' HH:mm")))
+                        .append("\n");
+                if (reason != null && !reason.isBlank()) {
+                        text.append("Motif : ").append(reason.trim()).append("\n");
+                }
+                text.append("\nVotre accès à la plateforme est désormais suspendu. ")
+                        .append("Vos anciennes demandes de congé et vos historiques administratifs restent conservés ")
+                        .append("dans le système.\n\n")
+                        .append("Pour toute information complémentaire, veuillez contacter l'administration de la SPAT.\n\n")
+                        .append("Cordialement,\nAdministration - SPAT");
 
-                String text = "Bonjour,\n\n"
-                                + "Nous vous informons que votre compte associé au matricule " + matricule
-                                + " a été supprimé de la plateforme de Gestion des Congés.\n\n"
-                                + "Si vous pensez que cette suppression résulte d'une erreur, veuillez contacter sans délai l'administrateur RH de la SPAT par le canal de contact habituel, en communiquant votre matricule. Votre demande permettra de vérifier la situation et, si nécessaire, d'engager la procédure de rétablissement de vos accès.\n\n"
-                                + "Cordialement,\nL'équipe RH — SPAT";
-
-                sendEmail(toEmail, subject, text);
+                sendEmail(toEmail, subject, text.toString());
         }
 }

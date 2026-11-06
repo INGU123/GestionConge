@@ -1,6 +1,7 @@
 package com.fruvio.GestionConge.utilisateur.dto;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
@@ -45,6 +46,21 @@ public class UtilisateurResponse {
     private LocalDate date_embauche;
     private LocalDate date_creation;
 
+    @JsonProperty("archived")
+    private boolean archived;
+
+    @JsonProperty("deleted_at")
+    private LocalDateTime deletedAt;
+
+    @JsonProperty("deleted_by")
+    private Long deletedBy;
+
+    @JsonProperty("deletion_reason")
+    private String deletionReason;
+
+    @JsonProperty("archive_email_sent_at")
+    private LocalDateTime archiveEmailSentAt;
+
     public static UtilisateurResponse fromEntity(Utilisateur utilisateur) {
         if (utilisateur == null) {
             return null;
@@ -72,6 +88,11 @@ public class UtilisateurResponse {
                 .manager_id(utilisateur.getManager_id())
                 .date_embauche(utilisateur.getDate_embauche())
                 .date_creation(utilisateur.getDate_creation())
+                .archived(utilisateur.isArchived())
+                .deletedAt(utilisateur.getDeletedAt())
+                .deletedBy(utilisateur.getDeletedBy())
+                .deletionReason(utilisateur.getDeletionReason())
+                .archiveEmailSentAt(utilisateur.getArchiveEmailSentAt())
                 .build();
     }
 }

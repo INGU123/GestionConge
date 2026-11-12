@@ -11,7 +11,7 @@ export default function CircuitCongePage() {
   const [busy,setBusy]=useState(false); const toast=useToast();
   const load=async()=>{const [a,t,d]=await Promise.all([
     authFetch(API+"/utilisateur/agents-actifs").then(r=>r.ok?r.json():[]),
-    authFetch(API+"/type-conge").then(r=>r.ok?r.json():[]),
+    authFetch(API+"/type-conge/all").then(r=>r.ok?r.json():[]),
     authFetch(API+"/circuit-conge/assistant/mes-dossiers").then(r=>r.ok?r.json():[])
   ]);setAgents(a);setTypes(t);setDossiers(d);};
   useEffect(()=>{load().catch(()=>toast("Impossible de charger les données.","error"));},[]);

@@ -14,6 +14,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 import jakarta.persistence.*;
 import lombok.*;
+import jakarta.validation.constraints.Pattern;
 
 @AllArgsConstructor
 @NoArgsConstructor

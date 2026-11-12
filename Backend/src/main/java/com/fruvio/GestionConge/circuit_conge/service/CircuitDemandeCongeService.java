@@ -62,6 +62,13 @@ public class CircuitDemandeCongeService {
     }
 
     @Transactional(readOnly = true)
+    public List<CircuitDemandeConge> consultationAdmin(Utilisateur user) {
+        exiger(user, Role.ADMIN);
+        return circuits.findAll().stream()
+                .sorted(java.util.Comparator.comparing(CircuitDemandeConge::getDateCreation).reversed()).toList();
+    }
+
+    @Transactional(readOnly = true)
     public List<CircuitDemandeConge> enAttenteAdministration(Utilisateur user) {
         exiger(user, Role.ADMINISTRATION_PERSONNEL);
         return circuits.findByStatutOrderByDateCreationAsc("RELIQUAT_EN_ATTENTE");

@@ -1,11 +1,10 @@
 "use client";
 import { useEffect, useState } from "react";
-import { authFetch, getCurrentUser } from "@/lib/apiClient";
+import { authFetch } from "@/lib/apiClient";
 import { useToast } from "../../components/ToastProvider";
 
 const API = "http://localhost:8080";
 export default function CircuitCongePage() {
-  const [user] = useState(() => getCurrentUser());
   const [agents,setAgents]=useState([]), [types,setTypes]=useState([]), [dossiers,setDossiers]=useState([]);
   const [form,setForm]=useState({utilisateurId:"",typeCongeId:"",dateDebut:"",dateFin:"",commentaire:""});
   const [busy,setBusy]=useState(false); const toast=useToast();

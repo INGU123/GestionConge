@@ -46,14 +46,14 @@ public class Service_congeController {
     }
 
     // Créer un nouveau service (Strictement ADMIN)
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("denyAll()")
     @PostMapping("/create")
     public Services createService(@RequestBody Services service) {
         return serviceRepository.save(service);
     }
 
     // Mettre à jour un service existant (Strictement ADMIN)
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("denyAll()")
     @PutMapping("/{id}")
     public ResponseEntity<Services> updateService(@PathVariable Long id, @RequestBody Services updatedService) {
         return serviceRepository.findById(id)
@@ -79,7 +79,7 @@ public class Service_congeController {
     }
 
     // Supprimer un service (Strictement ADMIN)
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("denyAll()")
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteService(@PathVariable Long id) {
         return serviceRepository.findById(id)

@@ -125,10 +125,12 @@ export default function DashboardLayout({
   const isAdmin =
     userRoleClean === "ADMIN" || userRoleClean === "ROLE_ADMIN";
 
-  const isManager =
-    userRoleClean === "MANAGER" ||
-    userRoleClean === "ROLE_MANAGER" ||
-    isAdmin;
+  const isManager = userRoleClean === "MANAGER" || userRoleClean === "ROLE_MANAGER";
+  const isAssistant = userRoleClean === "ASSISTANT_DIRECTION";
+  const isPersonnel = userRoleClean === "ADMINISTRATION_PERSONNEL";
+  const isChef = userRoleClean === "CHEF_DEPARTEMENT";
+  const isDirecteur = userRoleClean === "DIRECTEUR";
+  const isEmploye = userRoleClean === "EMPLOYE";
 
   const isNight = theme === "night";
 
@@ -172,7 +174,7 @@ export default function DashboardLayout({
           />
         </svg>
       ),
-      show: !isAdmin,
+      show: isEmploye,
     },
 
     {
@@ -221,7 +223,7 @@ export default function DashboardLayout({
           />
         </svg>
       ),
-      show: isManager,
+      show: false,
     },
 
     {
@@ -298,6 +300,14 @@ export default function DashboardLayout({
       show: true,
     },
   ];
+
+  navItems.push(
+    { href: "/dashboard/circuit-conge", label: "Circuit des congés", icon: <span>↗</span>, show: isAssistant },
+    { href: "/dashboard/reliquats", label: "Vérification des reliquats", icon: <span>✓</span>, show: isPersonnel },
+    { href: "/dashboard/chef-departement", label: "Examen du chef", icon: <span>▣</span>, show: isChef },
+    { href: "/dashboard/directeur", label: "Décisions du directeur", icon: <span>⚖</span>, show: isDirecteur },
+    { href: "/dashboard/departements", label: "Départements", icon: <span>⌂</span>, show: isAdmin }
+  );
 
   navItems.push({
     href: "/dashboard/aide",

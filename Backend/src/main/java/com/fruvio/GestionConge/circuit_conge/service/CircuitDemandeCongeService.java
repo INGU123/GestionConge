@@ -46,6 +46,7 @@ public class CircuitDemandeCongeService {
         if (typeId == null) throw new IllegalArgumentException("Le type de congé est obligatoire.");
         int nombre = joursFeries.compterJoursOuvres(debut, fin);
         if (nombre <= 0) throw new IllegalArgumentException("La période ne contient aucun jour ouvré.");
+        verifierChevauchementCircuit(employeId, debut, fin, null);
         CircuitDemandeConge saved = circuits.save(CircuitDemandeConge.builder().utilisateurId(employeId).typeCongeId(typeId)
                 .assistantId(assistant.getId()).dateDebut(debut).dateFin(fin).nombreJours(nombre)
                 .commentaire(commentaire).statut("RELIQUAT_EN_ATTENTE").dateCreation(LocalDateTime.now()).build());

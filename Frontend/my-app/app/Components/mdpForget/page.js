@@ -27,6 +27,11 @@ export default function ForgotPassword() {
     e.preventDefault();
     const value = mode === "matricule" ? matricule.trim() : email.trim();
 
+    if (mode === "matricule" && !/^[0-9]+$/.test(value)) {
+      setMessage({ text: "Le matricule doit contenir uniquement des chiffres (ex. 2026100).", type: "error" });
+      return;
+    }
+
     if (!value) {
       setMessage({ text: mode === "matricule" ? "Veuillez saisir votre numéro matricule." : "Veuillez saisir votre adresse e-mail.", type: "error" });
       return;
@@ -166,9 +171,11 @@ export default function ForgotPassword() {
                   <input
                     id={mode === "matricule" ? "matricule" : "email"}
                     type={mode === "matricule" ? "text" : "email"}
-                    placeholder={mode === "matricule" ? "Ex. SPAT-001" : "nom@exemple.mg"}
+                    inputMode={mode === "matricule" ? "numeric" : undefined}
+                    pattern={mode === "matricule" ? "[0-9]+" : undefined}
+                    placeholder={mode === "matricule" ? "Ex. 2026100" : "nom@exemple.mg"}
                     value={mode === "matricule" ? matricule : email}
-                    onChange={(e) => mode === "matricule" ? setMatricule(e.target.value) : setEmail(e.target.value)}
+                    onChange={(e) => mode === "matricule" ? setMatricule(e.target.value.replace(/[^0-9]/g, "")) : setEmail(e.target.value)}
                     autoComplete={mode === "matricule" ? "username" : "email"}
                     required
                     disabled={loading}

@@ -77,9 +77,9 @@ const Home = () => {
             <input
               type="text"
               className="w-full px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-lg text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-[#023E8A] focus:bg-white transition-all"
-              placeholder="Ex: MTR-2026-001"
+              placeholder="Ex. 2026100"
               value={matricule}
-              onChange={(e) => setMatricule(e.target.value)}
+              onChange={(e) => setMatricule(e.target.value.replace(/[^0-9]/g, ""))
               required
             />
           </div>

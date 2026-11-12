@@ -147,14 +147,14 @@ public class PasswordResetController {
 
             String resetLink = frontendUrl() + "/Components/mdpReset?token="
                     + URLEncoder.encode(resetToken, StandardCharsets.UTF_8);
-            String message = "Bonjour " + safe(user.getPrenom()) + " " + safe(user.getNom()) + ",\\n\\n"
-                    + "Votre réinitialisation automatique a été prise en compte.\\n\\n"
-                    + "Nom : " + safe(user.getNom()) + "\\n"
-                    + "Prénom : " + safe(user.getPrenom()) + "\\n"
-                    + "Matricule : " + safe(user.getMatricule()) + "\\n"
-                    + "Mot de passe temporaire : " + temporaryPassword + "\\n\\n"
-                    + "Utilisez ce lien pour remplacer immédiatement le mot de passe temporaire :\\n"
-                    + resetLink + "\\n\\nService RH - SPAT";
+            String message = "Bonjour " + safe(user.getPrenom()) + " " + safe(user.getNom()) + ",\n\n"
+                    + "Votre réinitialisation automatique a été prise en compte.\n\n"
+                    + "Nom : " + safe(user.getNom()) + "\n"
+                    + "Prénom : " + safe(user.getPrenom()) + "\n"
+                    + "Matricule : " + safe(user.getMatricule()) + "\n"
+                    + "Mot de passe temporaire : " + temporaryPassword + "\n\n"
+                    + "Utilisez ce lien pour remplacer immédiatement le mot de passe temporaire :\n"
+                    + resetLink + "\n\nService RH - SPAT";
             try {
                 emailService.sendEmail(user.getEmail(),
                         "Réinitialisation de votre mot de passe - SPAT", message);

@@ -33,7 +33,7 @@ public class PdfExportService {
 
     private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
-    public byte[] generateDecisionCongePdf(CircuitDemandeConge dossier, Utilisateur employe, Utilisateur directeur) {
+    public byte[] generateDecisionCongePdf(CircuitDemandeConge dossier, Utilisateur employe, Utilisateur directeur, String typeConge) {
         ByteArrayOutputStream output = new ByteArrayOutputStream();
         Document document = new Document(PageSize.A4, 48, 48, 52, 48);
         try {
@@ -55,7 +55,7 @@ public class PdfExportService {
             addDecisionRow(table, "Matricule", safePdf(employe.getMatricule()), normal, section);
             addDecisionRow(table, "Nom et prénom", safePdf(employe.getNom()) + " " + safePdf(employe.getPrenom()), normal, section);
             addDecisionRow(table, "Fonction", safePdf(employe.getFonction()), normal, section);
-            addDecisionRow(table, "Type de congé", "Type #" + dossier.getTypeCongeId(), normal, section);
+            addDecisionRow(table, "Type de congé", safePdf(typeConge), normal, section);
             addDecisionRow(table, "Période", dossier.getDateDebut().format(DATE_FORMAT) + " au " + dossier.getDateFin().format(DATE_FORMAT), normal, section);
             addDecisionRow(table, "Durée ouvrée", dossier.getNombreJours() + " jour(s)", normal, section);
             addDecisionRow(table, "Décision", "VALIDEE".equals(dossier.getStatut()) ? "ACCORDÉE" : "REFUSÉE", normal, section);

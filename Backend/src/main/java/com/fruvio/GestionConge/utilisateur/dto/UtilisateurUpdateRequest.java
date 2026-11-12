@@ -24,6 +24,8 @@ public class UtilisateurUpdateRequest {
     @NotNull(message = "L'ID de l'utilisateur est obligatoire.")
     private Long id;
 
+    @Size(min = 1, max = 50, message = "Le matricule doit contenir entre 1 et 50 chiffres.")
+    @Pattern(regexp = "^[0-9]+$", message = "Le matricule doit contenir uniquement des chiffres.")
     private String matricule;
 
     @Size(min = 1, max = 100, message = "Le nom ne peut pas dépasser 100 caractères.")

@@ -41,6 +41,7 @@ export default function UtilisateursPage() {
   const [showArchived, setShowArchived] = useState(false);
   const [archivedUsers, setArchivedUsers] = useState([]);
   const [archivedLoading, setArchivedLoading] = useState(false);
+  const [generatedPassword, setGeneratedPassword] = useState("");
   
   // État pour la modale de visualisation complète (Voir tout)
   const [viewUserModal, setViewUserModal] = useState(null);
@@ -196,10 +197,8 @@ export default function UtilisateursPage() {
         const successText = responseData.message || (editingUser
           ? "Collaborateur modifié avec succès."
           : "Collaborateur créé avec succès.");
-        const passwordNotice = responseData.motDePasseGenere
-          ? " Mot de passe généré (à copier immédiatement) : " + responseData.motDePasseGenere
-          : "";
-        showToast(successText + passwordNotice, "success");
+        if (responseData.motDePasseGenere) setGeneratedPassword(responseData.motDePasseGenere);
+        showToast(successText, "success");
       } else {
         const txt = await res.text();
         let errMsg = txt;

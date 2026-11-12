@@ -30,6 +30,7 @@ import com.fruvio.GestionConge.utilisateur.entity.HistoriqueCompte;
 import com.fruvio.GestionConge.utilisateur.entity.Role;
 import com.fruvio.GestionConge.utilisateur.entity.Utilisateur;
 import com.fruvio.GestionConge.utilisateur.service.UtilisateurService;
+import com.fruvio.GestionConge.utilisateur.repository.UtilisateurRepository;
 
 import jakarta.validation.Valid;
 
@@ -39,10 +40,12 @@ public class UtilisateurController {
 
     private final UtilisateurService utilisateurService;
     private final JwtUtil jwtUtil;
+    private final UtilisateurRepository utilisateurRepository;
 
-    public UtilisateurController(UtilisateurService utilisateurService, JwtUtil jwtUtil) {
+    public UtilisateurController(UtilisateurService utilisateurService, JwtUtil jwtUtil, UtilisateurRepository utilisateurRepository) {
         this.utilisateurService = utilisateurService;
         this.jwtUtil = jwtUtil;
+        this.utilisateurRepository = utilisateurRepository;
     }
 
     // =========================================================
@@ -102,7 +105,7 @@ public class UtilisateurController {
     // MISE A JOUR DU COMPTE
     // =========================================================
 
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'EMPLOYE')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYE', 'ASSISTANT_DIRECTION', 'ADMINISTRATION_PERSONNEL', 'CHEF_DEPARTEMENT', 'DIRECTEUR')")
     @PutMapping("/update")
     public ResponseEntity<?> update(@Valid @RequestBody UtilisateurUpdateRequest request) {
         Utilisateur currentUser = getCurrentAuthenticatedUser();
@@ -115,7 +118,7 @@ public class UtilisateurController {
     // CHANGEMENT DE MOT DE PASSE PAR L'UTILISATEUR
     // =========================================================
 
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'EMPLOYE')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYE', 'ASSISTANT_DIRECTION', 'ADMINISTRATION_PERSONNEL', 'CHEF_DEPARTEMENT', 'DIRECTEUR')")
     @PutMapping("/change-password")
     public ResponseEntity<?> changePassword(@Valid @RequestBody ChangePasswordRequest request) {
         Utilisateur currentUser = getCurrentAuthenticatedUser();
@@ -142,11 +145,19 @@ public class UtilisateurController {
         return ResponseEntity.ok(responseList);
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN', 'ASSISTANT_DIRECTION')")
+    @GetMapping("/agents-actifs")
+    public ResponseEntity<List<UtilisateurResponse>> getAgentsActifs() {
+        List<UtilisateurResponse> agents = utilisateurRepository.findByRoleAndActifTrue(Role.EMPLOYE).stream()
+                .filter(u -> !u.isArchived()).map(UtilisateurResponse::fromEntity).toList();
+        return ResponseEntity.ok(agents);
+    }
+
     // =========================================================
     // CONSULTATION D'UN COLLABORATEUR PAR ID
     // =========================================================
 
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'EMPLOYE')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYE', 'ASSISTANT_DIRECTION', 'ADMINISTRATION_PERSONNEL', 'CHEF_DEPARTEMENT', 'DIRECTEUR')")
     @GetMapping("/{id}")
     public ResponseEntity<?> getById(@PathVariable Long id) {
         Utilisateur currentUser = getCurrentAuthenticatedUser();

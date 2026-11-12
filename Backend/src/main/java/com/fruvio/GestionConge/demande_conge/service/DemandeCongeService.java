@@ -410,7 +410,7 @@ public class DemandeCongeService {
      * les mêmes règles de jours ouvrés, plafonds annuels, chevauchements et soldes
      * que le circuit historique. Aucun solde n'est débité à cette étape.
      */
-    @Transactional(readOnly = true)
+    @Transactional
     public int verifierEligibiliteWorkflow(Long utilisateurId, Long typeCongeId,
             LocalDate dateDebut, LocalDate dateFin) {
         if (utilisateurId == null || typeCongeId == null || dateDebut == null || dateFin == null

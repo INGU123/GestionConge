@@ -137,6 +137,10 @@ export default function UtilisateursPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!/^\\d+$/.test(String(newUser.matricule ?? "").trim())) {
+      showToast("Le matricule doit contenir uniquement des chiffres (ex. 2026100).", "warning");
+      return;
+    }
     if (!editingUser) {
       const requiredValues = [
         newUser.matricule, newUser.nom, newUser.prenom, newUser.numero_cin,
@@ -756,10 +760,12 @@ export default function UtilisateursPage() {
                 </label>
                 <input
                   type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]+"
                   required
-                  placeholder="Ex : 2026123"
-                  value={newUser.matricule}
-                  onChange={(e) => setNewUser({ ...newUser, matricule: e.target.value })}
+                  placeholder="Ex. 2026100"
+                  value={newUser.matricule ?? ""}
+                  onChange={(e) => setNewUser({ ...newUser, matricule: e.target.value.replace(/[^0-9]/g, "") })}
                   className="input input-bordered input-sm w-full bg-white text-slate-800 focus:outline-hidden"
                 />
               </div>
@@ -825,7 +831,7 @@ export default function UtilisateursPage() {
                 <input
                   type="email"
                   placeholder="Laisser vide si non disponible"
-                  value={newUser.email}
+                  value={newUser.email ?? ""}
                   onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
                   className="input input-bordered input-sm w-full bg-white text-slate-800 focus:outline-hidden"
                 />

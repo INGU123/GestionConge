@@ -163,6 +163,17 @@ public class CircuitDemandeCongeService {
         return savedCircuit;
     }
 
+    private void verifierChevauchementCircuit(Long employeId, java.time.LocalDate debut,
+            java.time.LocalDate fin, Long dossierIgnore) {
+        for (CircuitDemandeConge autre : circuits.findByUtilisateurId(employeId)) {
+            if (dossierIgnore != null && dossierIgnore.equals(autre.getId())) continue;
+            if ("REFUSEE".equals(autre.getStatut())) continue;
+            if (!(fin.isBefore(autre.getDateDebut()) || debut.isAfter(autre.getDateFin()))) {
+                throw new IllegalStateException("Cette période chevauche un autre dossier de congé déjà enregistré.");
+            }
+        }
+    }
+
     private CircuitDemandeConge dossierVerrouille(Long id) {
         return circuits.findByIdForUpdate(id).orElseThrow(() -> new IllegalArgumentException("Dossier introuvable."));
     }

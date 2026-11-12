@@ -405,6 +405,16 @@ public class DemandeCongeService {
         return demandeRepo.save(demande);
     }
 
+    @Transactional(readOnly = true)
+    public int calculerReliquatDisponible(Long utilisateurId, Long typeCongeId) {
+        return soldeRepo.findByUtilisateurIdAndTypeCongeId(utilisateurId, typeCongeId).stream()
+                .mapToInt(solde -> {
+                    int acquis = solde.getSoldeAquis() == null ? 0 : solde.getSoldeAquis();
+                    int pris = solde.getSoldePris() == null ? 0 : solde.getSoldePris();
+                    return Math.max(0, acquis - pris);
+                }).sum();
+    }
+
     /**
      * Vérifie l'éligibilité d'un dossier préparé par l'assistant en réutilisant
      * les mêmes règles de jours ouvrés, plafonds annuels, chevauchements et soldes

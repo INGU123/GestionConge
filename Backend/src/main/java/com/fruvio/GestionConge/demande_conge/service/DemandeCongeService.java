@@ -389,6 +389,57 @@ public class DemandeCongeService {
         return saved;
     }
 
+    /**
+     * Vérifie l'éligibilité d'un dossier préparé par l'assistant en réutilisant
+     * les mêmes règles de jours ouvrés, plafonds annuels, chevauchements et soldes
+     * que le circuit historique. Aucun solde n'est débité à cette étape.
+     */
+    @Transactional(readOnly = true)
+    public int verifierEligibiliteWorkflow(Long utilisateurId, Long typeCongeId,
+            LocalDate dateDebut, LocalDate dateFin) {
+        if (utilisateurId == null || typeCongeId == null || dateDebut == null || dateFin == null
+                || dateFin.isBefore(dateDebut)) {
+            throw new IllegalArgumentException("Collaborateur, type et période valides obligatoires.");
+        }
+        Utilisateur utilisateur = utilisateurRepo.findById(utilisateurId)
+                .orElseThrow(() -> new IllegalArgumentException("Collaborateur introuvable."));
+        if (!utilisateur.isEnabled()) throw new IllegalStateException("Le collaborateur n'est pas actif.");
+
+        Type_conge type = typeCongeRepo.findById(typeCongeId)
+                .orElseThrow(() -> new IllegalArgumentException("Type de congé introuvable."));
+        if (Boolean.FALSE.equals(type.getActif())) throw new IllegalStateException("Ce type de congé est désactivé.");
+
+        Map<Integer, Integer> joursParAnnee = calculerJoursOuvresParAnnee(dateDebut, dateFin);
+        int total = joursParAnnee.values().stream().mapToInt(Integer::intValue).sum();
+        if (total <= 0) throw new IllegalArgumentException("La période ne contient aucun jour ouvré.");
+
+        Integer plafond = type.getNombreJoursParAn();
+        for (Map.Entry<Integer, Integer> e : joursParAnnee.entrySet()) {
+            if (plafond != null && plafond > 0 && e.getValue() > plafond) {
+                throw new IllegalStateException("Le plafond annuel de " + plafond + " jour(s) est dépassé pour " + e.getKey() + ".");
+            }
+            Solde_conge solde = soldeRepo.findByUtilisateurIdAndTypeCongeIdAndPeriode(
+                    utilisateurId, typeCongeId, e.getKey())
+                    .orElseThrow(() -> new IllegalStateException("Aucun solde enregistré pour l'année " + e.getKey() + "."));
+            int acquis = solde.getSoldeAquis() == null ? 0 : solde.getSoldeAquis();
+            int pris = solde.getSoldePris() == null ? 0 : solde.getSoldePris();
+            if (acquis - pris < e.getValue()) {
+                throw new IllegalStateException("Solde insuffisant pour " + e.getKey() + " : "
+                        + e.getValue() + " jour(s) demandés, " + Math.max(0, acquis - pris) + " disponible(s).");
+            }
+        }
+
+        for (DemandeConge existing : demandeRepo.findByUtilisateurId(utilisateurId)) {
+            if (existing.getDateDebut() == null || existing.getDateFin() == null
+                    || "ANNULEE".equalsIgnoreCase(existing.getStatut())
+                    || "REFUSEE".equalsIgnoreCase(existing.getStatut())) continue;
+            if (!(dateFin.isBefore(existing.getDateDebut()) || dateDebut.isAfter(existing.getDateFin()))) {
+                throw new IllegalStateException("La période chevauche une autre demande déjà enregistrée.");
+            }
+        }
+        return total;
+    }
+
     private String safe(String value) {
         return value == null ? "" : value.trim();
     }

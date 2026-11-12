@@ -83,6 +83,11 @@ public class Utilisateur implements UserDetails {
     @Column(name = "deleted_at")
     private LocalDateTime deletedAt;
 
+    // Transitoire : transmis uniquement dans la réponse de création à l'ADMIN.
+    @Transient
+    @JsonIgnore
+    private String generatedPasswordForAdmin;
+
     @Column(name = "deleted_by")
     private Long deletedBy;
 

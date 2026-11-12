@@ -42,6 +42,9 @@ public class CircuitDemandeCongeService {
             java.time.LocalDate fin, String commentaire, Utilisateur assistant) {
         exiger(assistant, Role.ASSISTANT_DIRECTION);
         Utilisateur employe = utilisateurActif(employeId);
+        if (employe.getService_id() == null) throw new IllegalStateException("Le collaborateur n'est affecté à aucun service.");
+        Services serviceEmploye = services.findById(employe.getService_id()).orElseThrow(() -> new IllegalStateException("Service du collaborateur introuvable."));
+        if (serviceEmploye.getDepartementId() == null) throw new IllegalStateException("Le service du collaborateur doit être rattaché à un département avant la création du dossier.");
         if (debut == null || fin == null || fin.isBefore(debut)) throw new IllegalArgumentException("Période de congé invalide.");
         if (typeId == null) throw new IllegalArgumentException("Le type de congé est obligatoire.");
         int nombre = joursFeries.compterJoursOuvres(debut, fin);

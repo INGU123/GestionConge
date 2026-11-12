@@ -2,6 +2,7 @@ package com.fruvio.GestionConge.utilisateur.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -15,6 +16,7 @@ import lombok.Setter;
 @Builder
 public class LoginRequest {
 
+    @Pattern(regexp = "^[0-9]+$", message = "Le matricule doit contenir uniquement des chiffres.")
     private String matricule;
     private String email;
 
@@ -38,9 +40,6 @@ public class LoginRequest {
     public String getIdentifier() {
         if (matricule != null && !matricule.trim().isEmpty()) {
             return matricule.trim();
-        }
-        if (email != null && !email.trim().isEmpty()) {
-            return email.trim();
         }
         return null;
     }

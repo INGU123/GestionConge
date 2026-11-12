@@ -1,5 +1,6 @@
 -- Déploiement du circuit hiérarchique de congés.
 -- Les services et utilisateurs existants sont conservés sans affectation automatique.
+ALTER TABLE utilisateur ALTER COLUMN email DROP NOT NULL;
 CREATE TABLE IF NOT EXISTS departement (
     id BIGSERIAL PRIMARY KEY,
     nom VARCHAR(120) NOT NULL UNIQUE,

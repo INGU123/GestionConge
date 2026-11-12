@@ -34,6 +34,7 @@ public class CircuitDemandeCongeService {
             DemandeCongeService demandesHistoriques, Notification_congeService notifications) {
         this.circuits = circuits; this.utilisateurs = utilisateurs; this.services = services;
         this.departements = departements; this.joursFeries = joursFeries; this.demandesHistoriques = demandesHistoriques;
+        this.notifications = notifications;
     }
 
     @Transactional

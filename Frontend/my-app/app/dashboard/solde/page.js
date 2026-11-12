@@ -253,7 +253,7 @@ export default function SoldeConge() {
    * ROLE ADMIN
    */
   const isAdmin = user?.role?.toString().trim().toUpperCase() === "ADMIN";
-  const canAdjust = isAdmin && String(selectedUserId) !== String(user?.id);
+  const canAdjust = false;
 
   /*
    * CALCUL DES TOTAUX
@@ -291,7 +291,7 @@ export default function SoldeConge() {
 
           <p className="text-slate-400 text-sm mt-1">
             {isAdmin
-              ? "Supervision, initialisation et réajustement des droits aux congés pour les agents SPAT."
+              ? "Consultation des droits acquis, consommations et reliquats des agents SPAT."
               : "Suivi en temps réel de votre contingent annuel de droits, consommations et reliquats."}
           </p>
         </div>

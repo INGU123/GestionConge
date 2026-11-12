@@ -86,8 +86,16 @@ public class UtilisateurController {
 
         UtilisateurResponse response = UtilisateurResponse.fromEntity(saved);
 
-        return ResponseEntity.status(HttpStatus.CREATED).body(Map.of("utilisateur", response, "message",
-                "Collaborateur créé avec succès. Ses identifiants ont été envoyés par e-mail."));
+        Map<String, Object> result = new java.util.HashMap<>();
+        result.put("utilisateur", response);
+        result.put("message", saved.getEmail() != null && !saved.getEmail().isBlank()
+                ? "Collaborateur créé. Les informations de connexion ont été envoyées par e-mail."
+                : "Collaborateur créé sans adresse e-mail.");
+        if (saved.getGeneratedPasswordForAdmin() != null) {
+            result.put("motDePasseGenere", saved.getGeneratedPasswordForAdmin());
+            result.put("message", "Collaborateur créé. Copiez immédiatement le mot de passe généré et transmettez-le de manière sécurisée.");
+        }
+        return ResponseEntity.status(HttpStatus.CREATED).body(result);
     }
 
     // =========================================================

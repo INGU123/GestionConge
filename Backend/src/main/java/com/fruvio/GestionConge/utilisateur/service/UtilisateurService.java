@@ -222,9 +222,8 @@ public class UtilisateurService {
                         throw new IllegalArgumentException("Le matricule est obligatoire.");
                 }
 
-                if (email == null || email.isEmpty()) {
-
-                        throw new IllegalArgumentException("L'adresse e-mail est obligatoire.");
+                if (email != null && email.isEmpty()) {
+                        email = null;
                 }
 
                 if (utilisateurRepository.existsByMatricule(matricule)) {
@@ -232,8 +231,7 @@ public class UtilisateurService {
                         throw new IllegalArgumentException("Le matricule " + matricule + " existe déjà.");
                 }
 
-                if (utilisateurRepository.existsByEmail(email)) {
-
+                if (email != null && utilisateurRepository.existsByEmail(email)) {
                         throw new IllegalArgumentException("L'adresse e-mail " + email + " existe déjà.");
                 }
 
@@ -283,7 +281,10 @@ public class UtilisateurService {
                 String rawPassword = generatedAutomatically
                                 ? generateRandomPassword(12)
                                 : request.getPassword().trim();
-                String initialPasswordToken = generatedAutomatically ? UUID.randomUUID().toString() : null;
+                // Sans e-mail, le mot de passe généré est remis une seule fois à l'administrateur.
+                // Avec e-mail, l'activation passe par un lien personnel à durée limitée.
+                String initialPasswordToken = generatedAutomatically && email != null
+                                ? UUID.randomUUID().toString() : null;
 
                 Utilisateur newUser = Utilisateur.builder().matricule(matricule)
                                 .nom(request.getNom() != null ? request.getNom().trim() : "")
@@ -320,17 +321,14 @@ public class UtilisateurService {
                                         saved.getId(), e.getMessage(), e);
                 }
 
-                // Notification par e-mail des identifiants
-                // Le mot de passe en clair est uniquement transmis par e-mail.
-                try {
-
+                // Aucun e-mail n'est inventé ni envoyé si le champ est vide.
+                // Le mot de passe généré sans e-mail sera renvoyé une seule fois à l'administrateur.
+                if (saved.getEmail() != null && !saved.getEmail().isBlank()) {
+                  try {
                         emailService.sendWelcomeEmail(saved.getEmail(), saved.getMatricule(), rawPassword,
                                         generatedAutomatically, initialPasswordToken);
-
-                        log.info("E-mail de bienvenue envoyé avec succès pour l'utilisateur #{} [{}]", saved.getId(),
-                                        saved.getEmail());
-
-                } catch (IllegalStateException e) {
+                        log.info("E-mail de bienvenue envoyé pour le compte #{}.", saved.getId());
+                  } catch (IllegalStateException e) {
 
                         log.error("Échec de l'envoi de l'e-mail lors de la création de l'utilisateur #{} [{}]. Type: {}. Message: {}",
                                         saved.getId(), saved.getEmail(), e.getClass().getSimpleName(), e.getMessage());
@@ -345,6 +343,9 @@ public class UtilisateurService {
                          * du mail de bienvenue échoue.
                          */
                         throw e;
+                  }
+                } else if (generatedAutomatically) {
+                        saved.setGeneratedPasswordForAdmin(rawPassword);
                 }
 
                 /*

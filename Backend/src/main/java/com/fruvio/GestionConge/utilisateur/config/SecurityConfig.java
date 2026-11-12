@@ -69,7 +69,7 @@ public class SecurityConfig {
 
                         // Endpoints accessibles aux utilisateurs connectés (avec vérifications de
                         // propriété/périmètre)
-                        .requestMatchers(HttpMethod.GET, "/utilisateur/{id}").hasAnyRole("ADMIN", "EMPLOYE")
+                        .requestMatchers(HttpMethod.GET, "/utilisateur/{id}").hasAnyRole("ADMIN", "EMPLOYE", "ASSISTANT_DIRECTION")
                         .requestMatchers(HttpMethod.PUT, "/utilisateur/update")
                         .hasAnyRole("ADMIN", "EMPLOYE", "ASSISTANT_DIRECTION", "ADMINISTRATION_PERSONNEL", "CHEF_DEPARTEMENT", "DIRECTEUR")
                         .requestMatchers(HttpMethod.PUT, "/utilisateur/change-password")

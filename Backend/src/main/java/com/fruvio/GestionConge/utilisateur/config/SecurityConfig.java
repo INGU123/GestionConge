@@ -45,8 +45,8 @@ public class SecurityConfig {
 
                         // Endpoints réservés à l'ADMIN
                         .requestMatchers(HttpMethod.POST, "/utilisateur/create").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.POST, "/solde/initialiser/**").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.PUT, "/solde/ajuster/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/solde/initialiser/**").denyAll()
+                        .requestMatchers(HttpMethod.PUT, "/solde/ajuster/**").denyAll()
                         .requestMatchers(HttpMethod.POST, "/type-conge/create").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/type-conge/update/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/type-conge/delete/**").hasRole("ADMIN")
@@ -83,8 +83,8 @@ public class SecurityConfig {
                         .hasAnyRole("ADMIN", "EMPLOYE").requestMatchers(HttpMethod.GET, "/type-conge/**")
                         .hasAnyRole("ADMIN", "EMPLOYE").requestMatchers(HttpMethod.GET, "/services/**")
                         .hasAnyRole("ADMIN", "EMPLOYE").requestMatchers("/jours-feries/**")
-                        .hasAnyRole("ADMIN", "MANAGER", "EMPLOYE").requestMatchers("/notification/**")
-                        .hasAnyRole("ADMIN", "MANAGER", "EMPLOYE")
+                        .hasAnyRole("ADMIN", "EMPLOYE").requestMatchers("/notification/**")
+                        .hasAnyRole("ADMIN", "EMPLOYE")
                         .requestMatchers(HttpMethod.GET, "/historiques/utilisateur/**")
                         .hasAnyRole("ADMIN", "EMPLOYE")
 

@@ -80,7 +80,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/conge/mes-demandes/**")
                         .hasAnyRole("ADMIN", "MANAGER", "EMPLOYE")
                         .requestMatchers(HttpMethod.GET, "/solde/utilisateur/**")
-                        .hasAnyRole("ADMIN", "EMPLOYE").requestMatchers(HttpMethod.GET, "/type-conge/**")
+                        .hasAnyRole("ADMIN", "EMPLOYE", "ADMINISTRATION_PERSONNEL").requestMatchers(HttpMethod.GET, "/type-conge/**")
                         .hasAnyRole("ADMIN", "EMPLOYE", "ASSISTANT_DIRECTION").requestMatchers(HttpMethod.GET, "/services/**")
                         .hasAnyRole("ADMIN", "EMPLOYE", "ASSISTANT_DIRECTION", "ADMINISTRATION_PERSONNEL", "CHEF_DEPARTEMENT", "DIRECTEUR").requestMatchers("/jours-feries/**")
                         .hasAnyRole("ADMIN", "EMPLOYE").requestMatchers("/notification/**")

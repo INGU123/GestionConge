@@ -63,15 +63,15 @@ public class UtilisateurCreateRequest {
     @Size(max = 80, message = "Le type de contrat ne peut pas dépasser 80 caractères.")
     private String typeContrat;
 
-    @NotBlank(message = "L'adresse e-mail est obligatoire.")
+    // Facultatif : aucune adresse n'est créée automatiquement.
     @Email(message = "Format d'adresse e-mail invalide.")
-    @Pattern(
-        regexp = "^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$",
-        message = "Format d'adresse e-mail invalide."
-    )
+    @Pattern(regexp = "^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$",
+            message = "Format d'adresse e-mail invalide.")
     private String email;
 
-    @Pattern(regexp = "^$|.{6,}$", message = "Le mot de passe doit comporter au moins 6 caractères lorsqu'il est renseigné.")
+    // Facultatif : le service génère un mot de passe s'il est absent.
+    @Pattern(regexp = "^$|.{6,}$",
+            message = "Le mot de passe doit comporter au moins 6 caractères lorsqu'il est renseigné.")
     private String password;
 
     @NotNull(message = "Le rôle est obligatoire.")

@@ -248,7 +248,7 @@ class UtilisateurServiceTest {
         verify(utilisateurRepository).save(collaborator);
         verify(historiqueCompteRepository).save(any(com.fruvio.GestionConge.utilisateur.entity.HistoriqueCompte.class));
         verify(emailService).sendAccountArchivedEmail(
-                "employee@example.com", "EMP-002", "Agent", "Test",
+                "employee@example.com", "2026302", "Agent", "Test",
                 collaborator.getDeletedAt(), "Fin de contrat");
         verify(demandeCongeRepository, never()).existsByUtilisateurId(2L);
     }
@@ -262,7 +262,7 @@ class UtilisateurServiceTest {
         org.mockito.Mockito.doThrow(new IllegalStateException("SMTP indisponible"))
                 .when(emailService).sendAccountArchivedEmail(
                         org.mockito.ArgumentMatchers.eq("employee@example.com"),
-                        org.mockito.ArgumentMatchers.eq("EMP-003"),
+                        org.mockito.ArgumentMatchers.eq("2026303"),
                         org.mockito.ArgumentMatchers.isNull(),
                         org.mockito.ArgumentMatchers.isNull(),
                         any(LocalDateTime.class),

@@ -25,4 +25,7 @@ public class Services {
     private int responsable_id;
     private int effectifMinimum;
 
+    @jakarta.persistence.Column(name = "departement_id")
+    private Long departementId;
+
 }

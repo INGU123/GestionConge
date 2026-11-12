@@ -59,32 +59,33 @@ public class CircuitDemandeCongeService {
     @Transactional(readOnly = true)
     public List<CircuitDemandeConge> dossiersAssistant(Utilisateur user) {
         exiger(user, Role.ASSISTANT_DIRECTION);
-        return circuits.findByAssistantIdOrderByDateCreationDesc(user.getId());
+        return circuits.findByAssistantIdOrderByDateCreationDesc(user.getId()).stream().map(this::enrichir).toList();
     }
 
     @Transactional(readOnly = true)
     public List<CircuitDemandeConge> consultationAdmin(Utilisateur user) {
         exiger(user, Role.ADMIN);
         return circuits.findAll().stream()
-                .sorted(java.util.Comparator.comparing(CircuitDemandeConge::getDateCreation).reversed()).toList();
+                .sorted(java.util.Comparator.comparing(CircuitDemandeConge::getDateCreation).reversed())
+                .map(this::enrichir).toList();
     }
 
     @Transactional(readOnly = true)
     public List<CircuitDemandeConge> enAttenteAdministration(Utilisateur user) {
         exiger(user, Role.ADMINISTRATION_PERSONNEL);
-        return circuits.findByStatutOrderByDateCreationAsc("RELIQUAT_EN_ATTENTE");
+        return circuits.findByStatutOrderByDateCreationAsc("RELIQUAT_EN_ATTENTE").stream().map(this::enrichir).toList();
     }
 
     @Transactional(readOnly = true)
     public List<CircuitDemandeConge> enAttenteChef(Utilisateur user) {
         exiger(user, Role.CHEF_DEPARTEMENT);
-        return circuits.findByChefIdAndStatutOrderByDateCreationAsc(user.getId(), "CHEF_EN_ATTENTE");
+        return circuits.findByChefIdAndStatutOrderByDateCreationAsc(user.getId(), "CHEF_EN_ATTENTE").stream().map(this::enrichir).toList();
     }
 
     @Transactional(readOnly = true)
     public List<CircuitDemandeConge> enAttenteDirecteur(Utilisateur user) {
         exiger(user, Role.DIRECTEUR);
-        return circuits.findByDirecteurIdAndStatutOrderByDateCreationAsc(user.getId(), "DIRECTEUR_EN_ATTENTE");
+        return circuits.findByDirecteurIdAndStatutOrderByDateCreationAsc(user.getId(), "DIRECTEUR_EN_ATTENTE").stream().map(this::enrichir).toList();
     }
 
     @Transactional
@@ -162,6 +163,15 @@ public class CircuitDemandeCongeService {
         CircuitDemandeConge savedCircuit = circuits.save(d);
         notifications.creerNotification(d.getAssistantId(), "La décision du directeur pour le dossier #" + d.getId() + " est " + choix + ". Le PDF officiel est disponible dans votre boîte de réception.", "DECISION_CONGE", "/dashboard/circuit-conge");
         return savedCircuit;
+    }
+
+    private CircuitDemandeConge enrichir(CircuitDemandeConge dossier) {
+        utilisateurs.findById(dossier.getUtilisateurId()).ifPresent(u -> {
+            dossier.setUtilisateurNom(u.getNom());
+            dossier.setUtilisateurPrenom(u.getPrenom());
+            dossier.setUtilisateurMatricule(u.getMatricule());
+        });
+        return dossier;
     }
 
     private void verifierChevauchementCircuit(Long employeId, java.time.LocalDate debut,

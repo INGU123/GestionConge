@@ -885,7 +885,11 @@ export default function UtilisateursPage() {
                   >
                     <option value="EMPLOYE">Employé</option>
                     <option value="MANAGER">Manager</option>
-                    {editingUser?.role === "ADMIN" && <option value="ADMIN">Administrateur</option>}
+                    <option value="ADMIN">Administrateur</option>
+                    <option value="ASSISTANT_DIRECTION">Assistant de direction</option>
+                    <option value="ADMINISTRATION_PERSONNEL">Administration du personnel</option>
+                    <option value="CHEF_DEPARTEMENT">Chef de département</option>
+                    <option value="DIRECTEUR">Directeur</option>
                   </select>
                 </div>
               </div>

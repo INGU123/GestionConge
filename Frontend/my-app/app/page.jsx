@@ -121,9 +121,11 @@ const Home = () => {
                   <input
                     id="matricule"
                     type="text"
-                    placeholder="Saisissez votre matricule"
+                    inputMode="numeric"
+                    pattern="[0-9]+"
+                    placeholder="Ex. 2026100"
                     value={matricule}
-                    onChange={(e) => setMatricule(e.target.value)}
+                    onChange={(e) => setMatricule(e.target.value.replace(/[^0-9]/g, ""))}
                     autoComplete="username"
                     required
                   />

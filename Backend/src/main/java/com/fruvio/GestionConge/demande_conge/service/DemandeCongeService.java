@@ -390,6 +390,22 @@ public class DemandeCongeService {
     }
 
     /**
+     * Enregistre la demande historique associée à un dossier du nouveau circuit.
+     * Les contrôles métier sont exécutés avant la soumission au chef, puis le
+     * traitement final passe par traiterDemande() pour débiter les soldes.
+     */
+    @Transactional
+    public DemandeConge creerDemandePourCircuit(DemandeConge demande) {
+        if (demande == null || demande.getUtilisateurId() == null || demande.getTypeCongeId() == null
+                || demande.getDateDebut() == null || demande.getDateFin() == null) {
+            throw new IllegalArgumentException("Dossier de congé incomplet.");
+        }
+        demande.setStatut("EN_ATTENTE");
+        demande.setDateCreation(LocalDate.now());
+        return demandeRepo.save(demande);
+    }
+
+    /**
      * Vérifie l'éligibilité d'un dossier préparé par l'assistant en réutilisant
      * les mêmes règles de jours ouvrés, plafonds annuels, chevauchements et soldes
      * que le circuit historique. Aucun solde n'est débité à cette étape.

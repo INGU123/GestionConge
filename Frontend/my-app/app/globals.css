@@ -159,8 +159,8 @@ body {
 }
 
 .login-frame {
-  width: min(1240px, 100%);
-  min-height: min(780px, calc(100vh - 36px));
+  width: min(1080px, 100%);
+  min-height: min(680px, calc(100vh - 36px));
   display: grid;
   grid-template-columns: minmax(0, 0.96fr) minmax(440px, 1.04fr);
   overflow: hidden;
@@ -176,7 +176,7 @@ body {
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  min-height: 700px;
+  min-height: 640px;
   padding: clamp(30px, 4vw, 54px);
   color: #fff;
   background:

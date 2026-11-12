@@ -58,14 +58,14 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/jours-feries/create").hasRole("ADMIN")
 
                         // Endpoints réservés à ADMIN et MANAGER
-                        .requestMatchers("/utilisateur/all").hasAnyRole("ADMIN", "MANAGER")
-                        .requestMatchers(HttpMethod.PUT, "/conge/*/traiter").hasAnyRole("ADMIN", "MANAGER")
-                        .requestMatchers(HttpMethod.GET, "/conge/manager/**").hasAnyRole("ADMIN", "MANAGER")
-                        .requestMatchers(HttpMethod.GET, "/conge/en-attente").hasAnyRole("ADMIN", "MANAGER")
+                        .requestMatchers("/utilisateur/all").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/conge/*/traiter").hasRole("DIRECTEUR")
+                        .requestMatchers(HttpMethod.GET, "/conge/manager/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/conge/en-attente").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.GET, "/conge/all").hasAnyRole("ADMIN", "MANAGER")
-                        .requestMatchers(HttpMethod.GET, "/solde", "/solde/all").hasAnyRole("ADMIN", "MANAGER")
+                        .requestMatchers(HttpMethod.GET, "/solde", "/solde/all").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.GET, "/historiques", "/historiques/all")
-                        .hasAnyRole("ADMIN", "MANAGER")
+                        .hasRole("ADMIN")
 
                         // Endpoints accessibles aux utilisateurs connectés (avec vérifications de
                         // propriété/périmètre)

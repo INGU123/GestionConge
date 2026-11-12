@@ -132,9 +132,10 @@ public class PasswordResetController {
 
         if (user != null && user.isActif() && !user.isArchived()) {
             String temporaryPassword = generateTemporaryPassword();
+            String resetToken = java.util.UUID.randomUUID().toString();
             user.setPassword(passwordEncoder.encode(temporaryPassword));
-            user.setResetToken(null);
-            user.setTokenExpiration(null);
+            user.setResetToken(resetToken);
+            user.setTokenExpiration(LocalDateTime.now().plusHours(24));
             utilisateurRepository.save(user);
 
             PasswordResetRequestEntity request = requestRepository.save(PasswordResetRequestEntity.builder()
@@ -144,8 +145,8 @@ public class PasswordResetController {
                     .dateTraitement(LocalDateTime.now())
                     .build());
 
-            String resetLink = frontendUrl() + "/Components/mdpReset?matricule="
-                    + URLEncoder.encode(safe(user.getMatricule()), StandardCharsets.UTF_8);
+            String resetLink = frontendUrl() + "/Components/mdpReset?token="
+                    + URLEncoder.encode(resetToken, StandardCharsets.UTF_8);
             String message = "Bonjour " + safe(user.getPrenom()) + " " + safe(user.getNom()) + ",\\n\\n"
                     + "Votre réinitialisation automatique a été prise en compte.\\n\\n"
                     + "Nom : " + safe(user.getNom()) + "\\n"

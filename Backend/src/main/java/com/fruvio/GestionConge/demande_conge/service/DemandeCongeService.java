@@ -556,6 +556,17 @@ public class DemandeCongeService {
         throw new AccessDeniedException("Accès réservé aux managers et administrateurs.");
     }
 
+    private List<DemandeConge> enrichirDemandeurs(List<DemandeConge> demandes) {
+        for (DemandeConge demande : demandes) {
+            utilisateurRepo.findById(demande.getUtilisateurId()).ifPresent(u -> {
+                demande.setUtilisateurNom(u.getNom());
+                demande.setUtilisateurPrenom(u.getPrenom());
+                demande.setUtilisateurMatricule(u.getMatricule());
+            });
+        }
+        return demandes;
+    }
+
     // Récupérer toutes les demandes (adapté au rôle)
     public List<DemandeConge> getToutesLesDemandes(Utilisateur currentUser) {
         if (currentUser == null) {
@@ -563,7 +574,7 @@ public class DemandeCongeService {
         }
 
         if (currentUser.getRole() == Role.ADMIN) {
-            return demandeRepo.findAll();
+            return enrichirDemandeurs(demandeRepo.findAll());
         }
 
         if (currentUser.getRole() == Role.MANAGER) {
@@ -572,7 +583,7 @@ public class DemandeCongeService {
             if (!ids.contains(currentUser.getId())) {
                 ids.add(currentUser.getId());
             }
-            return demandeRepo.findByUtilisateurIdIn(ids);
+            return enrichirDemandeurs(demandeRepo.findByUtilisateurIdIn(ids));
         }
 
         throw new AccessDeniedException("Accès réservé aux managers et administrateurs.");

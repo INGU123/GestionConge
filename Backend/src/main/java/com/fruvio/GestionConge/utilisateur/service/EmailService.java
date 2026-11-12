@@ -68,11 +68,12 @@ public class EmailService {
                         log.info("Envoi e-mail vers {} (objet: {}) depuis {}", to, subject, fromAddress);
 
                         MimeMessage message = mailSender.createMimeMessage();
-                        MimeMessageHelper helper = new MimeMessageHelper(message, false, StandardCharsets.UTF_8.name());
+                        MimeMessageHelper helper = new MimeMessageHelper(message, true, StandardCharsets.UTF_8.name());
                         helper.setFrom(fromAddress, fromName);
                         helper.setTo(Objects.requireNonNull(to.trim()));
                         helper.setSubject(subject);
-                        helper.setText(emailText, false);
+                        // Texte brut de secours + HTML compatible Gmail, Outlook et clients mobiles.
+                        helper.setText(emailText, plainTextToHtml(emailText));
 
                         mailSender.send(message);
 
@@ -121,6 +122,38 @@ public class EmailService {
                                 .replace(">", "&gt;")
                                 .replace("\"", "&quot;")
                                 .replace("'", "&#39;");
+        }
+
+        /**
+         * Convertit le texte en HTML sans perdre les retours à la ligne.
+         * Les URL seules sur une ligne deviennent des boutons avec lien de secours.
+         */
+        private String plainTextToHtml(String plainText) {
+                StringBuilder body = new StringBuilder();
+                String normalized = plainText.replace("\\r\\n", "\\n").replace('\\r', '\\n');
+                for (String line : normalized.split("\\n", -1)) {
+                        String trimmed = line.trim();
+                        if (trimmed.matches("https?://\\\\S+")) {
+                                String url = escapeHtml(trimmed);
+                                body.append("<p style=\\"margin:18px 0;\\"><a href=\\"")
+                                                .append(url)
+                                                .append("\\" style=\\"display:inline-block;padding:13px 22px;background:#0757a7;color:#ffffff;text-decoration:none;font-weight:700;border-radius:7px;\\">OUVRIR LE LIEN SÉCURISÉ</a></p>")
+                                                .append("<p style=\\"font-size:12px;word-break:break-all;color:#475569;\\"><a href=\\"")
+                                                .append(url).append("\\" style=\\"color:#0757a7;\\">")
+                                                .append(url).append("</a></p>");
+                        } else if (trimmed.isEmpty()) {
+                                body.append("<div style=\\"height:10px;line-height:10px;\\">&nbsp;</div>");
+                        } else {
+                                body.append("<p style=\\"margin:0 0 8px;line-height:1.6;\\">")
+                                                .append(escapeHtml(line)).append("</p>");
+                        }
+                }
+                return "<!doctype html><html><body style=\\"margin:0;padding:24px 12px;background:#f1f5f9;font-family:Arial,Helvetica,sans-serif;color:#1e293b;\\">"
+                                + "<div style=\\"max-width:620px;margin:0 auto;padding:28px;background:#ffffff;border:1px solid #e2e8f0;border-radius:12px;\\">"
+                                + "<div style=\\"border-bottom:3px solid #0757a7;padding-bottom:14px;margin-bottom:20px;color:#0757a7;font-weight:700;\\">SPAT · GESTION DES CONGÉS</div>"
+                                + body
+                                + "<p style=\\"margin-top:24px;color:#64748b;font-size:12px;\\">Administration - SPAT</p>"
+                                + "</div></body></html>";
         }
 
         // =========================================================

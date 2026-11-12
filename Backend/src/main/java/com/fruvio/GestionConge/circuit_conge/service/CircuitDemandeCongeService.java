@@ -12,6 +12,7 @@ import com.fruvio.GestionConge.demande_conge.service.DemandeCongeService;
 import com.fruvio.GestionConge.departement.entity.Departement;
 import com.fruvio.GestionConge.departement.repository.DepartementRepository;
 import com.fruvio.GestionConge.jour_ferie.service.JourFerieService;
+import com.fruvio.GestionConge.notifications_conge.service.Notification_congeService;
 import com.fruvio.GestionConge.service_conge.entity.Services;
 import com.fruvio.GestionConge.service_conge.repository.Service_congeRepository;
 import com.fruvio.GestionConge.utilisateur.entity.Role;
@@ -26,10 +27,11 @@ public class CircuitDemandeCongeService {
     private final DepartementRepository departements;
     private final JourFerieService joursFeries;
     private final DemandeCongeService demandesHistoriques;
+    private final Notification_congeService notifications;
 
     public CircuitDemandeCongeService(CircuitDemandeCongeRepository circuits, UtilisateurRepository utilisateurs,
             Service_congeRepository services, DepartementRepository departements, JourFerieService joursFeries,
-            DemandeCongeService demandesHistoriques) {
+            DemandeCongeService demandesHistoriques, Notification_congeService notifications) {
         this.circuits = circuits; this.utilisateurs = utilisateurs; this.services = services;
         this.departements = departements; this.joursFeries = joursFeries; this.demandesHistoriques = demandesHistoriques;
     }
@@ -43,9 +45,13 @@ public class CircuitDemandeCongeService {
         if (typeId == null) throw new IllegalArgumentException("Le type de congé est obligatoire.");
         int nombre = joursFeries.compterJoursOuvres(debut, fin);
         if (nombre <= 0) throw new IllegalArgumentException("La période ne contient aucun jour ouvré.");
-        return circuits.save(CircuitDemandeConge.builder().utilisateurId(employeId).typeCongeId(typeId)
+        CircuitDemandeConge saved = circuits.save(CircuitDemandeConge.builder().utilisateurId(employeId).typeCongeId(typeId)
                 .assistantId(assistant.getId()).dateDebut(debut).dateFin(fin).nombreJours(nombre)
                 .commentaire(commentaire).statut("RELIQUAT_EN_ATTENTE").dateCreation(LocalDateTime.now()).build());
+        for (Utilisateur agent : utilisateurs.findByRoleAndActifTrue(Role.ADMINISTRATION_PERSONNEL)) {
+            notifications.creerNotification(agent.getId(), "Nouvelle demande de reliquat (dossier #" + saved.getId() + ").", "CIRCUIT_CONGE", "/dashboard/reliquats");
+        }
+        return saved;
     }
 
     @Transactional(readOnly = true)
@@ -81,7 +87,9 @@ public class CircuitDemandeCongeService {
         d.setReliquatJours(reliquat); d.setReliquatCommentaire(commentaire);
         d.setAdministrationPersonnelId(actor.getId()); d.setDateReliquat(LocalDateTime.now());
         d.setStatut("RELIQUAT_RETOURNE");
-        return circuits.save(d);
+        CircuitDemandeConge saved = circuits.save(d);
+        notifications.creerNotification(d.getAssistantId(), "Le reliquat du dossier #" + d.getId() + " a été retourné.", "CIRCUIT_CONGE", "/dashboard/circuit-conge");
+        return saved;
     }
 
     @Transactional
@@ -103,7 +111,9 @@ public class CircuitDemandeCongeService {
         if (!Boolean.TRUE.equals(dep.getActif())) throw new IllegalStateException("Département inactif.");
         d.setDepartementId(dep.getId()); d.setChefId(dep.getChefId()); d.setDirecteurId(dep.getDirecteurId());
         d.setDateSoumissionChef(LocalDateTime.now()); d.setStatut("CHEF_EN_ATTENTE");
-        return circuits.save(d);
+        CircuitDemandeConge saved = circuits.save(d);
+        notifications.creerNotification(d.getChefId(), "Un dossier de congé (#" + d.getId() + ") attend votre examen.", "CIRCUIT_CONGE", "/dashboard/chef-departement");
+        return saved;
     }
 
     @Transactional
@@ -113,7 +123,9 @@ public class CircuitDemandeCongeService {
         if (!chef.getId().equals(d.getChefId())) throw new AccessDeniedException("Ce dossier ne relève pas de votre département.");
         if (!"CHEF_EN_ATTENTE".equals(d.getStatut())) throw new IllegalStateException("Ce dossier n'attend pas l'avis du chef.");
         d.setDateTransmissionDirecteur(LocalDateTime.now()); d.setStatut("DIRECTEUR_EN_ATTENTE");
-        return circuits.save(d);
+        CircuitDemandeConge saved = circuits.save(d);
+        notifications.creerNotification(d.getDirecteurId(), "Un dossier de congé (#" + d.getId() + ") attend votre décision.", "CIRCUIT_CONGE", "/dashboard/directeur");
+        return saved;
     }
 
     @Transactional
@@ -127,6 +139,9 @@ public class CircuitDemandeCongeService {
         String raison = motif == null ? "" : motif.trim();
         if ("REFUSEE".equals(choix) && raison.isBlank()) throw new IllegalArgumentException("Le motif de refus est obligatoire.");
 
+        if ("VALIDEE".equals(choix)) {
+            demandesHistoriques.verifierEligibiliteWorkflow(d.getUtilisateurId(), d.getTypeCongeId(), d.getDateDebut(), d.getDateFin());
+        }
         DemandeConge legacy = DemandeConge.builder().utilisateurId(d.getUtilisateurId()).typeCongeId(d.getTypeCongeId())
                 .dateDebut(d.getDateDebut()).dateFin(d.getDateFin()).nombreJours(d.getNombreJours())
                 .commentaire(d.getCommentaire()).statut("EN_ATTENTE").dateCreation(java.time.LocalDate.now()).build();
@@ -134,7 +149,9 @@ public class CircuitDemandeCongeService {
         DemandeConge decisionResult = demandesHistoriques.traiterDemande(saved.getId(), null, choix, raison, directeur);
         d.setLegacyDemandeId(decisionResult.getId()); d.setMotifRefus("REFUSEE".equals(choix) ? raison : null);
         d.setDateDecision(LocalDateTime.now()); d.setStatut(choix);
-        return circuits.save(d);
+        CircuitDemandeConge savedCircuit = circuits.save(d);
+        notifications.creerNotification(d.getAssistantId(), "La décision du directeur pour le dossier #" + d.getId() + " est " + choix + ". Le PDF officiel est disponible dans votre boîte de réception.", "DECISION_CONGE", "/dashboard/circuit-conge");
+        return savedCircuit;
     }
 
     private CircuitDemandeConge dossierVerrouille(Long id) {

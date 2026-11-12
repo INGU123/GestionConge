@@ -442,7 +442,7 @@ export default function UtilisateursPage() {
           <button
             type="button"
             onClick={toggleArchivedView}
-            className="btn btn-outline btn-sm border-slate-500 text-white hover:bg-slate-700"
+            className="btn btn-outline btn-sm border-slate-500 !text-white hover:bg-slate-700 hover:!text-white"
           >
             {showArchived ? "Retour aux collaborateurs" : "Collaborateurs archivés"}
           </button>

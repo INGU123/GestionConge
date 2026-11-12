@@ -25,7 +25,8 @@ import lombok.Setter;
 public class UtilisateurCreateRequest {
 
     @NotBlank(message = "Le matricule est obligatoire.")
-    @Size(min = 2, max = 50, message = "Le matricule doit contenir entre 2 et 50 caractères.")
+    @Size(min = 1, max = 50, message = "Le matricule doit contenir entre 1 et 50 chiffres.")
+    @Pattern(regexp = "^[0-9]+$", message = "Le matricule doit contenir uniquement des chiffres.")
     private String matricule;
 
     @NotBlank(message = "Le nom est obligatoire.")

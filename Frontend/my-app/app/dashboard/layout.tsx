@@ -202,7 +202,7 @@ export default function DashboardLayout({
           />
         </svg>
       ),
-      show: true,
+      show: isAdmin || isEmploye,
     },
 
     {
@@ -297,7 +297,7 @@ export default function DashboardLayout({
           />
         </svg>
       ),
-      show: true,
+      show: isAdmin || isEmploye,
     },
   ];
 
@@ -327,7 +327,7 @@ export default function DashboardLayout({
         />
       </svg>
     ),
-    show: true,
+    show: isAdmin || isEmploye || isAssistant,
   });
 
   const visibleNavItems = navItems.filter((item) => item.show);

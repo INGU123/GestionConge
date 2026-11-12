@@ -78,10 +78,10 @@ class UtilisateurServiceTest {
 
     @Test
     void createUtilisateurRejectsAdminRole() {
-        UtilisateurCreateRequest request = UtilisateurCreateRequest.builder().matricule("ADM-NEW")
+        UtilisateurCreateRequest request = UtilisateurCreateRequest.builder().matricule("2026101")
                 .email("admin@example.com").role(Role.ADMIN).build();
 
-        when(utilisateurRepository.existsByMatricule("ADM-NEW")).thenReturn(false);
+        when(utilisateurRepository.existsByMatricule("2026101")).thenReturn(false);
         when(utilisateurRepository.existsByEmail("admin@example.com")).thenReturn(false);
 
         assertThrows(IllegalArgumentException.class, () -> utilisateurService.createUtilisateur(request,
@@ -92,8 +92,6 @@ class UtilisateurServiceTest {
 
     @Test
     void loginDoesNotAcceptEmailAsIdentifier() {
-        when(utilisateurRepository.findByMatricule("employee@example.com")).thenReturn(Optional.empty());
-
         assertNull(utilisateurService.login("employee@example.com", "any-password"));
 
         verify(utilisateurRepository, never()).findByEmail("employee@example.com");
@@ -103,14 +101,14 @@ class UtilisateurServiceTest {
     void loginSucceedsWithValidMatriculeAndPassword() {
         String hash = "$2a$10$mockedBcryptHash";
         Utilisateur employee = Utilisateur.builder()
-                .id(11L).matricule("EMP-LOGIN-01")
+                .id(11L).matricule("2026201")
                 .actif(true).password(hash).build();
 
-        when(utilisateurRepository.findByMatricule("EMP-LOGIN-01"))
+        when(utilisateurRepository.findByMatricule("2026201"))
                 .thenReturn(Optional.of(employee));
         when(passwordEncoder.matches("Valid123!", hash)).thenReturn(true);
 
-        assertEquals(employee, utilisateurService.login("EMP-LOGIN-01", "Valid123!"));
+        assertEquals(employee, utilisateurService.login("2026201", "Valid123!"));
         verify(passwordEncoder).matches("Valid123!", hash);
     }
 
@@ -118,14 +116,14 @@ class UtilisateurServiceTest {
     void loginRejectsIncorrectPassword() {
         String hash = "$2a$10$mockedBcryptHash";
         Utilisateur employee = Utilisateur.builder()
-                .id(12L).matricule("EMP-LOGIN-02")
+                .id(12L).matricule("2026202")
                 .actif(true).password(hash).build();
 
-        when(utilisateurRepository.findByMatricule("EMP-LOGIN-02"))
+        when(utilisateurRepository.findByMatricule("2026202"))
                 .thenReturn(Optional.of(employee));
         when(passwordEncoder.matches("Wrong123!", hash)).thenReturn(false);
 
-        assertNull(utilisateurService.login("EMP-LOGIN-02", "Wrong123!"));
+        assertNull(utilisateurService.login("2026202", "Wrong123!"));
         verify(passwordEncoder).matches("Wrong123!", hash);
     }
 
@@ -133,35 +131,35 @@ class UtilisateurServiceTest {
     void loginRejectsInactiveAccount() {
         String hash = "$2a$10$mockedBcryptHash";
         Utilisateur employee = Utilisateur.builder()
-                .id(13L).matricule("EMP-LOGIN-03")
+                .id(13L).matricule("2026203")
                 .actif(false).password(hash).build();
 
-        when(utilisateurRepository.findByMatricule("EMP-LOGIN-03"))
+        when(utilisateurRepository.findByMatricule("2026203"))
                 .thenReturn(Optional.of(employee));
 
-        assertNull(utilisateurService.login("EMP-LOGIN-03", "Valid123!"));
+        assertNull(utilisateurService.login("2026203", "Valid123!"));
         verify(passwordEncoder, never()).matches("Valid123!", hash);
     }
 
     @Test
     void loginRejectsUnknownMatricule() {
-        when(utilisateurRepository.findByMatricule("EMP-UNKNOWN"))
+        when(utilisateurRepository.findByMatricule("2026299"))
                 .thenReturn(Optional.empty());
 
-        assertNull(utilisateurService.login("EMP-UNKNOWN", "Valid123!"));
+        assertNull(utilisateurService.login("2026299", "Valid123!"));
         verify(passwordEncoder, never()).matches(any(), any());
     }
 
     @Test
     void loginRejectsNonBcryptPassword() {
         Utilisateur employee = Utilisateur.builder()
-                .id(14L).matricule("EMP-LOGIN-04")
+                .id(14L).matricule("2026204")
                 .actif(true).password("plain-text-password").build();
 
-        when(utilisateurRepository.findByMatricule("EMP-LOGIN-04"))
+        when(utilisateurRepository.findByMatricule("2026204"))
                 .thenReturn(Optional.of(employee));
 
-        assertNull(utilisateurService.login("EMP-LOGIN-04", "plain-text-password"));
+        assertNull(utilisateurService.login("2026204", "plain-text-password"));
         verify(passwordEncoder, never()).matches("plain-text-password", "plain-text-password");
     }
 
@@ -171,29 +169,29 @@ class UtilisateurServiceTest {
         PasswordResetController controller = new PasswordResetController(
                 utilisateurRepository, requestRepository, emailService, passwordEncoder);
         Utilisateur employee = Utilisateur.builder()
-                .id(10L).matricule("EMP-001").email("employee@example.com")
+                .id(10L).matricule("2026301").email("employee@example.com")
                 .nom("Test").prenom("Agent").actif(true).build();
 
-        when(utilisateurRepository.findByMatricule("EMP-001")).thenReturn(Optional.of(employee));
+        when(utilisateurRepository.findByMatricule("2026301")).thenReturn(Optional.of(employee));
         when(requestRepository.findByStatutOrderByDateDemandeDesc("EN_ATTENTE")).thenReturn(java.util.List.of());
         when(requestRepository.save(any(PasswordResetRequestEntity.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
         when(utilisateurRepository.findAll()).thenReturn(java.util.List.of());
 
-        var response = controller.forgotPassword(ForgotPasswordRequest.builder().matricule("EMP-001").build());
+        var response = controller.forgotPassword(ForgotPasswordRequest.builder().matricule("2026301").build());
 
         assertEquals(200, response.getStatusCode().value());
-        verify(utilisateurRepository).findByMatricule("EMP-001");
+        verify(utilisateurRepository).findByMatricule("2026301");
         verify(utilisateurRepository, never()).findByEmail("employee@example.com");
         verify(requestRepository).save(any(PasswordResetRequestEntity.class));
     }
 
     @Test
     void createUtilisateurRejectsManagerEscalation() {
-        UtilisateurCreateRequest request = UtilisateurCreateRequest.builder().matricule("MGR-NEW")
+        UtilisateurCreateRequest request = UtilisateurCreateRequest.builder().matricule("2026102")
                 .email("manager@example.com").role(Role.ADMIN).build();
 
-        when(utilisateurRepository.existsByMatricule("MGR-NEW")).thenReturn(false);
+        when(utilisateurRepository.existsByMatricule("2026102")).thenReturn(false);
         when(utilisateurRepository.existsByEmail("manager@example.com")).thenReturn(false);
 
         assertThrows(IllegalArgumentException.class, () -> utilisateurService.createUtilisateur(request,

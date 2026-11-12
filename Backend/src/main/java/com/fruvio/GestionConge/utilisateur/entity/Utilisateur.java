@@ -54,7 +54,7 @@ public class Utilisateur implements UserDetails {
     @Column(name = "type_contrat", length = 80)
     private String typeContrat;
 
-    @Column(unique = true, nullable = false)
+    @Column(unique = true, nullable = true)
     @Pattern(
         regexp = "^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$",
         message = "Email invalide"

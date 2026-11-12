@@ -8,6 +8,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -56,4 +57,8 @@ public class DemandeConge {
 
     @Column(name = "date_creation")
     private LocalDate dateCreation;
+
+    @Transient private String utilisateurNom;
+    @Transient private String utilisateurPrenom;
+    @Transient private String utilisateurMatricule;
 }

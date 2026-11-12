@@ -186,7 +186,7 @@ export default function ForgotPassword() {
 
             <div className="login-security-note">
               <FiLock aria-hidden="true" />
-              <span>{mode === "matricule" ? "La demande nécessite une validation administrative ; les informations seront transmises au numéro enregistré." : "Les informations de connexion et le lien de changement seront envoyés à votre adresse enregistrée."}</span>
+              <span>{mode === "matricule" ? "La demande nécessite une validation administrative. La transmission par SMS sera ajoutée ultérieurement." : "Les informations de connexion et le lien de changement seront envoyés à votre adresse enregistrée."}</span>
             </div>
 
             <div className="login-forgot-row" style={{ justifyContent: "flex-start", marginTop: "24px" }}>

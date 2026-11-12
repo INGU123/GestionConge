@@ -48,6 +48,10 @@ public class CircuitDemandeCongeController {
     @PreAuthorize("hasRole('ASSISTANT_DIRECTION')")
     public List<CircuitDemandeConge> mesDossiers() { return service.dossiersAssistant(currentUser()); }
 
+    @GetMapping("/admin/consultation")
+    @PreAuthorize("hasRole('ADMIN')")
+    public List<CircuitDemandeConge> consultationAdmin() { return service.consultationAdmin(currentUser()); }
+
     @GetMapping("/administration/en-attente")
     @PreAuthorize("hasRole('ADMINISTRATION_PERSONNEL')")
     public List<CircuitDemandeConge> enAttenteAdministration() { return service.enAttenteAdministration(currentUser()); }

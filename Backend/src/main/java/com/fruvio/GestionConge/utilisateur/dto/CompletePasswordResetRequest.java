@@ -2,6 +2,7 @@ package com.fruvio.GestionConge.utilisateur.dto;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.Pattern;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -11,6 +12,7 @@ import lombok.Setter;
 @NoArgsConstructor
 public class CompletePasswordResetRequest {
     @NotBlank(message = "Le matricule est obligatoire.")
+    @Pattern(regexp = "^[0-9]+$", message = "Le matricule doit contenir uniquement des chiffres.")
     private String matricule;
 
     @NotBlank(message = "L'ancien mot de passe est obligatoire.")

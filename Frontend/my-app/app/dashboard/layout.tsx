@@ -64,7 +64,7 @@ export default function DashboardLayout({
           setUser(current);
           if (pathname === "/dashboard") {
             const role = String(current.role || "").toUpperCase();
-            const workspace = {
+            const workspace: Record<string, string> = {
               MANAGER: "/dashboard/consultation-demandes",
               ASSISTANT_DIRECTION: "/dashboard/circuit-conge",
               ADMINISTRATION_PERSONNEL: "/dashboard/reliquats",

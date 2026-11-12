@@ -16,6 +16,7 @@ import com.fruvio.GestionConge.export.PdfExportService;
 import com.fruvio.GestionConge.utilisateur.config.CustomUserDetails;
 import com.fruvio.GestionConge.utilisateur.entity.Utilisateur;
 import com.fruvio.GestionConge.utilisateur.repository.UtilisateurRepository;
+import com.fruvio.GestionConge.type_conge.repository.Type_congeRepository;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
 
@@ -25,10 +26,11 @@ public class CircuitDemandeCongeController {
     private final CircuitDemandeCongeService service;
     private final PdfExportService pdf;
     private final UtilisateurRepository utilisateurs;
+    private final Type_congeRepository typesConge;
 
     public CircuitDemandeCongeController(CircuitDemandeCongeService service, PdfExportService pdf,
-            UtilisateurRepository utilisateurs) {
-        this.service = service; this.pdf = pdf; this.utilisateurs = utilisateurs;
+            UtilisateurRepository utilisateurs, Type_congeRepository typesConge) {
+        this.service = service; this.pdf = pdf; this.utilisateurs = utilisateurs; this.typesConge = typesConge;
     }
 
     public record CreationRequest(@NotNull Long utilisateurId, @NotNull Long typeCongeId,
@@ -100,7 +102,8 @@ public class CircuitDemandeCongeController {
         }
         Utilisateur employe = utilisateurs.findById(d.getUtilisateurId()).orElseThrow();
         Utilisateur directeur = utilisateurs.findById(d.getDirecteurId()).orElseThrow();
-        byte[] content = pdf.generateDecisionCongePdf(d, employe, directeur);
+        String typeLabel = typesConge.findById(d.getTypeCongeId()).map(t -> t.getLibelle()).orElse("Type #" + d.getTypeCongeId());
+        byte[] content = pdf.generateDecisionCongePdf(d, employe, directeur, typeLabel);
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_PDF)
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=decision-conge-" + id + ".pdf")
                 .body(content);

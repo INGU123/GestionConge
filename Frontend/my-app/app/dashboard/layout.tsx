@@ -414,7 +414,7 @@ export default function DashboardLayout({
             </button>
 
             {/* NOTIFICATIONS */}
-            <NotificationHeaderMenu />
+            {!isManager && <NotificationHeaderMenu />}
 
             {/* UTILISATEUR */}
             <div className="text-right">

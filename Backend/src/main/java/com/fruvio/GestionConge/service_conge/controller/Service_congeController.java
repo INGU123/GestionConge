@@ -15,19 +15,22 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.fruvio.GestionConge.service_conge.entity.Services;
 import com.fruvio.GestionConge.service_conge.repository.Service_congeRepository;
+import com.fruvio.GestionConge.departement.repository.DepartementRepository;
 
 @RestController
 @RequestMapping("/services")
 public class Service_congeController {
 
     private final Service_congeRepository serviceRepository;
+    private final DepartementRepository departementRepository;
 
-    public Service_congeController(Service_congeRepository serviceRepository) {
+    public Service_congeController(Service_congeRepository serviceRepository, DepartementRepository departementRepository) {
         this.serviceRepository = serviceRepository;
+        this.departementRepository = departementRepository;
     }
 
     // Récupérer tous les services (Consultation pour tous les utilisateurs authentifiés)
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'EMPLOYE')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYE', 'ASSISTANT_DIRECTION', 'ADMINISTRATION_PERSONNEL', 'CHEF_DEPARTEMENT', 'DIRECTEUR')")
     @GetMapping
     public List<Services> getAllServices() {
         return serviceRepository.findAll();
@@ -61,6 +64,18 @@ public class Service_congeController {
                     return ResponseEntity.ok(serviceRepository.save(service));
                 })
                 .orElse(ResponseEntity.notFound().build());
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @PutMapping("/{id}/departement/{departementId}")
+    public ResponseEntity<Services> rattacherDepartement(@PathVariable Long id, @PathVariable Long departementId) {
+        return serviceRepository.findById(id).map(service -> {
+            if (!departementRepository.existsById(departementId)) {
+                throw new IllegalArgumentException("Département introuvable.");
+            }
+            service.setDepartementId(departementId);
+            return ResponseEntity.ok(serviceRepository.save(service));
+        }).orElse(ResponseEntity.notFound().build());
     }
 
     // Supprimer un service (Strictement ADMIN)

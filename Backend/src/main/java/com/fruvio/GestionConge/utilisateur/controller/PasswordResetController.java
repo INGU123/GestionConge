@@ -21,6 +21,7 @@ import org.springframework.web.bind.annotation.*;
 import com.fruvio.GestionConge.notifications_conge.service.Notification_congeService;
 import com.fruvio.GestionConge.utilisateur.dto.CompletePasswordResetRequest;
 import com.fruvio.GestionConge.utilisateur.dto.ForgotPasswordRequest;
+import com.fruvio.GestionConge.utilisateur.dto.EmailPasswordResetRequest;
 import com.fruvio.GestionConge.utilisateur.dto.InitialPasswordSetupRequest;
 import com.fruvio.GestionConge.utilisateur.entity.PasswordResetRequestEntity;
 import com.fruvio.GestionConge.utilisateur.entity.Role;
@@ -116,6 +117,54 @@ public class PasswordResetController {
 
         return ResponseEntity.ok(Map.of("success", true,
                 "message", "Si ce matricule correspond à un compte actif, la demande sera transmise à l'administrateur."));
+    }
+
+    /**
+     * Récupération automatique par adresse e-mail : aucune validation ADMIN.
+     * La réponse reste identique si l'adresse n'existe pas afin d'éviter l'énumération des comptes.
+     */
+    @PostMapping("/forgot-password/email")
+    @Transactional
+    public ResponseEntity<Map<String, Object>> forgotPasswordByEmail(
+            @Valid @RequestBody EmailPasswordResetRequest body) {
+        String email = body.getEmail().trim();
+        Utilisateur user = utilisateurRepository.findByEmail(email).orElse(null);
+
+        if (user != null && user.isActif() && !user.isArchived()) {
+            String temporaryPassword = generateTemporaryPassword();
+            user.setPassword(passwordEncoder.encode(temporaryPassword));
+            user.setResetToken(null);
+            user.setTokenExpiration(null);
+            utilisateurRepository.save(user);
+
+            PasswordResetRequestEntity request = requestRepository.save(PasswordResetRequestEntity.builder()
+                    .utilisateur(user)
+                    .statut("ACCEPTEE")
+                    .dateDemande(LocalDateTime.now())
+                    .dateTraitement(LocalDateTime.now())
+                    .build());
+
+            String resetLink = frontendUrl() + "/Components/mdpReset?matricule="
+                    + URLEncoder.encode(safe(user.getMatricule()), StandardCharsets.UTF_8);
+            String message = "Bonjour " + safe(user.getPrenom()) + " " + safe(user.getNom()) + ",\\n\\n"
+                    + "Votre réinitialisation automatique a été prise en compte.\\n\\n"
+                    + "Nom : " + safe(user.getNom()) + "\\n"
+                    + "Prénom : " + safe(user.getPrenom()) + "\\n"
+                    + "Matricule : " + safe(user.getMatricule()) + "\\n"
+                    + "Mot de passe temporaire : " + temporaryPassword + "\\n\\n"
+                    + "Utilisez ce lien pour remplacer immédiatement le mot de passe temporaire :\\n"
+                    + resetLink + "\\n\\nService RH - SPAT";
+            try {
+                emailService.sendEmail(user.getEmail(),
+                        "Réinitialisation de votre mot de passe - SPAT", message);
+            } catch (Exception ex) {
+                log.error("Échec de l'envoi du lien de réinitialisation par e-mail.", ex);
+                throw new IllegalStateException("Impossible d'envoyer l'e-mail de réinitialisation.", ex);
+            }
+        }
+
+        return ResponseEntity.ok(Map.of("success", true,
+                "message", "Si cette adresse correspond à un compte actif, les informations de réinitialisation ont été envoyées."));
     }
 
     @GetMapping("/admin/password-reset-requests")

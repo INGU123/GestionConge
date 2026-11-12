@@ -12,6 +12,9 @@ import java.util.Map;
 import org.springframework.stereotype.Service;
 
 import com.fruvio.GestionConge.historique_mouvement.entity.Historique_mouvement;
+import com.fruvio.GestionConge.circuit_conge.entity.CircuitDemandeConge;
+import com.fruvio.GestionConge.utilisateur.entity.Utilisateur;
+
 import com.lowagie.text.Document;
 import com.lowagie.text.DocumentException;
 import com.lowagie.text.Element;
@@ -29,6 +32,61 @@ import com.lowagie.text.pdf.PdfWriter;
 public class PdfExportService {
 
     private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+
+    public byte[] generateDecisionCongePdf(CircuitDemandeConge dossier, Utilisateur employe, Utilisateur directeur) {
+        ByteArrayOutputStream output = new ByteArrayOutputStream();
+        Document document = new Document(PageSize.A4, 48, 48, 52, 48);
+        try {
+            PdfWriter.getInstance(document, output);
+            BaseFont base = BaseFont.createFont(BaseFont.HELVETICA, BaseFont.CP1252, BaseFont.NOT_EMBEDDED);
+            Font title = new Font(base, 18, Font.BOLD, new java.awt.Color(15, 35, 61));
+            Font section = new Font(base, 11, Font.BOLD, new java.awt.Color(30, 64, 175));
+            Font normal = new Font(base, 10, Font.NORMAL, java.awt.Color.BLACK);
+            Font small = new Font(base, 8, Font.NORMAL, new java.awt.Color(100, 116, 139));
+            document.open();
+
+            Paragraph brand = new Paragraph("SPAT - Société du Port à Gestion Autonome de Toamasina", section);
+            brand.setSpacingAfter(22); document.add(brand);
+            Paragraph heading = new Paragraph("DÉCISION RELATIVE À UNE DEMANDE DE CONGÉ", title);
+            heading.setAlignment(Element.ALIGN_CENTER); heading.setSpacingAfter(22); document.add(heading);
+
+            PdfPTable table = new PdfPTable(new float[] { 32, 68 });
+            table.setWidthPercentage(100);
+            addDecisionRow(table, "Matricule", safePdf(employe.getMatricule()), normal, section);
+            addDecisionRow(table, "Nom et prénom", safePdf(employe.getNom()) + " " + safePdf(employe.getPrenom()), normal, section);
+            addDecisionRow(table, "Fonction", safePdf(employe.getFonction()), normal, section);
+            addDecisionRow(table, "Type de congé", "Type #" + dossier.getTypeCongeId(), normal, section);
+            addDecisionRow(table, "Période", dossier.getDateDebut().format(DATE_FORMAT) + " au " + dossier.getDateFin().format(DATE_FORMAT), normal, section);
+            addDecisionRow(table, "Durée ouvrée", dossier.getNombreJours() + " jour(s)", normal, section);
+            addDecisionRow(table, "Décision", "VALIDEE".equals(dossier.getStatut()) ? "ACCORDÉE" : "REFUSÉE", normal, section);
+            if ("REFUSEE".equals(dossier.getStatut())) addDecisionRow(table, "Motif du refus", safePdf(dossier.getMotifRefus()), normal, section);
+            document.add(table);
+
+            Paragraph date = new Paragraph("\nDécision prise le : " + (dossier.getDateDecision() == null ? "-" : dossier.getDateDecision().toLocalDate().format(DATE_FORMAT)), normal);
+            date.setSpacingBefore(18); document.add(date);
+            Paragraph signer = new Paragraph("\nLe Directeur du département\n" + safePdf(directeur.getPrenom()) + " " + safePdf(directeur.getNom()), section);
+            signer.setAlignment(Element.ALIGN_RIGHT); signer.setSpacingBefore(25); document.add(signer);
+            Paragraph signature = new Paragraph("\n\nSignature et cachet", small);
+            signature.setAlignment(Element.ALIGN_RIGHT); document.add(signature);
+            Paragraph footer = new Paragraph("\nDocument généré par le système de gestion des congés SPAT.", small);
+            footer.setSpacingBefore(35); document.add(footer);
+            document.close();
+            return output.toByteArray();
+        } catch (DocumentException | IOException exception) {
+            if (document.isOpen()) document.close();
+            throw new IllegalStateException("Impossible de générer la décision PDF.", exception);
+        }
+    }
+
+    private static void addDecisionRow(PdfPTable table, String label, String value, Font valueFont, Font labelFont) {
+        PdfPCell left = new PdfPCell(new Phrase(label, labelFont));
+        left.setPadding(9); left.setBackgroundColor(new java.awt.Color(241, 245, 249));
+        PdfPCell right = new PdfPCell(new Phrase(value == null ? "-" : value, valueFont));
+        right.setPadding(9);
+        table.addCell(left); table.addCell(right);
+    }
+
+    private static String safePdf(String value) { return value == null || value.isBlank() ? "-" : value; }
 
     public byte[] generateHistoriquePdf(List<Historique_mouvement> mouvements,
             Map<Long, String> utilisateurs, Map<Long, String> typesConge, boolean vueComplete) {

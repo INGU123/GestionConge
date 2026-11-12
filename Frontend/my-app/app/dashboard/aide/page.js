@@ -140,7 +140,7 @@ const sections = [
     ],
     steps: [
       "Ouvrez « Gestion Collaborateurs ».",
-      "Utilisez la recherche pour retrouver un collaborateur par matricule, nom ou rôle.",
+      "Utilisez la recherche pour retrouver un collaborateur par matricule numérique, nom ou rôle.",
       "Pour modifier une fiche, utilisez l’action de modification de la ligne concernée.",
       "Pour supprimer un compte, vérifiez soigneusement la personne concernée avant de confirmer l’action.",
       "Lors de la création, renseignez les champs obligatoires et attribuez uniquement un rôle autorisé.",

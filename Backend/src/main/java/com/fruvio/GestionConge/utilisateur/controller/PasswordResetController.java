@@ -42,7 +42,7 @@ public class PasswordResetController {
     private final PasswordEncoder passwordEncoder;
     private final Notification_congeService notificationService;
 
-    @Value("${app.frontend-url:http://localhost:3000}")
+    @Value("${app.frontend.url:http://localhost:3000}")
     private String frontendUrl = "http://localhost:3000";
 
     @Autowired

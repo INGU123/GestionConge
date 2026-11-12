@@ -32,7 +32,7 @@ public class Demande_CongeController {
     }
 
     // Soumettre une demande de congé
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'EMPLOYE')")
+    @PreAuthorize("hasRole('ASSISTANT_DIRECTION')")
     @PostMapping("/demander/{utilisateurId}")
     public ResponseEntity<DemandeConge> demanderConge(
             @PathVariable Long utilisateurId,
@@ -44,7 +44,7 @@ public class Demande_CongeController {
     }
 
     // Valider ou refuser une demande (Réservé au Manager et Admin)
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    @PreAuthorize("hasAnyRole('CHEF_DEPARTEMENT', 'DIRECTEUR')")
     @PutMapping("/{demandeId}/traiter")
     public ResponseEntity<DemandeConge> traiterDemande(
             @PathVariable Long demandeId,
@@ -58,7 +58,7 @@ public class Demande_CongeController {
     }
 
     // Annuler une demande
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'EMPLOYE')")
+    @PreAuthorize("hasRole('ASSISTANT_DIRECTION')")
     @PutMapping("/{demandeId}/annuler")
     public ResponseEntity<DemandeConge> annulerDemande(
             @PathVariable Long demandeId,
@@ -78,7 +78,7 @@ public class Demande_CongeController {
     }
 
     // Liste des demandes en attente pour un manager
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/manager/{managerId}/en-attente")
     public ResponseEntity<List<DemandeConge>> getDemandesEnAttenteManager(@PathVariable Long managerId) {
         Utilisateur currentUser = getCurrentAuthenticatedUser();
@@ -86,7 +86,7 @@ public class Demande_CongeController {
     }
 
     // Liste de toutes les demandes en attente (selon périmètre)
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/en-attente")
     public ResponseEntity<List<DemandeConge>> getToutesDemandesEnAttente() {
         Utilisateur currentUser = getCurrentAuthenticatedUser();

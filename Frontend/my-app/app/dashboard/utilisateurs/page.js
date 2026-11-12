@@ -139,7 +139,7 @@ export default function UtilisateursPage() {
     if (!editingUser) {
       const requiredValues = [
         newUser.matricule, newUser.nom, newUser.prenom, newUser.numero_cin,
-        newUser.date_naissance, newUser.email, newUser.telephone, newUser.adresse,
+        newUser.date_naissance, newUser.telephone, newUser.adresse,
         newUser.role, newUser.date_embauche, newUser.fonction, newUser.type_contrat,
         newUser.service_id, newUser.manager_id,
       ];
@@ -154,7 +154,7 @@ export default function UtilisateursPage() {
         matricule: newUser.matricule.trim(),
         nom: newUser.nom.trim(),
         prenom: newUser.prenom.trim(),
-        email: newUser.email.trim(),
+        email: newUser.email?.trim() || null,
         numero_cin: newUser.numero_cin?.trim() || "",
         date_naissance: newUser.date_naissance || null,
         telephone: newUser.telephone?.trim() || "",
@@ -195,8 +195,11 @@ export default function UtilisateursPage() {
 
         const successText = responseData.message || (editingUser
           ? "Collaborateur modifié avec succès."
-          : "Collaborateur créé avec succès. Ses identifiants ont été envoyés par e-mail.");
-        showToast(successText, "success");
+          : "Collaborateur créé avec succès.");
+        const passwordNotice = responseData.motDePasseGenere
+          ? " Mot de passe généré (à copier immédiatement) : " + responseData.motDePasseGenere
+          : "";
+        showToast(successText + passwordNotice, "success");
       } else {
         const txt = await res.text();
         let errMsg = txt;
@@ -818,12 +821,11 @@ export default function UtilisateursPage() {
 
               <div>
                 <label className="block text-xs font-bold uppercase text-slate-600 mb-1">
-                  Email Institutionnel
+                  Email Institutionnel (facultatif)
                 </label>
                 <input
                   type="email"
-                  required
-                  placeholder="agent@port-toamasina.mg"
+                  placeholder="Laisser vide si non disponible"
                   value={newUser.email}
                   onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
                   className="input input-bordered input-sm w-full bg-white text-slate-800 focus:outline-hidden"

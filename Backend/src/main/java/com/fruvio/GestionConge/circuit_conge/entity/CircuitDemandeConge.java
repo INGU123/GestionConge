@@ -32,4 +32,8 @@ public class CircuitDemandeConge {
     @Column(name="date_soumission_chef") private LocalDateTime dateSoumissionChef;
     @Column(name="date_transmission_directeur") private LocalDateTime dateTransmissionDirecteur;
     @Column(name="date_decision") private LocalDateTime dateDecision;
+
+    @Transient private String utilisateurNom;
+    @Transient private String utilisateurPrenom;
+    @Transient private String utilisateurMatricule;
 }

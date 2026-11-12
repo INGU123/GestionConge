@@ -302,6 +302,7 @@ export default function DashboardLayout({
   ];
 
   navItems.push(
+    { href: "/dashboard/consultation-demandes", label: "Consultation des demandes", icon: <span>▤</span>, show: isAdmin || isManager },
     { href: "/dashboard/circuit-conge", label: "Circuit des congés", icon: <span>↗</span>, show: isAssistant },
     { href: "/dashboard/reliquats", label: "Vérification des reliquats", icon: <span>✓</span>, show: isPersonnel },
     { href: "/dashboard/chef-departement", label: "Examen du chef", icon: <span>▣</span>, show: isChef },

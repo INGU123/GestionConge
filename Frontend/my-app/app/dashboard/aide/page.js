@@ -34,6 +34,14 @@ const sections = [
     roles: "Collaborateur et manager selon les droits",
     href: "/dashboard/demande",
     action: "Ouvrir Mes Demandes",
+    images: [
+      {
+        src: "/DemandeConge.png",
+        alt: "Capture de l'écran de création et de suivi d'une demande de congé",
+        caption: "Créer une demande et suivre son traitement.",
+        help: "Repérez le formulaire de demande, vérifiez les dates et les informations avant l'envoi, puis consultez le statut de votre demande dans la liste de suivi.",
+      },
+    ],
     steps: [
       "Ouvrez « Mes Demandes » dans le menu.",
       "Dans le formulaire, choisissez un type de congé parmi les types proposés.",

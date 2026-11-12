@@ -998,6 +998,20 @@ export default function UtilisateursPage() {
         </div>
       )}
 
+      {generatedPassword && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/60 p-4">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
+            <h2 className="text-lg font-bold text-slate-900">Mot de passe généré</h2>
+            <p className="mt-2 text-sm text-slate-600">Aucune adresse e-mail n'a été renseignée. Copiez ce mot de passe et transmettez-le au collaborateur de manière sécurisée. Il ne sera plus affiché après fermeture de cette fenêtre.</p>
+            <div className="mt-4 rounded-lg border bg-slate-50 p-4 text-center font-mono text-lg font-bold tracking-wider text-slate-900">{generatedPassword}</div>
+            <div className="mt-5 flex justify-end gap-2">
+              <button type="button" className="btn btn-outline btn-sm" onClick={async () => { try { await navigator.clipboard.writeText(generatedPassword); showToast("Mot de passe copié.", "success"); } catch { showToast("Copie impossible : sélectionnez le mot de passe manuellement.", "warning"); } }}>Copier</button>
+              <button type="button" className="btn btn-primary btn-sm text-white" onClick={() => setGeneratedPassword("")}>J'ai noté le mot de passe</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {userToDelete && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4">
           <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">

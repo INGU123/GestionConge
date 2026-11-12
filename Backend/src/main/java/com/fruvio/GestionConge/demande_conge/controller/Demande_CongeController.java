@@ -44,7 +44,7 @@ public class Demande_CongeController {
     }
 
     // Valider ou refuser une demande (Réservé au Manager et Admin)
-    @PreAuthorize("hasAnyRole('CHEF_DEPARTEMENT', 'DIRECTEUR')")
+    @PreAuthorize("denyAll()")
     @PutMapping("/{demandeId}/traiter")
     public ResponseEntity<DemandeConge> traiterDemande(
             @PathVariable Long demandeId,

@@ -234,7 +234,7 @@ class UtilisateurServiceTest {
     void archiveUtilisateurKeepsLeaveHistoryAndSendsNotification() {
         Utilisateur admin = Utilisateur.builder().id(1L).role(Role.ADMIN).build();
         Utilisateur collaborator = Utilisateur.builder().id(2L).role(Role.EMPLOYE)
-                .matricule("EMP-002").email("employee@example.com")
+                .matricule("2026302").email("employee@example.com")
                 .nom("Agent").prenom("Test").actif(true).build();
         when(utilisateurRepository.findById(2L)).thenReturn(Optional.of(collaborator));
 
@@ -257,7 +257,7 @@ class UtilisateurServiceTest {
     void archiveUtilisateurRejectsWhenNotificationCannotBeSent() {
         Utilisateur admin = Utilisateur.builder().id(1L).role(Role.ADMIN).build();
         Utilisateur collaborator = Utilisateur.builder().id(3L).role(Role.EMPLOYE)
-                .matricule("EMP-003").email("employee@example.com").actif(true).build();
+                .matricule("2026303").email("employee@example.com").actif(true).build();
         when(utilisateurRepository.findById(3L)).thenReturn(Optional.of(collaborator));
         org.mockito.Mockito.doThrow(new IllegalStateException("SMTP indisponible"))
                 .when(emailService).sendAccountArchivedEmail(

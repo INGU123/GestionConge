@@ -62,6 +62,17 @@ export default function DashboardLayout({
 
         if (current) {
           setUser(current);
+          if (pathname === "/dashboard") {
+            const role = String(current.role || "").toUpperCase();
+            const workspace = {
+              MANAGER: "/dashboard/consultation-demandes",
+              ASSISTANT_DIRECTION: "/dashboard/circuit-conge",
+              ADMINISTRATION_PERSONNEL: "/dashboard/reliquats",
+              CHEF_DEPARTEMENT: "/dashboard/chef-departement",
+              DIRECTEUR: "/dashboard/directeur",
+            };
+            if (workspace[role]) router.replace(workspace[role]);
+          }
         } else {
           router.push("/");
         }
@@ -74,7 +85,7 @@ export default function DashboardLayout({
     };
 
     fetchUser();
-  }, [router]);
+  }, [router, pathname]);
 
   const handleLogout = () => {
     clearAuthSession();

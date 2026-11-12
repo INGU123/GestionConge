@@ -32,7 +32,7 @@ public class Demande_CongeController {
     }
 
     // Soumettre une demande de congé
-    @PreAuthorize("hasRole('ASSISTANT_DIRECTION')")
+    @PreAuthorize("denyAll()")
     @PostMapping("/demander/{utilisateurId}")
     public ResponseEntity<DemandeConge> demanderConge(
             @PathVariable Long utilisateurId,
@@ -58,7 +58,7 @@ public class Demande_CongeController {
     }
 
     // Annuler une demande
-    @PreAuthorize("hasRole('ASSISTANT_DIRECTION')")
+    @PreAuthorize("denyAll()")
     @PutMapping("/{demandeId}/annuler")
     public ResponseEntity<DemandeConge> annulerDemande(
             @PathVariable Long demandeId,

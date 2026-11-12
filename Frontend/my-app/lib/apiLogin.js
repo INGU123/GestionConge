@@ -2,6 +2,9 @@ const API_URL = "http://localhost:8080/utilisateur";
 
 export const loginUser = async (identifier, motDePass) => {
   const idTrimmed = identifier ? identifier.trim() : "";
+  if (!/^[0-9]+$/.test(idTrimmed)) {
+    throw new Error("Le matricule doit contenir uniquement des chiffres.");
+  }
   const response = await fetch(`${API_URL}/login`, {
     method: "POST",
     headers: {
@@ -9,7 +12,6 @@ export const loginUser = async (identifier, motDePass) => {
     },
     body: JSON.stringify({
       matricule: idTrimmed,
-      email: idTrimmed,
       password: motDePass,
       mot_de_pass: motDePass,
     }),

@@ -65,11 +65,13 @@ export default function DashboardLayout({
           if (pathname === "/dashboard") {
             const role = String(current.role || "").toUpperCase();
             const workspace: Record<string, string> = {
+              ADMIN: "/dashboard/consultation-demandes",
               MANAGER: "/dashboard/consultation-demandes",
               ASSISTANT_DIRECTION: "/dashboard/circuit-conge",
               ADMINISTRATION_PERSONNEL: "/dashboard/reliquats",
               CHEF_DEPARTEMENT: "/dashboard/chef-departement",
               DIRECTEUR: "/dashboard/directeur",
+              EMPLOYE: "/dashboard/solde",
             };
             if (workspace[role]) router.replace(workspace[role]);
           }
@@ -130,7 +132,7 @@ export default function DashboardLayout({
   }
 
   const userRoleClean = user?.role
-    ? user.role.toString().trim().toUpperCase()
+    ? user.role.toString().trim().toUpperCase().replace(/^ROLE_/, "")
     : "";
 
   const isAdmin =
@@ -185,7 +187,7 @@ export default function DashboardLayout({
           />
         </svg>
       ),
-      show: isEmploye,
+      show: false,
     },
 
     {

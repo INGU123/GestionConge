@@ -411,10 +411,9 @@ public class DemandeCongeService {
                 .mapToInt(solde -> {
                     int acquis = solde.getSoldeAquis() == null ? 0 : solde.getSoldeAquis();
                     int pris = solde.getSoldePris() == null ? 0 : solde.getSoldePris();
-                    Integer restant = solde.getSoldeRestant();
-                    // Le solde restant est la valeur de référence affichée à l'administration.
-                    // Recalculer uniquement pour les anciennes lignes où cette colonne est nulle.
-                    return Math.max(0, restant != null ? restant : acquis - pris);
+                    // Recalculer depuis les données de base : soldeRestant peut être obsolète
+                    // (notamment lorsqu'il vaut 0 par défaut malgré un solde acquis positif).
+                    return Math.max(0, acquis - pris);
                 }).sum();
     }
 

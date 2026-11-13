@@ -17,7 +17,7 @@ import lombok.Setter;
 public class ForgotPasswordRequest {
 
     @NotBlank(message = "Le matricule est obligatoire.")
-    @Size(max = 50, message = "Le matricule est trop long.")
-    @Pattern(regexp = "^[0-9]+$", message = "Le matricule doit contenir uniquement des chiffres.")
+    @Size(min = 7, max = 7, message = "Le matricule doit contenir exactement 7 chiffres.")
+    @Pattern(regexp = "^[0-9]{7}$", message = "Le matricule doit contenir exactement 7 chiffres.")
     private String matricule;
 }

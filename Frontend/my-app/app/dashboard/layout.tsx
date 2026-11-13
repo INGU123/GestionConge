@@ -65,11 +65,13 @@ export default function DashboardLayout({
           if (pathname === "/dashboard") {
             const role = String(current.role || "").toUpperCase();
             const workspace: Record<string, string> = {
+              ADMIN: "/dashboard/consultation-demandes",
               MANAGER: "/dashboard/consultation-demandes",
               ASSISTANT_DIRECTION: "/dashboard/circuit-conge",
               ADMINISTRATION_PERSONNEL: "/dashboard/reliquats",
               CHEF_DEPARTEMENT: "/dashboard/chef-departement",
               DIRECTEUR: "/dashboard/directeur",
+              EMPLOYE: "/dashboard/solde",
             };
             if (workspace[role]) router.replace(workspace[role]);
           }
@@ -130,7 +132,7 @@ export default function DashboardLayout({
   }
 
   const userRoleClean = user?.role
-    ? user.role.toString().trim().toUpperCase()
+    ? user.role.toString().trim().toUpperCase().replace(/^ROLE_/, "")
     : "";
 
   const isAdmin =
@@ -185,7 +187,7 @@ export default function DashboardLayout({
           />
         </svg>
       ),
-      show: isEmploye,
+      show: false,
     },
 
     {
@@ -255,7 +257,7 @@ export default function DashboardLayout({
           />
         </svg>
       ),
-      show: false,
+      show: isAdmin,
     },
 
     {
@@ -314,33 +316,13 @@ export default function DashboardLayout({
 
   navItems.push(
     { href: "/dashboard/consultation-demandes", label: "Consultation des demandes", icon: <span>▤</span>, show: isAdmin || isManager },
-    { href: "/dashboard/circuit-conge", label: "Circuit des congés", icon: <span>↗</span>, show: isAssistant },
-    { href: "/dashboard/reliquats", label: "Vérification des reliquats", icon: <span>✓</span>, show: isPersonnel },
+    { href: "/dashboard/circuit-conge", label: "Demande de reliquat", icon: <span>↗</span>, show: isAssistant },
+    { href: "/dashboard/reliquats", label: "Traitement des reliquats", icon: <span>✓</span>, show: isPersonnel },
     { href: "/dashboard/chef-departement", label: "Examen du chef", icon: <span>▣</span>, show: isChef },
     { href: "/dashboard/directeur", label: "Décisions du directeur", icon: <span>⚖</span>, show: isDirecteur },
     { href: "/dashboard/departements", label: "Départements", icon: <span>⌂</span>, show: isAdmin }
   );
 
-  navItems.push({
-    href: "/dashboard/aide",
-    label: "Aide / Guide",
-    icon: (
-      <svg
-        className="w-4 h-4"
-        fill="none"
-        stroke="currentColor"
-        viewBox="0 0 24 24"
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth="2"
-          d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5S19.832 5.477 21 6.253v13C19.832 18.477 18.246 18 16.5 18s-3.332.477-4.5 1.253"
-        />
-      </svg>
-    ),
-    show: isAdmin || isEmploye || isAssistant,
-  });
 
   const visibleNavItems = navItems.filter((item) => item.show);
 

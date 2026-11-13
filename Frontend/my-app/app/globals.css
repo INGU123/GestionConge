@@ -159,6 +159,7 @@ body {
 }
 
 .login-frame {
+  zoom: 0.95;
   width: min(1080px, 100%);
   min-height: min(680px, calc(100vh - 36px));
   display: grid;

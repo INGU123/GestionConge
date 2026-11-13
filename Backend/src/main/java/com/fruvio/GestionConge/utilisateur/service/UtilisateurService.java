@@ -138,7 +138,7 @@ public class UtilisateurService {
 
         public Utilisateur login(String identifier, String rawPassword) {
 
-                if (identifier == null || !identifier.trim().matches("[0-9]+") || rawPassword == null || rawPassword.isEmpty()) {
+                if (identifier == null || !identifier.trim().matches("[0-9]{7}") || rawPassword == null || rawPassword.isEmpty()) {
 
                         return null;
                 }
@@ -220,8 +220,8 @@ public class UtilisateurService {
                 if (matricule == null || matricule.isEmpty()) {
                         throw new IllegalArgumentException("Le matricule est obligatoire.");
                 }
-                if (!matricule.matches("[0-9]+")) {
-                        throw new IllegalArgumentException("Le matricule doit contenir uniquement des chiffres (ex. 2026100).");
+                if (!matricule.matches("[0-9]{7}")) {
+                        throw new IllegalArgumentException("Le matricule doit contenir exactement 7 chiffres (ex. 2026100).");
                 }
 
                 if (email != null && email.isEmpty()) {
@@ -511,8 +511,8 @@ public class UtilisateurService {
                         }
 
                         String newMatricule = request.getMatricule().trim();
-                        if (!newMatricule.matches("[0-9]+")) {
-                                throw new IllegalArgumentException("Le matricule doit contenir uniquement des chiffres (ex. 2026100).");
+                        if (!newMatricule.matches("[0-9]{7}")) {
+                                throw new IllegalArgumentException("Le matricule doit contenir exactement 7 chiffres (ex. 2026100).");
                         }
 
                         if (utilisateurRepository.existsByMatricule(newMatricule)) {

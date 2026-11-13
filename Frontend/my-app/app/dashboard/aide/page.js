@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { getCurrentUser } from "@/lib/apiClient";
 import Link from "next/link";
 import Image from "next/image";
@@ -246,6 +247,8 @@ const sections = [
 ];
 
 export default function GuideUtilisateurPage() {
+  const router = useRouter();
+  useEffect(() => { router.replace("/dashboard"); }, [router]);
   const [search, setSearch] = useState("");
   const [openSections, setOpenSections] = useState([]);
   const [currentUser, setCurrentUser] = useState(null);
@@ -301,6 +304,13 @@ export default function GuideUtilisateurPage() {
     );
   };
 
+  return (
+    <div className="flex min-h-[40vh] items-center justify-center">
+      <span className="loading loading-spinner loading-md text-primary" />
+    </div>
+  );
+
+  /* Interface conservée, mais masquée pour tous les rôles.
   return (
     <div className="mx-auto max-w-5xl space-y-6 pb-10">
       <section className="overflow-hidden rounded-2xl border border-[var(--primary-border)] bg-[var(--header-bg)] text-[var(--header-text)] shadow-sm">
@@ -479,4 +489,5 @@ export default function GuideUtilisateurPage() {
       </footer>
     </div>
   );
+  */
 }

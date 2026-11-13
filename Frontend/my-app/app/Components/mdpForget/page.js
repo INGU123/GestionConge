@@ -27,8 +27,8 @@ export default function ForgotPassword() {
     e.preventDefault();
     const value = mode === "matricule" ? matricule.trim() : email.trim();
 
-    if (mode === "matricule" && !/^[0-9]+$/.test(value)) {
-      setMessage({ text: "Le matricule doit contenir uniquement des chiffres (ex. 2026100).", type: "error" });
+    if (mode === "matricule" && !/^[0-9]{7}$/.test(value)) {
+      setMessage({ text: "Le matricule doit contenir exactement 7 chiffres (ex. 2026100).", type: "error" });
       return;
     }
 
@@ -124,7 +124,6 @@ export default function ForgotPassword() {
         <section className="login-form-panel">
           <div className="login-form-topline">
             <span className="login-secure-label"><FiShield /> RÉCUPÉRATION SÉCURISÉE</span>
-            <span className="login-language">FR <span>⌄</span></span>
           </div>
 
           <div className="login-form-content">
@@ -172,10 +171,11 @@ export default function ForgotPassword() {
                     id={mode === "matricule" ? "matricule" : "email"}
                     type={mode === "matricule" ? "text" : "email"}
                     inputMode={mode === "matricule" ? "numeric" : undefined}
-                    pattern={mode === "matricule" ? "[0-9]+" : undefined}
+                    pattern={mode === "matricule" ? "[0-9]{7}" : undefined}
+                    maxLength={mode === "matricule" ? 7 : undefined}
                     placeholder={mode === "matricule" ? "Ex. 2026100" : "nom@exemple.mg"}
                     value={mode === "matricule" ? matricule : email}
-                    onChange={(e) => mode === "matricule" ? setMatricule(e.target.value.replace(/[^0-9]/g, "")) : setEmail(e.target.value)}
+                    onChange={(e) => mode === "matricule" ? setMatricule(e.target.value.replace(/[^0-9]/g, "").slice(0, 7)) : setEmail(e.target.value)}
                     autoComplete={mode === "matricule" ? "username" : "email"}
                     required
                     disabled={loading}

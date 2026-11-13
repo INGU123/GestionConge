@@ -12,7 +12,8 @@ import lombok.Setter;
 @NoArgsConstructor
 public class CompletePasswordResetRequest {
     @NotBlank(message = "Le matricule est obligatoire.")
-    @Pattern(regexp = "^[0-9]+$", message = "Le matricule doit contenir uniquement des chiffres.")
+    @Size(min = 7, max = 7, message = "Le matricule doit contenir exactement 7 chiffres.")
+    @Pattern(regexp = "^[0-9]{7}$", message = "Le matricule doit contenir exactement 7 chiffres.")
     private String matricule;
 
     @NotBlank(message = "L'ancien mot de passe est obligatoire.")

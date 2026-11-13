@@ -58,6 +58,10 @@ function ResetPasswordForm() {
       setMessage({ text: "Veuillez remplir tous les champs.", type: "error" });
       return;
     }
+    if (!initialToken && !/^[0-9]{7}$/.test(normalizedMatricule)) {
+      setMessage({ text: "Le matricule doit contenir exactement 7 chiffres (ex. 2026100).", type: "error" });
+      return;
+    }
     if (nouveauMotDePasse.length < 6) {
       setMessage({ text: "Le nouveau mot de passe doit comporter au moins 6 caractères.", type: "error" });
       return;
@@ -141,7 +145,6 @@ function ResetPasswordForm() {
         <section className="login-form-panel">
           <div className="login-form-topline">
             <span className="login-secure-label"><FiShield /> RÉINITIALISATION SÉCURISÉE</span>
-            <span className="login-language">FR <span>⌄</span></span>
           </div>
 
           <div className="login-form-content">
@@ -175,8 +178,8 @@ function ResetPasswordForm() {
                 <label htmlFor="matricule">Matricule professionnel</label>
                 <div className="login-input-wrap">
                   <FiUser className="login-input-icon" aria-hidden="true" />
-                  <input id="matricule" type="text" placeholder="Ex. SPAT-001" value={matricule}
-                    onChange={(event) => setMatricule(event.target.value)} autoComplete="username" required disabled={loading} />
+                  <input id="matricule" type="text" inputMode="numeric" pattern="[0-9]{7}" maxLength={7} placeholder="Ex. 2026100" value={matricule}
+                    onChange={(event) => setMatricule(event.target.value.replace(/[^0-9]/g, "").slice(0, 7))} autoComplete="username" required disabled={loading} />
                 </div>
               </div>
 

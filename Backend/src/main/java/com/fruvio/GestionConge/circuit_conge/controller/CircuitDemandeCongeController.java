@@ -37,6 +37,8 @@ public class CircuitDemandeCongeController {
             @NotNull java.time.LocalDate dateDebut, @NotNull java.time.LocalDate dateFin,
             @Size(max=1500) String commentaire) {}
     public record ReliquatRequest(@NotNull @Min(0) Integer reliquatJours, @Size(max=1500) String commentaire) {}
+    public record FormulaireAssistantRequest(@NotNull java.time.LocalDate dateDebut,
+            @NotNull java.time.LocalDate dateFin, @Size(max=1500) String commentaire) {}
     public record DecisionRequest(@NotBlank String decision, String motif) {}
 
     @PostMapping
@@ -74,8 +76,8 @@ public class CircuitDemandeCongeController {
 
     @PostMapping("/{id}/soumettre-chef")
     @PreAuthorize("hasRole('ASSISTANT_DIRECTION')")
-    public CircuitDemandeConge soumettreChef(@PathVariable Long id) {
-        return service.soumettreAuChef(id, currentUser());
+    public CircuitDemandeConge soumettreChef(@PathVariable Long id, @Valid @RequestBody FormulaireAssistantRequest body) {
+        return service.soumettreAuChef(id, body.dateDebut(), body.dateFin(), body.commentaire(), currentUser());
     }
 
     @PostMapping("/{id}/transmettre-directeur")

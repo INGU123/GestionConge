@@ -35,14 +35,14 @@ public class Type_congeController {
     }
 
     // Récupérer tous les types de congés
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'EMPLOYE')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'EMPLOYE', 'ASSISTANT_DIRECTION', 'ADMINISTRATION_PERSONNEL', 'CHEF_DEPARTEMENT', 'DIRECTEUR')")
     @GetMapping("/all")
     public ResponseEntity<List<Type_conge>> getAllTypes() {
         return ResponseEntity.ok(typeCongeService.findAll());
     }
 
     // Récupérer un type par son ID
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'EMPLOYE')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'EMPLOYE', 'ASSISTANT_DIRECTION', 'ADMINISTRATION_PERSONNEL', 'CHEF_DEPARTEMENT', 'DIRECTEUR')")
     @GetMapping("/{id}")
     public ResponseEntity<Type_conge> getTypeById(@PathVariable Long id) {
         Type_conge type = typeCongeService.findById(id);

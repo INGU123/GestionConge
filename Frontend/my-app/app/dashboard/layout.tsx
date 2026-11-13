@@ -316,8 +316,8 @@ export default function DashboardLayout({
 
   navItems.push(
     { href: "/dashboard/consultation-demandes", label: "Consultation des demandes", icon: <span>▤</span>, show: isAdmin || isManager },
-    { href: "/dashboard/circuit-conge", label: "Circuit des congés", icon: <span>↗</span>, show: isAssistant },
-    { href: "/dashboard/reliquats", label: "Vérification des reliquats", icon: <span>✓</span>, show: isPersonnel },
+    { href: "/dashboard/circuit-conge", label: "Demande de reliquat", icon: <span>↗</span>, show: isAssistant },
+    { href: "/dashboard/reliquats", label: "Traitement des reliquats", icon: <span>✓</span>, show: isPersonnel },
     { href: "/dashboard/chef-departement", label: "Examen du chef", icon: <span>▣</span>, show: isChef },
     { href: "/dashboard/directeur", label: "Décisions du directeur", icon: <span>⚖</span>, show: isDirecteur },
     { href: "/dashboard/departements", label: "Départements", icon: <span>⌂</span>, show: isAdmin }

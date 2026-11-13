@@ -45,10 +45,11 @@ public class CircuitDemandeCongeService {
         if (employe.getService_id() == null) throw new IllegalStateException("Le collaborateur n'est affecté à aucun service.");
         Services serviceEmploye = services.findById(employe.getService_id()).orElseThrow(() -> new IllegalStateException("Service du collaborateur introuvable."));
         if (serviceEmploye.getDepartementId() == null) throw new IllegalStateException("Le service du collaborateur doit être rattaché à un département avant la création du dossier.");
-        if (debut == null || fin == null || fin.isBefore(debut)) throw new IllegalArgumentException("Période de congé invalide.");
+        if (debut == null || fin == null) throw new IllegalArgumentException("Les dates de début et de fin sont obligatoires.");
+        if (fin.isBefore(debut)) throw new IllegalArgumentException("La date de fin ne peut pas être antérieure à la date de début.");
         if (typeId == null) throw new IllegalArgumentException("Le type de congé est obligatoire.");
         int nombre = joursFeries.compterJoursOuvres(debut, fin);
-        if (nombre <= 0) throw new IllegalArgumentException("La période ne contient aucun jour ouvré.");
+        if (nombre <= 0) throw new IllegalArgumentException("La période ne contient aucun jour ouvré (hors week-ends et jours fériés).");
         verifierChevauchementCircuit(employeId, debut, fin, null);
         CircuitDemandeConge saved = circuits.save(CircuitDemandeConge.builder().utilisateurId(employeId).typeCongeId(typeId)
                 .assistantId(assistant.getId()).dateDebut(debut).dateFin(fin).nombreJours(nombre)
@@ -96,9 +97,14 @@ public class CircuitDemandeCongeService {
         exiger(actor, Role.ADMINISTRATION_PERSONNEL);
         if (reliquat == null || reliquat < 0) throw new IllegalArgumentException("Le reliquat doit être positif ou nul.");
         CircuitDemandeConge d = dossierVerrouille(id);
+        if (!"RELIQUAT_EN_ATTENTE".equals(d.getStatut())) throw new IllegalStateException("Ce dossier n'attend pas le reliquat.");
         int disponible = demandesHistoriques.calculerReliquatDisponible(d.getUtilisateurId(), d.getTypeCongeId());
         if (reliquat > disponible) throw new IllegalArgumentException("Le reliquat saisi (" + reliquat + " j) dépasse le solde disponible enregistré (" + disponible + " j).");
-        if (!"RELIQUAT_EN_ATTENTE".equals(d.getStatut())) throw new IllegalStateException("Ce dossier n'attend pas le reliquat.");
+        if (reliquat < d.getNombreJours()) {
+            throw new IllegalArgumentException("Reliquat insuffisant : " + d.getNombreJours()
+                    + " jour(s) ouvré(s) sont demandés, mais seulement " + reliquat
+                    + " jour(s) sont retournés. Le dossier ne peut pas avancer avec un reliquat nul ou insuffisant.");
+        }
         d.setReliquatJours(reliquat); d.setReliquatCommentaire(commentaire);
         d.setAdministrationPersonnelId(actor.getId()); d.setDateReliquat(LocalDateTime.now());
         d.setStatut("RELIQUAT_RETOURNE");
@@ -123,18 +129,18 @@ public class CircuitDemandeCongeService {
             throw new IllegalArgumentException("Les deux dates du formulaire final sont obligatoires.");
         if (nouvelleDateDebut != null) {
             if (nouvelleDateFin.isBefore(nouvelleDateDebut))
-                throw new IllegalArgumentException("Période de congé invalide.");
+                throw new IllegalArgumentException("La date de fin ne peut pas être antérieure à la date de début.");
             d.setDateDebut(nouvelleDateDebut);
             d.setDateFin(nouvelleDateFin);
         }
         int joursFinal = joursFeries.compterJoursOuvres(d.getDateDebut(), d.getDateFin());
-        if (joursFinal <= 0) throw new IllegalArgumentException("La période finale ne contient aucun jour ouvré.");
+        if (joursFinal <= 0) throw new IllegalArgumentException("La période finale ne contient aucun jour ouvré (hors week-ends et jours fériés).");
         d.setNombreJours(joursFinal);
         if (commentaireFinal != null) d.setCommentaire(commentaireFinal);
         verifierChevauchementCircuit(d.getUtilisateurId(), d.getDateDebut(), d.getDateFin(), d.getId());
         if (d.getReliquatJours() == null || d.getReliquatJours() < d.getNombreJours())
-            throw new IllegalStateException("Reliquat insuffisant : " + d.getNombreJours() + " jour(s) demandés, "
-                    + (d.getReliquatJours() == null ? 0 : d.getReliquatJours()) + " jour(s) retournés par l'administration.");
+            throw new IllegalStateException("Reliquat insuffisant : " + d.getNombreJours() + " jour(s) ouvré(s) demandés, "
+                    + (d.getReliquatJours() == null ? 0 : d.getReliquatJours()) + " jour(s) retournés par l'administration. Corrigez la période ou faites vérifier le solde.");
         int joursVerifies = demandesHistoriques.verifierEligibiliteWorkflow(d.getUtilisateurId(), d.getTypeCongeId(), d.getDateDebut(), d.getDateFin());
         if (joursVerifies != d.getNombreJours()) throw new IllegalStateException("Le nombre de jours ouvrés a changé. Recréez le dossier après vérification.");
         Utilisateur employe = utilisateurActif(d.getUtilisateurId());

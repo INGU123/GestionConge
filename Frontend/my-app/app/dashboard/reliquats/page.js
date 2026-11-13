@@ -5,7 +5,8 @@ import {useToast} from "../../components/ToastProvider";
 const API="http://localhost:8080";
 const disponiblePourType=(soldes)=>soldes.reduce((total,s)=>{
  const acquis=Number(s.soldeAquis??0), pris=Number(s.soldePris??0);
- return total+Math.max(0,acquis-pris);
+ const restant=s.soldeRestant==null?acquis-pris:Number(s.soldeRestant);
+ return total+Math.max(0,restant);
 },0);
 export default function ReliquatsPage(){
  const [rows,setRows]=useState([]),[balances,setBalances]=useState({}),[values,setValues]=useState({}),[busy,setBusy]=useState(null);const toast=useToast();
@@ -28,7 +29,7 @@ export default function ReliquatsPage(){
  return <section className="space-y-5"><header><h1 className="text-2xl font-bold">Administration du personnel — Vérification des reliquats</h1><p className="text-sm text-slate-500">Le reliquat disponible est calculé automatiquement : jours acquis moins jours déjà pris. Le circuit compte les jours ouvrés, hors week-ends et jours fériés.</p></header>
  {rows.map(d=>{const userBalances=balances[d.id]||[];const relevant=userBalances.filter(b=>String(b.typeCongeId)===String(d.typeCongeId));const disponible=disponiblePourType(relevant);const demande=Number(d.nombreJours||0);const suffisant=disponible>=demande;return <article key={d.id} className="card bg-base-100 border p-5 space-y-3">
  <div className="flex flex-wrap justify-between gap-2"><b>Dossier #{d.id} — {d.utilisateurPrenom} {d.utilisateurNom} ({d.utilisateurMatricule})</b><span>Type #{d.typeCongeId} · {d.dateDebut} → {d.dateFin}</span></div>
- <div className="rounded-lg bg-slate-50 border p-3 text-sm"><b>Calcul du dossier :</b><p>{demande} jour(s) ouvré(s) demandés</p><b className="mt-2 inline-block">Soldes enregistrés pour ce type de congé :</b>{relevant.length?relevant.map(b=><p key={b.id}>Exercice {b.periode} : acquis {b.soldeAquis??0} j · pris {b.soldePris??0} j · restant calculé {Math.max(0,Number(b.soldeAquis??0)-Number(b.soldePris??0))} j</p>):<p className="text-amber-700">Aucun solde correspondant trouvé. Vérifiez et régularisez le solde du collaborateur avant de poursuivre.</p>}<p className="font-semibold mt-2">Total disponible : {disponible} jour(s)</p></div>
+ <div className="rounded-lg bg-slate-50 border p-3 text-sm"><b>Calcul du dossier :</b><p>{demande} jour(s) ouvré(s) demandés</p><b className="mt-2 inline-block">Soldes enregistrés pour ce type de congé :</b>{relevant.length?relevant.map(b=><p key={b.id}>Exercice {b.periode} : acquis {b.soldeAquis??0} j · pris {b.soldePris??0} j · restant {b.soldeRestant??Math.max(0,Number(b.soldeAquis??0)-Number(b.soldePris??0))} j</p>):<p className="text-amber-700">Aucun solde correspondant trouvé. Vérifiez et régularisez le solde du collaborateur avant de poursuivre.</p>}<p className="font-semibold mt-2">Total disponible : {disponible} jour(s)</p></div>
  <label className="form-control max-w-xs"><span className="label-text">Reliquat vérifié (calcul automatique)</span><input type="number" min={demande} max={disponible} readOnly className="input input-bordered" value={values[d.id]?.days??disponible}/></label>
  {!suffisant&&<p className="text-sm text-error">Solde insuffisant : {demande} jour(s) ouvré(s) demandés, {disponible} disponible(s). Le dossier ne peut pas être retourné avec 0 jour ou un reliquat insuffisant. Corrigez le solde dans la gestion des soldes avant de poursuivre.</p>}
  <label className="form-control"><span className="label-text">Observation</span><textarea className="textarea textarea-bordered" value={values[d.id]?.comment??""} onChange={e=>setValues({...values,[d.id]:{...values[d.id],comment:e.target.value}})}/></label>

@@ -1,17 +1,16 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useState } from "react";
 import { getCurrentUser } from "@/lib/apiClient";
 
 const ROLE_HOME = {
-  ADMIN: { title: "Espace administrateur", description: "Consultez les dossiers de reliquat et gérez les paramètres de l’application.", href: "/dashboard/consultation-demandes", action: "Suivi des reliquats" },
-  MANAGER: { title: "Espace professionnel", description: "Bienvenue dans votre espace de travail.", href: null, action: "" },
-  ASSISTANT_DIRECTION: { title: "Espace Assistant de direction", description: "Enregistrez les demandes verbales de reliquat et suivez leur traitement.", href: "/dashboard/circuit-conge", action: "Demande de reliquat" },
-  ADMINISTRATION_PERSONNEL: { title: "Espace Administration du personnel", description: "Vérifiez les soldes disponibles et retournez les reliquats aux assistants.", href: "/dashboard/reliquats", action: "Traitement des reliquats" },
-  CHEF_DEPARTEMENT: { title: "Espace Chef de département", description: "Examinez les dossiers transmis par l’assistant de direction.", href: "/dashboard/chef-departement", action: "Examiner les dossiers" },
-  DIRECTEUR: { title: "Espace Directeur", description: "Consultez les dossiers transmis et rendez votre décision.", href: "/dashboard/directeur", action: "Décisions du directeur" },
-  EMPLOYE: { title: "Espace collaborateur", description: "Consultez vos soldes et votre historique de congés.", href: "/dashboard/solde", action: "Mes soldes" },
+  ADMIN: { title: "Espace administrateur", description: "Consultez les dossiers de reliquat et gérez les paramètres de l’application." },
+  MANAGER: { title: "Espace professionnel", description: "Bienvenue dans votre espace de travail." },
+  ASSISTANT_DIRECTION: { title: "Espace Assistant de direction", description: "Enregistrez les demandes verbales de reliquat et suivez leur traitement." },
+  ADMINISTRATION_PERSONNEL: { title: "Espace Administration du personnel", description: "Vérifiez les soldes disponibles et retournez les reliquats aux assistants." },
+  CHEF_DEPARTEMENT: { title: "Espace Chef de département", description: "Examinez les dossiers transmis par l’assistant de direction." },
+  DIRECTEUR: { title: "Espace Directeur", description: "Consultez les dossiers transmis et rendez votre décision." },
+  EMPLOYE: { title: "Espace collaborateur", description: "Consultez vos soldes et votre historique de congés." },
 };
 
 export default function Dashboard() {
@@ -35,7 +34,6 @@ export default function Dashboard() {
         <div className="card-body gap-3">
           <h2 className="card-title">{home.title}</h2>
           <p className="text-base-content/70">{home.description}</p>
-          {home.href && <div className="card-actions mt-2"><Link className="btn btn-primary" href={home.href}>{home.action}</Link></div>}
         </div>
       </article>
       <p className="text-sm text-base-content/60">Utilisez le menu latéral pour accéder aux fonctionnalités autorisées selon votre rôle.</p>

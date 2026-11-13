@@ -257,7 +257,7 @@ export default function DashboardLayout({
           />
         </svg>
       ),
-      show: false,
+      show: isAdmin,
     },
 
     {

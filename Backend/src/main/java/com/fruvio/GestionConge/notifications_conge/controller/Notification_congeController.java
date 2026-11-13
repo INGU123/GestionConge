@@ -39,7 +39,7 @@ public class Notification_congeController {
     }
 
     // Notifications non lues du compte authentifié
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'EMPLOYE')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'EMPLOYE', 'ASSISTANT_DIRECTION', 'ADMINISTRATION_PERSONNEL', 'CHEF_DEPARTEMENT', 'DIRECTEUR')")
     @GetMapping("/utilisateur/{utilisateurId}/non-lues")
     public ResponseEntity<List<Notification>> getNonLues(@PathVariable Long utilisateurId) {
         Utilisateur currentUser = getCurrentAuthenticatedUser();

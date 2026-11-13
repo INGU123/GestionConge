@@ -48,7 +48,7 @@ public class Notification_congeController {
     }
 
     // Toutes les notifications du compte authentifié
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'EMPLOYE')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'EMPLOYE', 'ASSISTANT_DIRECTION', 'ADMINISTRATION_PERSONNEL', 'CHEF_DEPARTEMENT', 'DIRECTEUR')")
     @GetMapping("/utilisateur/{utilisateurId}")
     public ResponseEntity<List<Notification>> getToutes(@PathVariable Long utilisateurId) {
         Utilisateur currentUser = getCurrentAuthenticatedUser();
@@ -57,7 +57,7 @@ public class Notification_congeController {
     }
 
     // Marquer comme lue
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'EMPLOYE')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'EMPLOYE', 'ASSISTANT_DIRECTION', 'ADMINISTRATION_PERSONNEL', 'CHEF_DEPARTEMENT', 'DIRECTEUR')")
     @PutMapping("/{notificationId}/lire")
     public ResponseEntity<Void> marquerCommeLue(@PathVariable Long notificationId) {
         Notification notification = notificationRepository.findById(notificationId).orElse(null);

@@ -109,9 +109,7 @@ public class CircuitDemandeCongeService {
 
     @Transactional
     public CircuitDemandeConge soumettreAuChef(Long id, Utilisateur assistant) {
-        CircuitDemandeConge dossier = circuits.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Dossier introuvable."));
-        return soumettreAuChef(id, dossier.getDateDebut(), dossier.getDateFin(), dossier.getCommentaire(), assistant);
+        return soumettreAuChef(id, null, null, null, assistant);
     }
 
     @Transactional
@@ -121,14 +119,18 @@ public class CircuitDemandeCongeService {
         CircuitDemandeConge d = dossierVerrouille(id);
         verifierAssistantProprietaire(d, assistant);
         if (!"RELIQUAT_RETOURNE".equals(d.getStatut())) throw new IllegalStateException("Le reliquat doit d'abord être retourné.");
-        if (nouvelleDateDebut == null || nouvelleDateFin == null || nouvelleDateFin.isBefore(nouvelleDateDebut))
-            throw new IllegalArgumentException("Période de congé invalide.");
-        int joursFinal = joursFeries.compterJoursOuvres(nouvelleDateDebut, nouvelleDateFin);
+        if ((nouvelleDateDebut == null) != (nouvelleDateFin == null))
+            throw new IllegalArgumentException("Les deux dates du formulaire final sont obligatoires.");
+        if (nouvelleDateDebut != null) {
+            if (nouvelleDateFin.isBefore(nouvelleDateDebut))
+                throw new IllegalArgumentException("Période de congé invalide.");
+            d.setDateDebut(nouvelleDateDebut);
+            d.setDateFin(nouvelleDateFin);
+        }
+        int joursFinal = joursFeries.compterJoursOuvres(d.getDateDebut(), d.getDateFin());
         if (joursFinal <= 0) throw new IllegalArgumentException("La période finale ne contient aucun jour ouvré.");
-        d.setDateDebut(nouvelleDateDebut);
-        d.setDateFin(nouvelleDateFin);
         d.setNombreJours(joursFinal);
-        d.setCommentaire(commentaireFinal);
+        if (commentaireFinal != null) d.setCommentaire(commentaireFinal);
         verifierChevauchementCircuit(d.getUtilisateurId(), d.getDateDebut(), d.getDateFin(), d.getId());
         if (d.getReliquatJours() == null || d.getReliquatJours() < d.getNombreJours())
             throw new IllegalStateException("Reliquat insuffisant : " + d.getNombreJours() + " jour(s) demandés, "

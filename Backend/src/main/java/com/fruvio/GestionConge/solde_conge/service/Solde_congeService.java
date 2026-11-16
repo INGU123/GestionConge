@@ -104,6 +104,11 @@ public class Solde_congeService {
     // Initialiser les soldes annuels pour un utilisateur (Admin)
     @Transactional
     public void initialiserSoldesPourUtilisateur(Long utilisateurId, int annee) {
+        Utilisateur utilisateur = utilisateurRepository.findByIdForUpdate(utilisateurId)
+                .orElseThrow(() -> new IllegalArgumentException("Collaborateur introuvable."));
+        if (!utilisateur.isEnabled()) {
+            throw new IllegalStateException("Impossible d'initialiser les soldes d'un compte inactif ou archivé.");
+        }
         List<Type_conge> types = typeCongeRepository.findAll();
 
         for (Type_conge type : types) {
@@ -113,7 +118,7 @@ public class Solde_congeService {
                 solde.setUtilisateurId(utilisateurId);
                 solde.setTypeCongeId(type.getId());
                 solde.setPeriode(annee);
-                int nbJours = (type.getNombreJoursParAn() != null) ? type.getNombreJoursParAn() : 0;
+                int nbJours = Math.max(0, type.getNombreJoursParAn() != null ? type.getNombreJoursParAn() : 0);
                 solde.setSoldeAquis(nbJours);
                 solde.setSoldePris(0);
                 solde.setSoldeRestant(nbJours);
@@ -140,6 +145,11 @@ public class Solde_congeService {
         if (acteurId == null) {
             throw new AccessDeniedException("Un administrateur authentifié est requis.");
         }
+        Utilisateur acteur = utilisateurRepository.findByIdForUpdate(acteurId)
+                .orElseThrow(() -> new AccessDeniedException("Administrateur introuvable."));
+        if (acteur.getRole() != Role.ADMIN || !acteur.isEnabled()) {
+            throw new AccessDeniedException("Seul un administrateur actif peut ajuster un solde.");
+        }
         if (motif == null || motif.trim().length() < 10) {
             throw new IllegalArgumentException("Le motif de correction doit contenir au moins 10 caractères.");
         }
@@ -147,7 +157,7 @@ public class Solde_congeService {
             throw new IllegalArgumentException("Le solde ne peut pas être négatif.");
         }
 
-        Solde_conge solde = soldeCongeRepository.findById(soldeId)
+        Solde_conge solde = soldeCongeRepository.findByIdForUpdate(soldeId)
                 .orElseThrow(() -> new IllegalArgumentException("Solde introuvable"));
 
         if (Objects.equals(solde.getUtilisateurId(), acteurId)) {

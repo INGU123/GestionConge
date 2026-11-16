@@ -1,6 +1,7 @@
 package com.fruvio.GestionConge.utilisateur.config;
 
 import java.util.List;
+import org.springframework.beans.factory.annotation.Value;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -28,6 +29,9 @@ public class SecurityConfig {
 
     private final JwtAuthFilter jwtAuthFilter;
 
+    @Value("${app.cors.allowed-origins:http://localhost:3000,http://127.0.0.1:3000,http://192.168.16.71:3000}")
+    private String allowedOrigins;
+
     public SecurityConfig(JwtAuthFilter jwtAuthFilter) {
         this.jwtAuthFilter = jwtAuthFilter;
     }
@@ -45,48 +49,36 @@ public class SecurityConfig {
 
                         // Endpoints réservés à l'ADMIN
                         .requestMatchers(HttpMethod.POST, "/utilisateur/create").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.POST, "/solde/initialiser/**").denyAll()
-                        .requestMatchers(HttpMethod.PUT, "/solde/ajuster/**").denyAll()
-                        .requestMatchers(HttpMethod.POST, "/type-conge/create").denyAll()
-                        .requestMatchers(HttpMethod.PUT, "/type-conge/update/**").denyAll()
-                        .requestMatchers(HttpMethod.DELETE, "/type-conge/delete/**").denyAll()
-                        .requestMatchers(HttpMethod.POST, "/services/create").denyAll()
-                        .requestMatchers(HttpMethod.PUT, "/services/**").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.DELETE, "/services/**").denyAll()
-                        .requestMatchers(HttpMethod.POST, "/historiques/creer").denyAll()
-                        .requestMatchers(HttpMethod.POST, "/notification/creer").denyAll()
-                        .requestMatchers(HttpMethod.POST, "/jours-feries/create").denyAll()
-
+                        // Les contrôleurs appliquent les rôles précis sur ces opérations.
                         // Endpoints réservés à ADMIN et MANAGER
-                        .requestMatchers("/utilisateur/all").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.PUT, "/conge/*/traiter").hasRole("DIRECTEUR")
-                        .requestMatchers(HttpMethod.GET, "/conge/manager/**").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.GET, "/conge/en-attente").hasRole("ADMIN")
+                        .requestMatchers("/utilisateur/all").hasAnyRole("ADMIN", "MANAGER")
+                        .requestMatchers(HttpMethod.PUT, "/conge/*/traiter").hasAnyRole("ADMIN", "MANAGER")
+                        .requestMatchers(HttpMethod.GET, "/conge/manager/**").hasAnyRole("ADMIN", "MANAGER")
+                        .requestMatchers(HttpMethod.GET, "/conge/en-attente").hasAnyRole("ADMIN", "MANAGER")
                         .requestMatchers(HttpMethod.GET, "/conge/all").hasAnyRole("ADMIN", "MANAGER")
-                        .requestMatchers(HttpMethod.GET, "/solde", "/solde/all").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/solde", "/solde/all").hasAnyRole("ADMIN", "MANAGER")
                         .requestMatchers(HttpMethod.GET, "/historiques", "/historiques/all")
-                        .hasRole("ADMIN")
+                        .hasAnyRole("ADMIN", "MANAGER")
 
                         // Endpoints accessibles aux utilisateurs connectés (avec vérifications de
                         // propriété/périmètre)
-                        .requestMatchers(HttpMethod.GET, "/utilisateur/{id}").hasAnyRole("ADMIN", "EMPLOYE", "ASSISTANT_DIRECTION")
+                        .requestMatchers(HttpMethod.GET, "/utilisateur/{id}").hasAnyRole("ADMIN", "MANAGER", "EMPLOYE", "ASSISTANT_DIRECTION", "ADMINISTRATION_PERSONNEL", "CHEF_DEPARTEMENT", "DIRECTEUR")
                         .requestMatchers(HttpMethod.PUT, "/utilisateur/update")
-                        .hasAnyRole("ADMIN", "EMPLOYE", "ASSISTANT_DIRECTION", "ADMINISTRATION_PERSONNEL", "CHEF_DEPARTEMENT", "DIRECTEUR")
+                        .hasAnyRole("ADMIN", "MANAGER", "EMPLOYE", "ASSISTANT_DIRECTION", "ADMINISTRATION_PERSONNEL", "CHEF_DEPARTEMENT", "DIRECTEUR")
                         .requestMatchers(HttpMethod.PUT, "/utilisateur/change-password")
-                        .hasAnyRole("ADMIN", "EMPLOYE", "ASSISTANT_DIRECTION", "ADMINISTRATION_PERSONNEL", "CHEF_DEPARTEMENT", "DIRECTEUR")
+                        .hasAnyRole("ADMIN", "MANAGER", "EMPLOYE", "ASSISTANT_DIRECTION", "ADMINISTRATION_PERSONNEL", "CHEF_DEPARTEMENT", "DIRECTEUR")
                         .requestMatchers(HttpMethod.POST, "/conge/demander/**")
                         .hasAnyRole("ADMIN", "MANAGER", "EMPLOYE").requestMatchers(HttpMethod.PUT, "/conge/*/annuler")
                         .hasAnyRole("ADMIN", "MANAGER", "EMPLOYE")
                         .requestMatchers(HttpMethod.GET, "/conge/mes-demandes/**")
                         .hasAnyRole("ADMIN", "MANAGER", "EMPLOYE")
                         .requestMatchers(HttpMethod.GET, "/solde/utilisateur/**")
-                        .hasAnyRole("ADMIN", "EMPLOYE", "ADMINISTRATION_PERSONNEL").requestMatchers(HttpMethod.GET, "/type-conge/**")
-                        .hasAnyRole("ADMIN", "EMPLOYE", "ASSISTANT_DIRECTION").requestMatchers(HttpMethod.GET, "/services/**")
-                        .hasAnyRole("ADMIN", "EMPLOYE", "ASSISTANT_DIRECTION", "ADMINISTRATION_PERSONNEL", "CHEF_DEPARTEMENT", "DIRECTEUR").requestMatchers("/jours-feries/**")
-                        .hasAnyRole("ADMIN", "EMPLOYE").requestMatchers("/notification/**")
-                        .hasAnyRole("ADMIN", "EMPLOYE", "ASSISTANT_DIRECTION", "ADMINISTRATION_PERSONNEL", "CHEF_DEPARTEMENT", "DIRECTEUR")
-                        .requestMatchers(HttpMethod.GET, "/historiques/utilisateur/**")
-                        .hasAnyRole("ADMIN", "EMPLOYE")
+                        .hasAnyRole("ADMIN", "MANAGER", "EMPLOYE", "ADMINISTRATION_PERSONNEL").requestMatchers(HttpMethod.GET, "/type-conge/**")
+                        .hasAnyRole("ADMIN", "MANAGER", "EMPLOYE", "ASSISTANT_DIRECTION").requestMatchers(HttpMethod.GET, "/services/**")
+                        .hasAnyRole("ADMIN", "MANAGER", "EMPLOYE", "ASSISTANT_DIRECTION", "ADMINISTRATION_PERSONNEL", "CHEF_DEPARTEMENT", "DIRECTEUR").requestMatchers("/jours-feries/**")
+                        .hasAnyRole("ADMIN", "MANAGER", "EMPLOYE", "ASSISTANT_DIRECTION", "ADMINISTRATION_PERSONNEL", "CHEF_DEPARTEMENT", "DIRECTEUR").requestMatchers("/notification/**")
+                        .hasAnyRole("ADMIN", "MANAGER", "EMPLOYE", "ASSISTANT_DIRECTION", "ADMINISTRATION_PERSONNEL", "CHEF_DEPARTEMENT", "DIRECTEUR").requestMatchers(HttpMethod.GET, "/historiques/utilisateur/**")
+                        .hasAnyRole("ADMIN", "MANAGER", "EMPLOYE")
 
                         // Toute autre requête nécessite une authentification
                         .anyRequest().authenticated())
@@ -121,7 +113,8 @@ public class SecurityConfig {
 
         CorsConfiguration configuration = new CorsConfiguration();
 
-        configuration.setAllowedOrigins(List.of("http://localhost:3000", "http://127.0.0.1:3000"));
+        configuration.setAllowedOrigins(java.util.Arrays.stream(allowedOrigins.split(","))
+                .map(String::trim).filter(origin -> !origin.isEmpty()).distinct().toList());
 
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
 

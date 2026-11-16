@@ -19,6 +19,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.access.AccessDeniedException;
 
 import com.fruvio.GestionConge.demande_conge.entity.DemandeConge;
 import com.fruvio.GestionConge.demande_conge.repository.DemandeCongeRepository;
@@ -64,6 +65,9 @@ class DemandeCongeServiceTest {
         void setUp() {
                 lenient().when(demandeRepo.save(any(DemandeConge.class)))
                                 .thenAnswer(invocation -> invocation.getArgument(0));
+                lenient().when(utilisateurRepo.findByIdForUpdate(any(Long.class)))
+                                .thenAnswer(invocation -> Optional.of(Utilisateur.builder()
+                                        .id(invocation.getArgument(0)).actif(true).build()));
         }
 
         @Test
@@ -331,6 +335,28 @@ class DemandeCongeServiceTest {
                                 "Congé validé par le responsable #9 (exercice 2026)", 9L);
                 verify(historiqueService).enregistrerMouvement(7L, "DEBIT_CONGE", 2, 1L, 45L,
                                 "Congé validé par le responsable #9 (exercice 2027)", 9L);
+        }
+
+        @Test
+        void managerCanReadOnlyPendingRequestsFromTheirOwnTeam() {
+                Utilisateur manager = Utilisateur.builder().id(9L).role(Role.MANAGER).build();
+                Utilisateur employee = Utilisateur.builder().id(7L).manager_id(9L).build();
+                DemandeConge pending = DemandeConge.builder().id(30L).utilisateurId(7L)
+                                .statut("EN_ATTENTE").build();
+                when(utilisateurRepo.findByManagerId(9L)).thenReturn(List.of(employee));
+                when(demandeRepo.findByUtilisateurIdInAndStatut(List.of(7L), "EN_ATTENTE"))
+                                .thenReturn(List.of(pending));
+
+                assertEquals(List.of(pending), demandeCongeService.getDemandesEnAttentePourManager(9L, manager));
+        }
+
+        @Test
+        void managerCannotReadAnotherManagersPendingRequests() {
+                Utilisateur manager = Utilisateur.builder().id(9L).role(Role.MANAGER).build();
+
+                assertThrows(AccessDeniedException.class,
+                                () -> demandeCongeService.getDemandesEnAttentePourManager(8L, manager));
+                verifyNoInteractions(utilisateurRepo, demandeRepo);
         }
 
 }

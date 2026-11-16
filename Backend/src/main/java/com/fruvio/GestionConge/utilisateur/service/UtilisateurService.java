@@ -248,7 +248,7 @@ public class UtilisateurService {
                                 || request.getAdresse() == null || request.getAdresse().isBlank()
                                 || request.getFonction() == null || request.getFonction().isBlank()
                                 || request.getTypeContrat() == null || request.getTypeContrat().isBlank()
-                                || request.getService_id() == null || request.getManager_id() == null
+                                || request.getService_id() == null
                                 || request.getDate_embauche() == null || request.getRole() == null) {
                         throw new IllegalArgumentException("Compléter toutes les informations de l'utilisateur");
                 }
@@ -257,11 +257,14 @@ public class UtilisateurService {
                         throw new IllegalArgumentException("Le service sélectionné n'existe pas.");
                 }
 
-                Utilisateur manager = utilisateurRepository.findById(request.getManager_id())
-                                .orElseThrow(() -> new IllegalArgumentException("Le responsable hiérarchique sélectionné n'existe pas."));
-                if (manager.getRole() != Role.MANAGER || !manager.isActif()) {
-                        throw new IllegalArgumentException(
-                                        "Le responsable hiérarchique doit être un compte MANAGER actif.");
+                if (request.getManager_id() != null) {
+                        Utilisateur manager = utilisateurRepository.findById(request.getManager_id())
+                                        .orElseThrow(() -> new IllegalArgumentException(
+                                                        "Le responsable hiérarchique sélectionné n'existe pas."));
+                        if (manager.getRole() != Role.MANAGER || !manager.isEnabled()) {
+                                throw new IllegalArgumentException(
+                                                "Le responsable hiérarchique doit être un compte MANAGER actif.");
+                        }
                 }
 
                 Role assignedRole = request.getRole();
@@ -464,6 +467,8 @@ public class UtilisateurService {
                 if (request.getPassword() != null && !request.getPassword().trim().isEmpty()) {
 
                         targetUser.setPassword(passwordEncoder.encode(request.getPassword().trim()));
+                        targetUser.setResetToken(null);
+                        targetUser.setTokenExpiration(null);
                 }
 
                 // 3. Champs administratifs protégés
@@ -595,6 +600,8 @@ public class UtilisateurService {
                 }
 
                 targetUser.setPassword(passwordEncoder.encode(request.getNouveauMotDePasse()));
+                targetUser.setResetToken(null);
+                targetUser.setTokenExpiration(null);
 
                 utilisateurRepository.save(targetUser);
         }
@@ -636,6 +643,8 @@ public class UtilisateurService {
 
                 targetUser.setActifAvantArchivage(targetUser.isActif());
                 targetUser.setActif(false);
+                targetUser.setResetToken(null);
+                targetUser.setTokenExpiration(null);
                 targetUser.setDeletedAt(archivedAt);
                 targetUser.setDeletedBy(currentUser.getId());
                 targetUser.setDeletionReason(normalizedReason);

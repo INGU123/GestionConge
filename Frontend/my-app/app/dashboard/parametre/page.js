@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { getCurrentUser, authFetch } from "@/lib/apiClient";
+import { getCurrentUser, authFetch, API_BASE_URL } from "@/lib/apiClient";
 
 export default function Parametres() {
   const currentUser = getCurrentUser();
@@ -51,7 +51,7 @@ export default function Parametres() {
         payload.role = formData.role;
       }
 
-      const res = await authFetch("http://localhost:8080/utilisateur/update", {
+      const res = await authFetch(`${API_BASE_URL}/utilisateur/update`, {
         method: "PUT",
         body: JSON.stringify(payload),
       });

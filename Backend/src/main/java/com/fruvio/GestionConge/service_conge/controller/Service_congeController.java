@@ -30,7 +30,7 @@ public class Service_congeController {
     }
 
     // Récupérer tous les services (Consultation pour tous les utilisateurs authentifiés)
-    @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYE', 'ASSISTANT_DIRECTION', 'ADMINISTRATION_PERSONNEL', 'CHEF_DEPARTEMENT', 'DIRECTEUR')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'EMPLOYE', 'ASSISTANT_DIRECTION', 'ADMINISTRATION_PERSONNEL', 'CHEF_DEPARTEMENT', 'DIRECTEUR')")
     @GetMapping
     public List<Services> getAllServices() {
         return serviceRepository.findAll();
@@ -46,14 +46,14 @@ public class Service_congeController {
     }
 
     // Créer un nouveau service (Strictement ADMIN)
-    @PreAuthorize("denyAll()")
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/create")
     public Services createService(@RequestBody Services service) {
         return serviceRepository.save(service);
     }
 
     // Mettre à jour un service existant (Strictement ADMIN)
-    @PreAuthorize("denyAll()")
+    @PreAuthorize("hasRole('ADMIN')")
     @PutMapping("/{id}")
     public ResponseEntity<Services> updateService(@PathVariable Long id, @RequestBody Services updatedService) {
         return serviceRepository.findById(id)
@@ -79,7 +79,7 @@ public class Service_congeController {
     }
 
     // Supprimer un service (Strictement ADMIN)
-    @PreAuthorize("denyAll()")
+    @PreAuthorize("hasRole('ADMIN')")
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteService(@PathVariable Long id) {
         return serviceRepository.findById(id)

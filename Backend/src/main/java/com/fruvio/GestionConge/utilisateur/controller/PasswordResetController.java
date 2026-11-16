@@ -2,7 +2,6 @@ package com.fruvio.GestionConge.utilisateur.controller;
 
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -74,10 +73,16 @@ public class PasswordResetController {
         String matricule = body.getMatricule().trim();
         Utilisateur user = utilisateurRepository.findByMatricule(matricule).orElse(null);
 
+        // Verrouiller le compte avant de vérifier les demandes en attente.
+        if (user != null) {
+            user = utilisateurRepository.findByIdForUpdate(user.getId()).orElse(null);
+        }
+
         // Réponse uniforme : ne pas révéler si un matricule existe.
-        if (user != null && user.isActif()) {
+        if (user != null && user.isEnabled()) {
+            Long requestedUserId = user.getId();
             boolean pending = requestRepository.findByStatutOrderByDateDemandeDesc("EN_ATTENTE")
-                    .stream().anyMatch(r -> r.getUtilisateur().getId().equals(user.getId()));
+                    .stream().anyMatch(r -> r.getUtilisateur().getId().equals(requestedUserId));
             if (!pending) {
                 PasswordResetRequestEntity request = requestRepository.save(PasswordResetRequestEntity.builder()
                         .utilisateur(user).statut("EN_ATTENTE").dateDemande(LocalDateTime.now()).build());
@@ -119,53 +124,13 @@ public class PasswordResetController {
                 "message", "Si ce matricule correspond à un compte actif, la demande sera transmise à l'administrateur."));
     }
 
-    /**
-     * Récupération automatique par adresse e-mail : aucune validation ADMIN.
-     * La réponse reste identique si l'adresse n'existe pas afin d'éviter l'énumération des comptes.
-     */
+    /** La récupération du compte s'effectue uniquement par matricule avec validation ADMIN. */
     @PostMapping("/forgot-password/email")
-    @Transactional
     public ResponseEntity<Map<String, Object>> forgotPasswordByEmail(
             @Valid @RequestBody EmailPasswordResetRequest body) {
-        String email = body.getEmail().trim();
-        Utilisateur user = utilisateurRepository.findByEmail(email).orElse(null);
-
-        if (user != null && user.isActif() && !user.isArchived()) {
-            String temporaryPassword = generateTemporaryPassword();
-            String resetToken = java.util.UUID.randomUUID().toString();
-            user.setPassword(passwordEncoder.encode(temporaryPassword));
-            user.setResetToken(resetToken);
-            user.setTokenExpiration(LocalDateTime.now().plusHours(24));
-            utilisateurRepository.save(user);
-
-            PasswordResetRequestEntity request = requestRepository.save(PasswordResetRequestEntity.builder()
-                    .utilisateur(user)
-                    .statut("ACCEPTEE")
-                    .dateDemande(LocalDateTime.now())
-                    .dateTraitement(LocalDateTime.now())
-                    .build());
-
-            String resetLink = frontendUrl() + "/Components/mdpReset?token="
-                    + URLEncoder.encode(resetToken, StandardCharsets.UTF_8);
-            String message = "Bonjour " + safe(user.getPrenom()) + " " + safe(user.getNom()) + ",\n\n"
-                    + "Votre réinitialisation automatique a été prise en compte.\n\n"
-                    + "Nom : " + safe(user.getNom()) + "\n"
-                    + "Prénom : " + safe(user.getPrenom()) + "\n"
-                    + "Matricule : " + safe(user.getMatricule()) + "\n"
-                    + "Mot de passe temporaire : " + temporaryPassword + "\n\n"
-                    + "Utilisez ce lien pour remplacer immédiatement le mot de passe temporaire :\n"
-                    + resetLink + "\n\nService RH - SPAT";
-            try {
-                emailService.sendEmail(user.getEmail(),
-                        "Réinitialisation de votre mot de passe - SPAT", message);
-            } catch (Exception ex) {
-                log.error("Échec de l'envoi du lien de réinitialisation par e-mail.", ex);
-                throw new IllegalStateException("Impossible d'envoyer l'e-mail de réinitialisation.", ex);
-            }
-        }
-
-        return ResponseEntity.ok(Map.of("success", true,
-                "message", "Si cette adresse correspond à un compte actif, les informations de réinitialisation ont été envoyées."));
+        return ResponseEntity.status(org.springframework.http.HttpStatus.GONE).body(Map.of(
+                "success", false,
+                "message", "La récupération du compte s'effectue uniquement avec votre matricule professionnel."));
     }
 
     @GetMapping("/admin/password-reset-requests")
@@ -187,49 +152,47 @@ public class PasswordResetController {
     @PreAuthorize("hasRole('ADMIN')")
     @Transactional
     public ResponseEntity<Map<String, Object>> approveRequest(@PathVariable Long id) {
-        PasswordResetRequestEntity request = requestRepository.findById(id).orElse(null);
+        PasswordResetRequestEntity request = requestRepository.findByIdForUpdate(id).orElse(null);
         if (request == null || !"EN_ATTENTE".equals(request.getStatut())) {
             return ResponseEntity.badRequest().body(Map.of("success", false, "message", "Demande introuvable ou déjà traitée."));
         }
-
-        Utilisateur user = request.getUtilisateur();
-        String temporaryPassword = generateTemporaryPassword();
-        user.setPassword(passwordEncoder.encode(temporaryPassword));
-        // Une nouvelle réinitialisation admin remplace toute activation initiale précédente.
-        user.setResetToken(null);
-        user.setTokenExpiration(null);
+        Utilisateur user = utilisateurRepository.findByIdForUpdate(request.getUtilisateur().getId())
+                .orElseThrow(() -> new IllegalStateException("Compte utilisateur introuvable."));
+        if (!user.isEnabled() || user.getEmail() == null || user.getEmail().isBlank()) {
+            throw new IllegalStateException("Le compte doit être actif et disposer d'une adresse e-mail enregistrée.");
+        }
+        String resetToken = java.util.UUID.randomUUID().toString();
+        user.setResetToken(resetToken);
+        user.setTokenExpiration(LocalDateTime.now().plusHours(24));
         utilisateurRepository.save(user);
-
         request.setStatut("ACCEPTEE");
         request.setDateTraitement(LocalDateTime.now());
         requestRepository.save(request);
 
-        String resetLink = frontendUrl() + "/Components/mdpReset?matricule="
-                + URLEncoder.encode(safe(user.getMatricule()), StandardCharsets.UTF_8);
+        String resetLink = frontendUrl() + "/Components/mdpReset?token="
+                + URLEncoder.encode(resetToken, StandardCharsets.UTF_8);
         String emailText = "Bonjour " + safe(user.getPrenom()) + " " + safe(user.getNom()) + ",\n\n"
-                + "Votre demande de réinitialisation de mot de passe a été ACCEPTÉE.\n\n"
-                + "Nom : " + safe(user.getNom()) + "\nPrénom : " + safe(user.getPrenom())
-                + "\nMatricule : " + safe(user.getMatricule())
-                + "\nMot de passe temporaire : " + temporaryPassword
-                + "\n\nConnectez-vous à l'interface de réinitialisation pour remplacer ce mot de passe temporaire par un mot de passe personnel :\n"
-                + resetLink + "\n\nPour votre sécurité, changez ce mot de passe temporaire dès que possible.\n\nService RH - SPAT";
-
+                + "Votre demande de réinitialisation de mot de passe a été ACCEPTÉE par l'administration SPAT.\n\n"
+                + "Matricule : " + safe(user.getMatricule()) + "\n"
+                + "Pour choisir un nouveau mot de passe, utilisez ce lien personnel à usage unique :\n"
+                + resetLink + "\n\n"
+                + "Ce lien expire dans 24 heures. Aucun mot de passe temporaire n'est envoyé par e-mail.\n\n"
+                + "Service RH - SPAT";
         try {
             emailService.sendEmail(user.getEmail(), "Demande acceptée : réinitialisation de mot de passe - SPAT", emailText);
         } catch (Exception ex) {
-            log.error("L'e-mail d'acceptation de la demande {} a échoué ; la transaction doit être annulée.", id, ex);
-            throw new IllegalStateException("L'e-mail contenant le mot de passe temporaire n'a pas pu être envoyé.", ex);
+            log.error("L'e-mail de réinitialisation de la demande {} a échoué ; la transaction doit être annulée.", id, ex);
+            throw new IllegalStateException("Impossible d'envoyer le lien sécurisé de réinitialisation.", ex);
         }
-
         return ResponseEntity.ok(Map.of("success", true,
-                "message", "Demande acceptée. Les informations et le lien de changement de mot de passe ont été envoyés à l'agent."));
+                "message", "Demande acceptée. Un lien sécurisé valable 24 heures a été envoyé à l'agent."));
     }
 
     @PostMapping("/admin/password-reset-requests/{id}/reject")
     @PreAuthorize("hasRole('ADMIN')")
     @Transactional
     public ResponseEntity<Map<String, Object>> rejectRequest(@PathVariable Long id) {
-        PasswordResetRequestEntity request = requestRepository.findById(id).orElse(null);
+        PasswordResetRequestEntity request = requestRepository.findByIdForUpdate(id).orElse(null);
         if (request == null || !"EN_ATTENTE".equals(request.getStatut())) {
             return ResponseEntity.badRequest().body(Map.of("success", false, "message", "Demande introuvable ou déjà traitée."));
         }
@@ -263,8 +226,11 @@ public class PasswordResetController {
             @Valid @RequestBody CompletePasswordResetRequest body) {
         String matricule = body.getMatricule().trim();
         Utilisateur user = utilisateurRepository.findByMatricule(matricule).orElse(null);
+        if (user != null && user.getId() != null) {
+            user = utilisateurRepository.findByIdForUpdate(user.getId()).orElse(null);
+        }
 
-        if (user == null || !user.isActif() || user.getId() == null) {
+        if (user == null || !user.isEnabled() || user.getId() == null) {
             return ResponseEntity.badRequest().body(Map.of("success", false,
                     "message", "Matricule ou mot de passe temporaire incorrect, ou demande non acceptée."));
         }
@@ -306,10 +272,10 @@ public class PasswordResetController {
     public ResponseEntity<Map<String, Object>> setInitialPassword(
             @Valid @RequestBody InitialPasswordSetupRequest body) {
         String token = body.getToken().trim();
-        Utilisateur user = utilisateurRepository.findByResetToken(token).orElse(null);
+        Utilisateur user = utilisateurRepository.findByResetTokenForUpdate(token).orElse(null);
 
-        if (user == null || !user.isActif() || user.getTokenExpiration() == null
-                || user.getTokenExpiration().isBefore(LocalDateTime.now())) {
+        if (user == null || !user.isEnabled() || user.getTokenExpiration() == null
+                || !user.getTokenExpiration().isAfter(LocalDateTime.now())) {
             return ResponseEntity.badRequest().body(Map.of("success", false,
                     "message", "Ce lien de changement de mot de passe est invalide ou expiré."));
         }
@@ -338,11 +304,4 @@ public class PasswordResetController {
         return value == null ? "" : value;
     }
 
-    private String generateTemporaryPassword() {
-        final String alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789@#";
-        SecureRandom random = new SecureRandom();
-        StringBuilder value = new StringBuilder(12);
-        for (int i = 0; i < 12; i++) value.append(alphabet.charAt(random.nextInt(alphabet.length())));
-        return value.toString();
-    }
 }

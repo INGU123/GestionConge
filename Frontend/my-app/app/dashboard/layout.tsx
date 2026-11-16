@@ -7,7 +7,7 @@ import { useRouter, usePathname } from "next/navigation";
 import { FiMoon, FiSun, FiChevronLeft, FiChevronRight, FiLogOut } from "react-icons/fi";
 import { getCurrentUser, clearAuthSession } from "@/lib/apiClient";
 import NotificationHeaderMenu from "./notifications/page";
-import { ToastProvider } from "../components/ToastProvider";
+import { ToastProvider } from "../Components/ToastProvider";
 
 interface DashboardUser {
   id?: number;
@@ -63,9 +63,10 @@ export default function DashboardLayout({
         if (current) {
           setUser(current);
           if (pathname === "/dashboard") {
-            const role = String(current.role || "").toUpperCase();
+            const role = String(current.role || "").trim().toUpperCase().replace(/^ROLE_/, "");
             const workspace: Record<string, string> = {
-              MANAGER: "/dashboard/consultation-demandes",
+              ADMIN: "/dashboard/consultation-demandes",
+              MANAGER: "/dashboard/historique",
               ASSISTANT_DIRECTION: "/dashboard/circuit-conge",
               ADMINISTRATION_PERSONNEL: "/dashboard/reliquats",
               CHEF_DEPARTEMENT: "/dashboard/chef-departement",
@@ -130,13 +131,12 @@ export default function DashboardLayout({
   }
 
   const userRoleClean = user?.role
-    ? user.role.toString().trim().toUpperCase()
+    ? user.role.toString().trim().toUpperCase().replace(/^ROLE_/, "")
     : "";
 
-  const isAdmin =
-    userRoleClean === "ADMIN" || userRoleClean === "ROLE_ADMIN";
+  const isAdmin = userRoleClean === "ADMIN";
 
-  const isManager = userRoleClean === "MANAGER" || userRoleClean === "ROLE_MANAGER";
+  const isManager = userRoleClean === "MANAGER";
   const isAssistant = userRoleClean === "ASSISTANT_DIRECTION";
   const isPersonnel = userRoleClean === "ADMINISTRATION_PERSONNEL";
   const isChef = userRoleClean === "CHEF_DEPARTEMENT";
@@ -185,7 +185,7 @@ export default function DashboardLayout({
           />
         </svg>
       ),
-      show: isEmploye,
+      show: false,
     },
 
     {
@@ -213,7 +213,7 @@ export default function DashboardLayout({
           />
         </svg>
       ),
-      show: isAdmin || isEmploye,
+      show: isEmploye || isAdmin,
     },
 
     {
@@ -308,18 +308,25 @@ export default function DashboardLayout({
           />
         </svg>
       ),
-      show: isAdmin || isEmploye,
+      show: isAdmin || isManager || isEmploye,
     },
   ];
 
   navItems.push(
-    { href: "/dashboard/consultation-demandes", label: "Consultation des demandes", icon: <span>▤</span>, show: isAdmin || isManager },
+    { href: "/dashboard/consultation-demandes", label: "Consultation des demandes", icon: <span>▤</span>, show: isAdmin },
     { href: "/dashboard/circuit-conge", label: "Circuit des congés", icon: <span>↗</span>, show: isAssistant },
     { href: "/dashboard/reliquats", label: "Vérification des reliquats", icon: <span>✓</span>, show: isPersonnel },
     { href: "/dashboard/chef-departement", label: "Examen du chef", icon: <span>▣</span>, show: isChef },
     { href: "/dashboard/directeur", label: "Décisions du directeur", icon: <span>⚖</span>, show: isDirecteur },
     { href: "/dashboard/departements", label: "Départements", icon: <span>⌂</span>, show: isAdmin }
   );
+
+  navItems.push({
+    href: "/dashboard/decisions",
+    label: "Décisions reçues",
+    icon: <span>✓</span>,
+    show: isEmploye,
+  });
 
   navItems.push({
     href: "/dashboard/aide",
@@ -339,7 +346,7 @@ export default function DashboardLayout({
         />
       </svg>
     ),
-    show: isAdmin || isEmploye || isAssistant,
+    show: true,
   });
 
   const visibleNavItems = navItems.filter((item) => item.show);
@@ -414,7 +421,7 @@ export default function DashboardLayout({
             </button>
 
             {/* NOTIFICATIONS */}
-            {!isManager && <NotificationHeaderMenu />}
+            {(isAdmin || isManager || isEmploye) && <NotificationHeaderMenu />}
 
             {/* UTILISATEUR */}
             <div className="text-right">

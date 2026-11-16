@@ -162,14 +162,10 @@ public class EmailService {
         // E-MAIL DE BIENVENUE
         // =========================================================
 
-        public void sendWelcomeEmail(String toEmail, String matricule, String rawPassword) {
-                sendWelcomeEmail(toEmail, matricule, rawPassword, false, null);
-        }
-
         /**
-         * Envoie les identifiants du compte avec un lien d'activation clairement identifiable.
+         * Envoie un e-mail de bienvenue sans jamais recevoir ni transporter le mot de passe en clair.
          */
-        public void sendWelcomeEmail(String toEmail, String matricule, String rawPassword,
+        public void sendWelcomeEmail(String toEmail, String matricule,
                         boolean generatedAutomatically, String token) {
 
                 if (toEmail == null || toEmail.isBlank()) {
@@ -178,10 +174,6 @@ public class EmailService {
                 if (matricule == null || matricule.isBlank()) {
                         throw new IllegalArgumentException("Le matricule est obligatoire pour l'e-mail de bienvenue.");
                 }
-                if (rawPassword == null || rawPassword.isBlank()) {
-                        throw new IllegalArgumentException("Le mot de passe est obligatoire.");
-                }
-
                 String subject = "Création de votre compte - Gestion des Congés";
                 StringBuilder plainText = new StringBuilder("Bonjour,\n\n");
                 String actionHtml = "";

@@ -330,7 +330,7 @@ public class UtilisateurService {
                 // Le mot de passe généré sans e-mail sera renvoyé une seule fois à l'administrateur.
                 if (saved.getEmail() != null && !saved.getEmail().isBlank()) {
                   try {
-                        emailService.sendWelcomeEmail(saved.getEmail(), saved.getMatricule(), rawPassword,
+                        emailService.sendWelcomeEmail(saved.getEmail(), saved.getMatricule(),
                                         generatedAutomatically, initialPasswordToken);
                         log.info("E-mail de bienvenue envoyé pour le compte #{}.", saved.getId());
                   } catch (IllegalStateException e) {

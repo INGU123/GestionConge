@@ -366,7 +366,8 @@ export default function UtilisateursPage() {
     setViewUserModal(user);
   };
 
-  const isAdmin = currentUser?.role?.toUpperCase() === "ADMIN";
+  const normalizedRole = String(currentUser?.role || "").trim().toUpperCase().replace(/^ROLE_/, "");
+  const isAdmin = normalizedRole === "ADMIN" || normalizedRole === "ADMINISTRATEUR";
 
   if (!loading && !isAdmin) {
     return (

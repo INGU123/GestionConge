@@ -155,7 +155,8 @@ export default function Dashboard() {
       </div>
 
       {/* Tables section : Recent Demandes & Solde Summary */}
-      <div className={`grid grid-cols-1 ${isAdmin ? "" : "lg:grid-cols-2"} gap-6`}>
+      {!isAdmin && (
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Recent Demandes - Masqué pour les Administrateurs */}
         {!isAdmin && (
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
@@ -262,6 +263,7 @@ export default function Dashboard() {
           )}
         </div>
       </div>
+      )}
     </div>
   );
 }

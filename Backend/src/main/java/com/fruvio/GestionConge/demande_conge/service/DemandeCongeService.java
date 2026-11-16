@@ -67,6 +67,12 @@ public class DemandeCongeService {
             throw new AccessDeniedException("Vous ne pouvez soumettre une demande que pour votre propre compte.");
         }
 
+        Utilisateur demandeur = utilisateurRepo.findByIdForUpdate(utilisateurId)
+                .orElseThrow(() -> new IllegalArgumentException("Collaborateur demandeur introuvable."));
+        if (!demandeur.isEnabled()) {
+            throw new IllegalStateException("Un collaborateur inactif ou archivé ne peut pas soumettre une demande.");
+        }
+
         if (demande.getDateDebut() == null || demande.getDateFin() == null) {
             throw new IllegalArgumentException("Les dates de début et de fin sont obligatoires.");
         }
@@ -143,8 +149,7 @@ public class DemandeCongeService {
                                 + demande.getDateFin() + " a été soumise avec succès.",
                         "INFO", "/dashboard/demande");
 
-                Utilisateur demandeur = utilisateurRepo.findById(utilisateurId).orElse(null);
-                Utilisateur manager = demandeur == null || demandeur.getManager_id() == null
+                Utilisateur manager = demandeur.getManager_id() == null
                         ? null : utilisateurRepo.findById(demandeur.getManager_id()).orElse(null);
 
                 if (manager != null && manager.isActif() && manager.getRole() == Role.MANAGER) {
@@ -188,6 +193,9 @@ public class DemandeCongeService {
         Long demandeurId = demande.getUtilisateurId();
         Utilisateur demandeur = utilisateurRepo.findById(demandeurId)
                 .orElseThrow(() -> new IllegalArgumentException("Collaborateur demandeur introuvable."));
+        if (!demandeur.isEnabled()) {
+            throw new IllegalStateException("Le compte du demandeur est inactif ou archivé.");
+        }
 
         if (Objects.equals(demandeur.getId(), currentUser.getId())) {
             throw new AccessDeniedException("Vous ne pouvez pas approuver ou refuser votre propre demande.");
@@ -427,7 +435,7 @@ public class DemandeCongeService {
                 || dateFin.isBefore(dateDebut)) {
             throw new IllegalArgumentException("Collaborateur, type et période valides obligatoires.");
         }
-        Utilisateur utilisateur = utilisateurRepo.findById(utilisateurId)
+        Utilisateur utilisateur = utilisateurRepo.findByIdForUpdate(utilisateurId)
                 .orElseThrow(() -> new IllegalArgumentException("Collaborateur introuvable."));
         if (!utilisateur.isEnabled()) throw new IllegalStateException("Le collaborateur n'est pas actif.");
 

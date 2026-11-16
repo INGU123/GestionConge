@@ -113,19 +113,32 @@ public class CircuitDemandeCongeService {
         CircuitDemandeConge d = dossierVerrouille(id);
         verifierAssistantProprietaire(d, assistant);
         if (!"RELIQUAT_RETOURNE".equals(d.getStatut())) throw new IllegalStateException("Le reliquat doit d'abord être retourné.");
+        Utilisateur employe = utilisateurActif(d.getUtilisateurId());
         verifierChevauchementCircuit(d.getUtilisateurId(), d.getDateDebut(), d.getDateFin(), d.getId());
         if (d.getReliquatJours() == null || d.getReliquatJours() < d.getNombreJours())
             throw new IllegalStateException("Reliquat insuffisant : " + d.getNombreJours() + " jour(s) demandés, "
                     + (d.getReliquatJours() == null ? 0 : d.getReliquatJours()) + " jour(s) retournés par l'administration.");
         int joursVerifies = demandesHistoriques.verifierEligibiliteWorkflow(d.getUtilisateurId(), d.getTypeCongeId(), d.getDateDebut(), d.getDateFin());
         if (joursVerifies != d.getNombreJours()) throw new IllegalStateException("Le nombre de jours ouvrés a changé. Recréez le dossier après vérification.");
-        Utilisateur employe = utilisateurActif(d.getUtilisateurId());
         if (employe.getService_id() == null) throw new IllegalStateException("Le collaborateur n'est affecté à aucun service.");
         Services service = services.findById(employe.getService_id()).orElseThrow(() -> new IllegalStateException("Service du collaborateur introuvable."));
         if (service.getDepartementId() == null) throw new IllegalStateException("Le service du collaborateur n'est rattaché à aucun département.");
         Departement dep = departements.findById(service.getDepartementId()).orElseThrow(() -> new IllegalStateException("Département introuvable."));
         if (!Boolean.TRUE.equals(dep.getActif())) throw new IllegalStateException("Département inactif.");
-        d.setDepartementId(dep.getId()); d.setChefId(dep.getChefId()); d.setDirecteurId(dep.getDirecteurId());
+        if (dep.getChefId() == null || dep.getDirecteurId() == null) {
+            throw new IllegalStateException("Le département doit disposer d'un chef et d'un directeur.");
+        }
+        Utilisateur chef = utilisateurs.findById(dep.getChefId())
+                .orElseThrow(() -> new IllegalStateException("Chef de département introuvable."));
+        if (!chef.isEnabled() || chef.getRole() != Role.CHEF_DEPARTEMENT) {
+            throw new IllegalStateException("Le chef de département affecté doit être un compte CHEF_DEPARTEMENT actif.");
+        }
+        Utilisateur directeur = utilisateurs.findById(dep.getDirecteurId())
+                .orElseThrow(() -> new IllegalStateException("Directeur de département introuvable."));
+        if (!directeur.isEnabled() || directeur.getRole() != Role.DIRECTEUR) {
+            throw new IllegalStateException("Le directeur affecté doit être un compte DIRECTEUR actif.");
+        }
+        d.setDepartementId(dep.getId()); d.setChefId(chef.getId()); d.setDirecteurId(directeur.getId());
         d.setDateSoumissionChef(LocalDateTime.now()); d.setStatut("CHEF_EN_ATTENTE");
         CircuitDemandeConge saved = circuits.save(d);
         notifications.creerNotification(d.getChefId(), "Un dossier de congé (#" + d.getId() + ") attend votre examen.", "CIRCUIT_CONGE", "/dashboard/chef-departement");
@@ -155,6 +168,7 @@ public class CircuitDemandeCongeService {
         String raison = motif == null ? "" : motif.trim();
         if ("REFUSEE".equals(choix) && raison.isBlank()) throw new IllegalArgumentException("Le motif de refus est obligatoire.");
 
+        utilisateurActif(d.getUtilisateurId());
         if ("VALIDEE".equals(choix)) {
             demandesHistoriques.verifierEligibiliteWorkflow(d.getUtilisateurId(), d.getTypeCongeId(), d.getDateDebut(), d.getDateFin());
         }
@@ -194,7 +208,8 @@ public class CircuitDemandeCongeService {
         return circuits.findByIdForUpdate(id).orElseThrow(() -> new IllegalArgumentException("Dossier introuvable."));
     }
     private Utilisateur utilisateurActif(Long id) {
-        Utilisateur u = utilisateurs.findById(id).orElseThrow(() -> new IllegalArgumentException("Collaborateur introuvable."));
+        Utilisateur u = utilisateurs.findByIdForUpdate(id)
+                .orElseThrow(() -> new IllegalArgumentException("Collaborateur introuvable."));
         if (!u.isEnabled()) throw new IllegalArgumentException("Le collaborateur est inactif ou archivé.");
         return u;
     }

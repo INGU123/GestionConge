@@ -6,7 +6,7 @@ import {
   getHistoriqueUtilisateur,
 } from "../../api/historiqueMouvements/historiqueMouvement";
 import { getAllTypeConge } from "../../api/typeConge/typeConge";
-import { getCurrentUser, authFetch } from "@/lib/apiClient";
+import { getCurrentUser, authFetch, API_BASE_URL } from "@/lib/apiClient";
 import {
   History,
   User,
@@ -17,11 +17,10 @@ import {
   Users,
   Layers,
   ShieldCheck,
-  Download,
   FileText,
   FileSpreadsheet,
 } from "lucide-react";
-import { useToast } from "../../components/ToastProvider";
+import { useToast } from "../../Components/ToastProvider";
 
 export default function HistoriquePage() {
   const [currentUser, setCurrentUser] = useState(null);
@@ -35,6 +34,7 @@ export default function HistoriquePage() {
 
 
 
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     const user = getCurrentUser();
     if (!user) {
@@ -46,6 +46,7 @@ export default function HistoriquePage() {
     const role = String(user.role || "").trim().toUpperCase().replace(/^ROLE_/, "");
     setViewAll(role === "ADMIN" || role === "MANAGER");
   }, []);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   useEffect(() => {
     if (!currentUser) return;
@@ -62,7 +63,7 @@ export default function HistoriquePage() {
             : getHistoriqueUtilisateur(currentUser.id),
           getAllTypeConge().catch(() => []),
           canViewAll
-            ? authFetch("http://localhost:8080/utilisateur/all")
+            ? authFetch(`${API_BASE_URL}/utilisateur/all`)
                 .then((r) => (r.ok ? r.json() : []))
                 .catch(() => [])
             : Promise.resolve([]),

@@ -1,7 +1,9 @@
 "use client";
+
+import { API_BASE_URL } from "@/lib/apiClient";
 import {useEffect,useState} from "react";
 import {authFetch,getCurrentUser} from "@/lib/apiClient";
-const API="http://localhost:8080";
+const API=API_BASE_URL;
 export default function ConsultationDemandesPage(){
  const [rows,setRows]=useState([]),[circuits,setCircuits]=useState([]),[loading,setLoading]=useState(true),[role]=useState(()=>String(getCurrentUser()?.role||"").toUpperCase());
  useEffect(()=>{Promise.all([authFetch(API+"/conge/all").then(async r=>{if(!r.ok)throw new Error("Consultation non autorisée");return r.json();}),role==="ADMIN"?authFetch(API+"/circuit-conge/admin/consultation").then(r=>r.ok?r.json():[]):Promise.resolve([])]).then(([legacy,workflow])=>{const circuitLegacyIds=new Set(workflow.map(d=>d.legacyDemandeId).filter(Boolean));setRows(role==="ADMIN"?legacy.filter(d=>!circuitLegacyIds.has(d.id)):legacy);setCircuits(workflow);}).catch(()=>{setRows([]);setCircuits([]);}).finally(()=>setLoading(false));},[role]);

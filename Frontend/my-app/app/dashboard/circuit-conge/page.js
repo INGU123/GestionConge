@@ -1,9 +1,9 @@
 "use client";
 import { useEffect, useState } from "react";
-import { authFetch } from "@/lib/apiClient";
-import { useToast } from "../../components/ToastProvider";
+import { authFetch, API_BASE_URL } from "@/lib/apiClient";
+import { useToast } from "../../Components/ToastProvider";
 
-const API = "http://localhost:8080";
+const API = API_BASE_URL;
 export default function CircuitCongePage() {
   const [agents,setAgents]=useState([]), [types,setTypes]=useState([]), [dossiers,setDossiers]=useState([]);
   const [form,setForm]=useState({utilisateurId:"",typeCongeId:"",dateDebut:"",dateFin:"",commentaire:""});
@@ -13,7 +13,8 @@ export default function CircuitCongePage() {
     authFetch(API+"/type-conge/all").then(r=>r.ok?r.json():[]),
     authFetch(API+"/circuit-conge/assistant/mes-dossiers").then(r=>r.ok?r.json():[])
   ]);setAgents(a);setTypes(t);setDossiers(d);};
-  useEffect(()=>{load().catch(()=>toast("Impossible de charger les données.","error"));},[]);
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+ useEffect(()=>{load().catch(()=>toast("Impossible de charger les données.","error"));},[]);
   const create=async e=>{e.preventDefault();setBusy(true);try{
     const r=await authFetch(API+"/circuit-conge",{method:"POST",body:JSON.stringify({...form,utilisateurId:Number(form.utilisateurId),typeCongeId:Number(form.typeCongeId)})});
     const data=await r.json();if(!r.ok)throw new Error(data.message||"Création impossible");

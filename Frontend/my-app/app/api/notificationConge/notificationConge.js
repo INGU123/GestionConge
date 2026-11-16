@@ -1,6 +1,6 @@
-import { authFetch } from "@/lib/apiClient";
+import { authFetch, API_BASE_URL } from "@/lib/apiClient";
 
-const API_URL = "http://localhost:8080/notification";
+const API_URL = `${API_BASE_URL}/notification`;
 
 export const getNotificationNonLues = async (utilisateurId) => {
   if (!utilisateurId) return [];

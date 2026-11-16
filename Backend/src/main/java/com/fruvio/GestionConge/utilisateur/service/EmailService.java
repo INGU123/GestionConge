@@ -162,14 +162,10 @@ public class EmailService {
         // E-MAIL DE BIENVENUE
         // =========================================================
 
-        public void sendWelcomeEmail(String toEmail, String matricule, String rawPassword) {
-                sendWelcomeEmail(toEmail, matricule, rawPassword, false, null);
-        }
-
         /**
-         * Envoie les identifiants du compte avec un lien d'activation clairement identifiable.
+         * Envoie un e-mail de bienvenue sans jamais recevoir ni transporter le mot de passe en clair.
          */
-        public void sendWelcomeEmail(String toEmail, String matricule, String rawPassword,
+        public void sendWelcomeEmail(String toEmail, String matricule,
                         boolean generatedAutomatically, String token) {
 
                 if (toEmail == null || toEmail.isBlank()) {
@@ -178,10 +174,6 @@ public class EmailService {
                 if (matricule == null || matricule.isBlank()) {
                         throw new IllegalArgumentException("Le matricule est obligatoire pour l'e-mail de bienvenue.");
                 }
-                if (rawPassword == null || rawPassword.isBlank()) {
-                        throw new IllegalArgumentException("Le mot de passe est obligatoire.");
-                }
-
                 String subject = "Création de votre compte - Gestion des Congés";
                 StringBuilder plainText = new StringBuilder("Bonjour,\n\n");
                 String actionHtml = "";
@@ -221,16 +213,17 @@ public class EmailService {
                 }
 
                 plainText.append("Votre compte sur la plateforme de Gestion des Congés a été créé avec succès.\n\n")
-                                .append("Vos identifiants :\n")
-                                .append("Matricule / Identifiant : ").append(matricule).append("\n")
-                                .append("Mot de passe initial : ").append(rawPassword).append("\n\n");
-
+                                .append("Votre identifiant : ").append(matricule).append("\n");
                 if (generatedAutomatically) {
-                        plainText.append("Nous vous recommandons de définir votre mot de passe personnel dès maintenant.\n\n");
+                        plainText.append("Utilisez le lien sécurisé ci-dessus pour définir votre mot de passe personnel.\n\n");
                 } else {
-                        plainText.append("Conservez ce mot de passe en sécurité. Vous pourrez le modifier depuis votre espace personnel.\n\n");
+                        plainText.append("Le mot de passe initial a été défini par l'administration. Pour votre sécurité, il n'est pas transmis par e-mail.\n\n");
                 }
                 plainText.append("Cordialement,\nL'équipe RH");
+
+                String credentialNotice = generatedAutomatically
+                                ? "Définissez votre mot de passe personnel à l'aide du lien sécurisé ci-dessus."
+                                : "Le mot de passe initial a été défini par l'administration et n'est pas transmis par e-mail.";
 
                 String html = """
                                 <!doctype html>
@@ -247,7 +240,7 @@ public class EmailService {
                                       <div style="padding:18px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;">
                                         <p style="margin:0 0 12px;font-weight:700;color:#0f172a;">Vos identifiants de connexion</p>
                                         <p style="margin:7px 0;">Matricule / Identifiant : <strong>{{MATRICULE}}</strong></p>
-                                        <p style="margin:7px 0;">Mot de passe initial : <strong style="font-family:monospace;">{{PASSWORD}}</strong></p>
+                                        <p style="margin:7px 0;line-height:1.6;">{{CREDENTIAL_NOTICE}}</p>
                                       </div>
                                       <p style="margin:22px 0 0;line-height:1.6;">Cordialement,<br><strong>L'équipe RH</strong></p>
                                     </div>
@@ -255,7 +248,7 @@ public class EmailService {
                                 </html>
                                 """.replace("{{ACTION}}", actionHtml)
                                         .replace("{{MATRICULE}}", escapeHtml(matricule))
-                                        .replace("{{PASSWORD}}", escapeHtml(rawPassword));
+                                        .replace("{{CREDENTIAL_NOTICE}}", escapeHtml(credentialNotice));
 
                 sendHtmlEmail(toEmail, subject, plainText.toString(), html);
         }

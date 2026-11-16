@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { authFetch, getCurrentUser } from "@/lib/apiClient";
+import { authFetch, getCurrentUser, API_BASE_URL } from "@/lib/apiClient";
 
-const API_URL = "http://localhost:8080/services";
+const API_URL = `${API_BASE_URL}/services`;
 
 export default function ServicesPage() {
   const [user] = useState(() => getCurrentUser());

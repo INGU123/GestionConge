@@ -15,8 +15,8 @@ import {
   X,
   Layers
 } from "lucide-react";
-import { useToast } from "../../components/ToastProvider";
-import ConfirmDialog from "../../components/ConfirmDialog";
+import { useToast } from "../../Components/ToastProvider";
+import ConfirmDialog from "../../Components/ConfirmDialog";
 
 export default function TypeCongePage() {
   const [types, setTypes] = useState([]);

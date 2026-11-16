@@ -31,7 +31,7 @@ public class Solde_congeController {
     }
 
     // Récupérer tous les soldes selon périmètre (Admin : tous, Manager : équipe)
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     @GetMapping({ "", "/all" })
     public ResponseEntity<List<Solde_conge>> getAllSoldes() {
         Utilisateur currentUser = getCurrentAuthenticatedUser();
@@ -40,7 +40,7 @@ public class Solde_congeController {
 
     // Récupérer tous les soldes d'un utilisateur (Employé : soi-même, Manager :
     // équipe, Admin : tous)
-    @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYE', 'ADMINISTRATION_PERSONNEL')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'EMPLOYE', 'ADMINISTRATION_PERSONNEL')")
     @GetMapping("/utilisateur/{utilisateurId}")
     public ResponseEntity<List<Solde_conge>> getSoldesParUtilisateur(@PathVariable Long utilisateurId) {
         Utilisateur currentUser = getCurrentAuthenticatedUser();
@@ -49,7 +49,7 @@ public class Solde_congeController {
 
     // Initialiser le solde d'un utilisateur pour une année (Strictement réservé à
     // l'Admin)
-    @PreAuthorize("denyAll()")
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/initialiser/{utilisateurId}")
     public ResponseEntity<Void> initialiserSoldesAnnuels(@PathVariable Long utilisateurId, @RequestParam int annee) {
         soldeCongeService.initialiserSoldesPourUtilisateur(utilisateurId, annee);
@@ -57,7 +57,7 @@ public class Solde_congeController {
     }
 
     // Ajuster manuellement le solde (Strictement réservé à l'Admin)
-    @PreAuthorize("denyAll()")
+    @PreAuthorize("hasRole('ADMIN')")
     @PutMapping("/ajuster/{soldeId}")
     public ResponseEntity<Solde_conge> ajusterSolde(@PathVariable Long soldeId,
             @RequestParam int nouveauNombreJoursRestants, @RequestParam String motif) {

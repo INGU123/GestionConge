@@ -1,5 +1,7 @@
 "use client";
 
+import { API_BASE_URL } from "@/lib/apiClient";
+
 import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
@@ -14,26 +16,24 @@ import {
   FiAlertCircle,
 } from "react-icons/fi";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+const API_URL = API_BASE_URL;
 
 export default function ForgotPassword() {
-  const [mode, setMode] = useState("matricule");
   const [matricule, setMatricule] = useState("");
-  const [email, setEmail] = useState("");
   const [message, setMessage] = useState({ text: "", type: "" });
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const value = mode === "matricule" ? matricule.trim() : email.trim();
+    const value = matricule.trim();
 
-    if (mode === "matricule" && !/^[0-9]+$/.test(value)) {
+    if (!/^[0-9]+$/.test(value)) {
       setMessage({ text: "Le matricule doit contenir uniquement des chiffres (ex. 2026100).", type: "error" });
       return;
     }
 
     if (!value) {
-      setMessage({ text: mode === "matricule" ? "Veuillez saisir votre numéro matricule." : "Veuillez saisir votre adresse e-mail.", type: "error" });
+      setMessage({ text: "Veuillez saisir votre numéro matricule.", type: "error" });
       return;
     }
 
@@ -41,10 +41,10 @@ export default function ForgotPassword() {
     setMessage({ text: "", type: "" });
 
     try {
-      const res = await fetch(`${API_URL}/auth/forgot-password${mode === "email" ? "/email" : ""}`, {
+      const res = await fetch(`${API_URL}/auth/forgot-password`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(mode === "matricule" ? { matricule: value } : { email: value }),
+        body: JSON.stringify({ matricule: value }),
       });
       const data = await res.json().catch(() => ({}));
 
@@ -54,7 +54,6 @@ export default function ForgotPassword() {
           type: "success",
         });
         setMatricule("");
-        setEmail("");
       } else {
         setMessage({
           text: data.message || "La demande n'a pas pu être envoyée. Vérifiez votre matricule.",
@@ -133,7 +132,7 @@ export default function ForgotPassword() {
               <p className="login-overline">RÉCUPÉRATION DU COMPTE</p>
               <h2>Mot de passe oublié ?</h2>
               <p>
-                Choisissez une récupération par matricule avec validation administrative ou par e-mail avec traitement automatique.
+                Saisissez votre matricule professionnel. Votre demande sera transmise à l&apos;administration pour validation.
               </p>
             </div>
 
@@ -159,32 +158,19 @@ export default function ForgotPassword() {
               </div>
             )}
 
-            <div className="flex gap-2 mb-5">
-              <button type="button" onClick={() => setMode("matricule")} className={"btn btn-sm flex-1 " + (mode === "matricule" ? "btn-primary" : "btn-outline")}>Par matricule</button>
-              <button type="button" onClick={() => setMode("email")} className={"btn btn-sm flex-1 " + (mode === "email" ? "btn-primary" : "btn-outline")}>Par e-mail</button>
-            </div>
             <form onSubmit={handleSubmit} className="login-form">
               <div className="login-field">
-                <label htmlFor={mode === "matricule" ? "matricule" : "email"}>{mode === "matricule" ? "Matricule professionnel" : "Adresse e-mail enregistrée"}</label>
+                <label htmlFor="matricule">Matricule professionnel</label>
                 <div className="login-input-wrap">
                   <FiUser className="login-input-icon" aria-hidden="true" />
-                  <input
-                    id={mode === "matricule" ? "matricule" : "email"}
-                    type={mode === "matricule" ? "text" : "email"}
-                    inputMode={mode === "matricule" ? "numeric" : undefined}
-                    pattern={mode === "matricule" ? "[0-9]+" : undefined}
-                    placeholder={mode === "matricule" ? "Ex. 2026100" : "nom@exemple.mg"}
-                    value={mode === "matricule" ? matricule : email}
-                    onChange={(e) => mode === "matricule" ? setMatricule(e.target.value.replace(/[^0-9]/g, "")) : setEmail(e.target.value)}
-                    autoComplete={mode === "matricule" ? "username" : "email"}
-                    required
-                    disabled={loading}
-                  />
+                  <input id="matricule" type="text" inputMode="numeric" pattern="[0-9]+" placeholder="Ex. 2026100"
+                    value={matricule} onChange={(e) => setMatricule(e.target.value.replace(/[^0-9]/g, ""))}
+                    autoComplete="username" required disabled={loading} />
                 </div>
               </div>
 
               <button type="submit" className="login-submit" disabled={loading}>
-                <span>{loading ? "Envoi en cours..." : mode === "matricule" ? "Envoyer ma demande" : "Recevoir mes informations"}</span>
+                <span>{loading ? "Envoi en cours..." : "Envoyer ma demande"}</span>
                 <span className="login-submit-icon">
                   {loading ? <FiKey /> : <FiArrowRight />}
                 </span>
@@ -193,7 +179,7 @@ export default function ForgotPassword() {
 
             <div className="login-security-note">
               <FiLock aria-hidden="true" />
-              <span>{mode === "matricule" ? "La demande nécessite une validation administrative. La transmission par SMS sera ajoutée ultérieurement." : "Les informations de connexion et le lien de changement seront envoyés à votre adresse enregistrée."}</span>
+              <span>La demande nécessite une validation administrative. Si elle est acceptée, un lien personnel valable 24 heures sera envoyé à l&apos;adresse enregistrée sur votre compte.</span>
             </div>
 
             <div className="login-forgot-row" style={{ justifyContent: "flex-start", marginTop: "24px" }}>

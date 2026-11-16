@@ -137,6 +137,10 @@ public class CircuitDemandeCongeService {
         if (service.getDepartementId() == null) throw new IllegalStateException("Le service du collaborateur n'est rattaché à aucun département.");
         Departement dep = departements.findById(service.getDepartementId()).orElseThrow(() -> new IllegalStateException("Département introuvable."));
         if (!Boolean.TRUE.equals(dep.getActif())) throw new IllegalStateException("Département inactif.");
+        if (dep.getChefId() == null || dep.getDirecteurId() == null)
+            throw new IllegalStateException("Le département doit avoir un chef et un directeur actifs avant la transmission.");
+        utilisateurActif(dep.getChefId());
+        utilisateurActif(dep.getDirecteurId());
         d.setDepartementId(dep.getId()); d.setChefId(dep.getChefId()); d.setDirecteurId(dep.getDirecteurId());
         d.setDateSoumissionChef(LocalDateTime.now()); d.setStatut("CHEF_EN_ATTENTE");
         CircuitDemandeConge saved = circuits.save(d);
@@ -176,7 +180,13 @@ public class CircuitDemandeCongeService {
         if ("REFUSEE".equals(choix) && raison.isBlank()) throw new IllegalArgumentException("Le motif de refus est obligatoire.");
 
         if ("VALIDEE".equals(choix)) {
-            demandesHistoriques.verifierEligibiliteWorkflow(d.getUtilisateurId(), d.getTypeCongeId(), d.getDateDebut(), d.getDateFin());
+            int joursVerifies = demandesHistoriques.verifierEligibiliteWorkflow(
+                    d.getUtilisateurId(), d.getTypeCongeId(), d.getDateDebut(), d.getDateFin());
+            if (joursVerifies != d.getNombreJours())
+                throw new IllegalStateException("Le nombre de jours ouvrés a changé depuis la création du dossier. La décision est suspendue pour éviter un débit incorrect.");
+            // Actualise le relevé final après recontrôle transactionnel des soldes.
+            d.setReliquatJours(demandesHistoriques.calculerReliquatDisponible(
+                    d.getUtilisateurId(), d.getTypeCongeId()));
         }
         DemandeConge legacy = DemandeConge.builder().utilisateurId(d.getUtilisateurId()).typeCongeId(d.getTypeCongeId())
                 .dateDebut(d.getDateDebut()).dateFin(d.getDateFin()).nombreJours(d.getNombreJours())

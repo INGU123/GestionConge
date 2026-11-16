@@ -291,7 +291,7 @@ public class DemandeCongeService {
                 notificationService.creerNotification(
                         demande.getUtilisateurId(), "Votre demande de congé du " + demande.getDateDebut()
                                 + " au " + demande.getDateFin() + " a été VALIDÉE.",
-                        "VALIDATION", "/dashboard/demande");
+                        "VALIDATION", "/dashboard/decisions");
             } catch (Exception e) {
                 log.warn("Échec d'envoi notification validation : {}", e.getMessage());
             }
@@ -301,7 +301,7 @@ public class DemandeCongeService {
                 notificationService.creerNotification(demande.getUtilisateurId(),
                         "Votre demande de congé du " + demande.getDateDebut() + " a été REFUSÉE"
                                 + (motifRefusNormalise.isEmpty() ? "." : " (Motif : " + motifRefusNormalise + ")"),
-                        "REFUS", "/dashboard/demande");
+                        "REFUS", "/dashboard/decisions");
             } catch (Exception e) {
                 log.warn("Échec d'envoi notification refus : {}", e.getMessage());
             }

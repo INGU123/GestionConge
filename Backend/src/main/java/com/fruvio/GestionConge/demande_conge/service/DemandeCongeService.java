@@ -427,8 +427,10 @@ public class DemandeCongeService {
                 || dateFin.isBefore(dateDebut)) {
             throw new IllegalArgumentException("Collaborateur, type et période valides obligatoires.");
         }
+        Map<Integer, Integer> joursParAnnee = calculerJoursOuvresParAnnee(dateDebut, dateFin);
+        if (joursParAnnee.isEmpty()) throw new IllegalArgumentException("La période ne contient aucun jour ouvré.");
         int disponibleTotal = 0;
-        for (int annee = dateDebut.getYear(); annee <= dateFin.getYear(); annee++) {
+        for (Integer annee : joursParAnnee.keySet()) {
             Solde_conge solde = soldeRepo.findByUtilisateurIdAndTypeCongeIdAndPeriode(
                     utilisateurId, typeCongeId, annee)
                     .orElseThrow(() -> new IllegalStateException("Aucun solde enregistré pour l'année " + annee + "."));

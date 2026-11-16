@@ -26,156 +26,193 @@ import {
 const sections = [
   {
     id: "demandes",
-    title: "Créer et suivre une demande de congé",
-    forRoles: ["EMPLOYE", "MANAGER"],
-    detail: "Cette rubrique concerne les collaborateurs et les managers autorisés à déposer une demande pour leur propre compte. Elle est volontairement masquée pour ADMIN, dont l’espace est consacré à l’administration et au suivi des outils RH.",
-    description: "Saisir les informations puis suivre la décision.",
+    title: "Préparer et suivre un dossier de congé",
+    forRoles: ["ASSISTANT_DIRECTION"],
+    detail: "L'assistant constitue le dossier au nom du collaborateur. Il ne décide pas de l'octroi du congé : il vérifie les pièces et la concordance avant transmission.",
+    description: "Créer le dossier maître et suivre son acheminement.",
     icon: ClipboardList,
-    roles: "Collaborateur et manager selon les droits",
-    href: "/dashboard/demande",
-    action: "Ouvrir Mes Demandes",
-    images: [
-      {
-        src: "/DemandeConge.png",
-        alt: "Capture de l'écran de création et de suivi d'une demande de congé",
-        caption: "Créer une demande et suivre son traitement.",
-        help: "Repérez le formulaire de demande, vérifiez les dates et les informations avant l'envoi, puis consultez le statut de votre demande dans la liste de suivi.",
-      },
-    ],
+    roles: "Assistant de direction",
+    href: "/dashboard/circuit-conge",
+    action: "Ouvrir le circuit des congés",
     steps: [
-      "Ouvrez « Mes Demandes » dans le menu.",
-      "Dans le formulaire, choisissez un type de congé parmi les types proposés.",
-      "Renseignez les dates de début et de fin.",
-      "Complétez le motif ou le commentaire si nécessaire.",
-      "Vérifiez les jours calendaires et les jours ouvrés affichés, puis relisez les informations saisies.",
-      "Utilisez le bouton de soumission proposé dans le formulaire et vérifiez que la demande apparaît dans la liste.",
+      "Sélectionnez le collaborateur, le type de congé, les dates et le motif communiqué.",
+      "Vérifiez les informations affichées avant de créer le dossier.",
+      "Attendez le relevé officiel de l'Administration du personnel.",
+      "Comparez le relevé, l'identité, le type, les dates, le motif et le reliquat avec le dossier initial.",
+      "En cas de discordance, décrivez précisément l'écart et retournez le dossier à l'Administration du personnel.",
+      "Si tout concorde et que le solde est suffisant, transmettez le dossier au chef de département.",
+      "Suivez la décision finale et téléchargez le document officiel après décision de la Direction."
     ],
     notes: [
-      "La demande envoyée n’est pas automatiquement approuvée. Consultez son statut pour connaître la décision.",
-      "Les types disponibles et les champs obligatoires sont ceux présentés par le formulaire.",
-      "Si une erreur apparaît, corrigez les champs signalés avant de réessayer.",
-    ],
+      "Le nombre de jours ouvrés est calculé par le serveur. Ne le corrigez pas manuellement.",
+      "L'assistant coordonne le dossier mais ne valide ni ne refuse le congé."
+    ]
   },
   {
     id: "soldes",
-    title: "Consulter solde et quota",
-    forRoles: ["ADMIN"],
-    detail: "Vérifiez le nom du collaborateur, le type de congé et les valeurs de solde/quotas avant de tirer une conclusion. Les libellés visibles dans le tableau font foi. Ne supposez pas qu’une demande en attente a déjà été décomptée.",
-    description: "Lire les informations de congés disponibles.",
+    title: "Consulter mes soldes",
+    forRoles: ["EMPLOYE"],
+    detail: "Cette rubrique permet au collaborateur de consulter ses droits. Elle ne permet pas de déposer une demande ni de modifier le solde.",
+    description: "Lire les droits acquis, consommés et restants.",
     icon: CalendarDays,
-    roles: "Tous les rôles selon les droits",
+    roles: "Collaborateur",
     href: "/dashboard/solde",
-    action: "Ouvrir les soldes",
-    images: [
-      { src: "/Aides/SoldQuota.png", alt: "Écran des soldes et quotas de congés", caption: "Consultation des soldes et quotas de congés.", help: "Repérez d’abord la ligne du collaborateur et le type de congé concernés, puis lisez les colonnes de solde et de quota. En cas de doute, comparez avec l’historique plutôt que de supposer qu’une demande a déjà été décomptée." },
-    ],
+    action: "Consulter mes soldes",
     steps: [
-      "Ouvrez « Mes Soldes » ou « Soldes & Quotas ».",
-      "Repérez le collaborateur ou le type de congé concerné selon les données affichées.",
-      "Lisez les valeurs et les intitulés de colonnes présents à l’écran.",
-      "Si le solde semble incohérent, consultez l’historique des mouvements lorsque cette information est disponible.",
+      "Ouvrez « Mes Soldes » depuis le menu.",
+      "Vérifiez le type de congé et l'exercice affiché.",
+      "Comparez les jours acquis, consommés et restants.",
+      "En cas d'écart, contactez l'Administration du personnel."
     ],
     notes: [
-      "Le calcul du solde et son moment de mise à jour dépendent des règles configurées dans l’application.",
-      "Ne déduisez pas qu’une demande en attente a déjà été décomptée : vérifiez les valeurs affichées et les règles internes.",
-    ],
+      "Le solde n'est débité qu'après la décision favorable de la Direction.",
+      "Le collaborateur ne peut pas modifier ses propres soldes."
+    ]
   },
   {
     id: "types-conge",
     title: "Gestion des types de congé",
     forRoles: ["ADMIN"],
-    detail: "Rubrique réservée à l’administration : consultez les types configurés dans l’application. Les collaborateurs choisissent un type dans le formulaire de demande, sans modifier la configuration.",
-    description: "Consulter les catégories de congés proposées dans l’application.",
+    detail: "Rubrique d'administration de la configuration des types de congés.",
+    description: "Consulter les catégories de congés configurées.",
     icon: CalendarDays,
-    roles: "Selon les droits du compte",
+    roles: "Administrateur",
     images: [
-      { src: "/Aides/typeConge.png", alt: "Écran de gestion des types de congés", caption: "Écran des types de congés configurés dans GestionConge.", help: "Cette vue est destinée à l’administrateur. Vérifiez l’intitulé du type avant de modifier sa configuration. Les utilisateurs choisissent parmi les types disponibles dans le formulaire ; ils ne gèrent pas cette liste." },
+      { src: "/Aides/typeConge.png", alt: "Écran de gestion des types de congés", caption: "Écran des types de congés configurés dans GestionConge.", help: "Vérifiez l'intitulé du type avant toute modification." }
     ],
     steps: [
       "Ouvrez la rubrique des types de congés si elle est disponible dans votre menu.",
       "Consultez les intitulés et les informations affichés pour chaque type.",
-      "Lors de la création d’une demande, choisissez uniquement un type proposé par le formulaire.",
+      "Les utilisateurs choisissent uniquement un type proposé par le formulaire."
     ],
-    notes: [
-      "Les types disponibles dépendent de la configuration de l’application et des droits de votre compte.",
-    ],
+    notes: ["Les types disponibles dépendent de la configuration de l'application."]
   },
   {
     id: "historique",
-    title: "Historique et statuts",
-    forRoles: ["EMPLOYE", "MANAGER", "ADMIN"],
-    detail: "Pour retrouver une entrée, comparez les dates, le type de congé et le statut. Si le statut ne correspond pas à ce que vous attendiez, consultez les détails disponibles ou contactez le responsable avant de soumettre une seconde demande.",
-    description: "Retrouver une demande et comprendre son état.",
+    title: "Historique et traçabilité",
+    forRoles: ["EMPLOYE", "MANAGER", "ADMIN", "ASSISTANT_DIRECTION", "ADMINISTRATION_PERSONNEL", "CHEF_DEPARTEMENT", "DIRECTEUR"],
+    detail: "L'historique permet de contrôler les mouvements et les opérations enregistrées. Chaque acteur doit vérifier le dossier concerné avant toute action.",
+    description: "Retrouver les mouvements et contrôler leur traçabilité.",
     icon: History,
     roles: "Selon les droits du compte",
     href: "/dashboard/historique",
-    action: "Ouvrir l’historique",
-    images: [
-      { src: "/Aides/historiqueConge.png", alt: "Historique des congés", caption: "Historique des demandes et des mouvements de congés.", help: "Pour vérifier une opération, comparez le collaborateur, les dates, le type et le statut. Utilisez la recherche ou les filtres seulement s’ils sont visibles dans votre écran. Si une entrée semble incorrecte, vérifiez les détails avant de refaire l’action." },
-    ],
+    action: "Ouvrir l'historique",
     steps: [
-      "Ouvrez « Historique » depuis le menu latéral.",
-      "Repérez la demande ou le mouvement recherché dans la liste.",
-      "Consultez les informations disponibles, notamment le type de congé, les dates et le statut.",
-      "Si les filtres ou la recherche sont proposés à l’écran, utilisez-les pour retrouver plus vite une entrée.",
+      "Ouvrez « Historique » depuis le menu.",
+      "Repérez l'opération par sa date, son collaborateur et son type.",
+      "Vérifiez le sens du mouvement, la quantité et le commentaire.",
+      "Signalez toute anomalie à l'Administration du personnel."
     ],
     notes: [
-      "« En attente » signifie qu’une décision ou une action est attendue.",
-      "« Validée » ou « Refusée » indique le résultat de la décision affichée par l’application.",
-      "Si une demande est refusée, consultez le motif lorsqu’il est fourni. Contactez le responsable si vous avez besoin d’une précision.",
-    ],
+      "Un débit de congé ne doit apparaître qu'après une décision favorable.",
+      "Une annulation doit être accompagnée de la restitution correspondante des jours selon les règles applicables."
+    ]
   },
   {
     id: "collaborateurs",
     title: "Gestion des collaborateurs",
     forRoles: ["ADMIN"],
-    detail: "Avant de créer ou modifier un compte, vérifiez le matricule et l’identité. Contrôlez le rôle attribué, car il détermine les rubriques accessibles. Confirmez une suppression uniquement après avoir vérifié le compte concerné.",
+    detail: "Avant de créer ou modifier un compte, vérifiez le matricule, l'identité, le service, le département et le rôle.",
     description: "Administrer les comptes et les informations autorisées.",
     icon: Users,
-    roles: "Administrateur (ADMIN)",
+    roles: "Administrateur",
     href: "/dashboard/utilisateurs",
     action: "Ouvrir les collaborateurs",
-    images: [
-      { src: "/Aides/gestionCollaborateur.png", alt: "Gestion des collaborateurs", caption: "Liste et gestion des collaborateurs.", help: "Avant toute action, retrouvez la bonne personne à l’aide du matricule et vérifiez son identité. Lors d’une modification, contrôlez les champs et le rôle. Une suppression peut retirer l’accès au compte : ne la confirmez qu’après vérification." },
-    ],
     steps: [
       "Ouvrez « Gestion Collaborateurs ».",
-      "Utilisez la recherche pour retrouver un collaborateur par matricule numérique, nom ou rôle.",
-      "Pour modifier une fiche, utilisez l’action de modification de la ligne concernée.",
-      "Pour supprimer un compte, vérifiez soigneusement la personne concernée avant de confirmer l’action.",
-      "Lors de la création, renseignez les champs obligatoires et attribuez uniquement un rôle autorisé.",
+      "Retrouvez la personne à l'aide de son matricule.",
+      "Vérifiez le service, le département et le responsable hiérarchique.",
+      "Attribuez uniquement le rôle correspondant aux responsabilités réelles."
     ],
     notes: [
-      "La gestion des collaborateurs est réservée à l’administrateur dans l’interface actuelle.",
-      "La suppression d’un compte peut affecter l’accès de la personne à l’application. Vérifiez avant de confirmer.",
-      "Le rôle ADMIN ne doit être attribué que selon les règles de sécurité de l’organisation.",
-    ],
+      "Le rôle détermine les interfaces et les opérations autorisées.",
+      "Ne supprimez pas un compte sans vérifier les conséquences sur l'historique."
+    ]
   },
   {
-    id: "validation",
-    title: "Traiter les demandes",
-    forRoles: ["MANAGER", "ADMIN"],
-    detail: "Le manager examine les demandes auxquelles il a accès. L’administrateur peut accéder aux outils de validation selon les autorisations prévues. Avant de décider, vérifiez l’identité, les dates et le motif, puis contrôlez le statut mis à jour.",
-    description: "Examiner les demandes et enregistrer une décision.",
+    id: "assistant-rh",
+    title: "Vérifier le reliquat",
+    forRoles: ["ADMINISTRATION_PERSONNEL"],
+    detail: "L'Administration du personnel est responsable de l'exactitude du solde communiqué pour le collaborateur et le type de congé.",
+    description: "Contrôler le solde avant de retourner le relevé à l'assistant.",
     icon: CheckCircle2,
-    roles: "Manager et administrateur selon les autorisations",
-    href: "/dashboard/validation",
-    action: "Ouvrir la validation",
-    images: [
-      { src: "/Aides/validationConge.png", alt: "Validation des demandes de congé", caption: "Écran de traitement et de validation des demandes.", help: "Examinez la demande avant de prendre une décision : identité du collaborateur, dates, type et motif. Si un refus demande une justification, indiquez un motif clair. Après validation ou refus, vérifiez que le statut a bien changé." },
-    ],
+    roles: "Administration du personnel",
+    href: "/dashboard/reliquats",
+    action: "Ouvrir les reliquats",
     steps: [
-      "Ouvrez « Validation des congés » si cette rubrique est disponible dans votre menu.",
-      "Consultez les informations de la demande : collaborateur, dates, motif et statut.",
-      "Pour refuser une demande, utilisez l’action correspondante et renseignez le motif demandé par le formulaire.",
-      "Pour approuver une demande, utilisez l’action de validation disponible.",
-      "Après l’action, vérifiez le statut mis à jour dans la liste.",
+      "Ouvrez le dossier et confirmez l'identité du collaborateur.",
+      "Vérifiez le type de congé et la période demandée.",
+      "Contrôlez les soldes de tous les exercices concernés.",
+      "Saisissez le solde disponible exact calculé à partir des données RH.",
+      "Ajoutez une observation utile puis retournez le relevé à l'assistant.",
+      "Si l'assistant signale une discordance, reprenez le contrôle avant un nouvel envoi."
     ],
     notes: [
-      "N’effectuez une décision qu’après avoir vérifié les informations de la demande.",
-      "Si l’accès est restreint, votre compte ne dispose peut-être pas des droits nécessaires. Contactez l’administrateur.",
-      "Les effets sur le solde suivent les règles de gestion configurées dans l’application.",
+      "Ne saisissez pas le nombre de jours demandés à la place du solde disponible.",
+      "Le serveur refuse un solde saisi qui ne correspond pas au solde calculé."
+    ]
+  },
+  {
+    id: "chef",
+    title: "Avis du chef de département",
+    forRoles: ["CHEF_DEPARTEMENT"],
+    detail: "Le chef évalue les nécessités du service et transmet un avis à la Direction. Il ne prend pas la décision finale.",
+    description: "Examiner la demande et joindre un avis hiérarchique.",
+    icon: Users,
+    roles: "Chef de département",
+    href: "/dashboard/chef-departement",
+    action: "Ouvrir les dossiers à examiner",
+    steps: [
+      "Vérifiez l'identité, le type, les dates, le nombre de jours et le reliquat.",
+      "Évaluez l'impact de l'absence sur l'organisation du département.",
+      "Choisissez un avis favorable ou défavorable.",
+      "Ajoutez une observation obligatoire si l'avis est défavorable.",
+      "Transmettez le dossier à la Direction."
     ],
+    notes: ["La Direction reste seule responsable de la décision finale."]
+  },
+  {
+    id: "direction",
+    title: "Décision finale de la Direction",
+    forRoles: ["DIRECTEUR"],
+    detail: "La Direction prend la décision finale après examen du dossier et de l'avis du chef de département.",
+    description: "Accorder ou refuser le congé en motivant tout refus.",
+    icon: ShieldCheck,
+    roles: "Directeur",
+    href: "/dashboard/directeur",
+    action: "Ouvrir les décisions",
+    steps: [
+      "Vérifiez le dossier complet, le relevé RH et l'avis hiérarchique.",
+      "Vérifiez la cohérence de la période et du nombre de jours.",
+      "Accordez le congé ou refusez-le.",
+      "En cas de refus, renseignez obligatoirement un motif clair.",
+      "La décision est notifiée au collaborateur et à l'assistant."
+    ],
+    notes: [
+      "Le solde est débité une seule fois après validation.",
+      "Une décision définitive ne doit pas être modifiée sans procédure de correction traçable."
+    ]
+  },
+  {
+    id: "decisions",
+    title: "Décisions reçues",
+    forRoles: ["EMPLOYE"],
+    detail: "Après la décision de la Direction, le collaborateur reçoit une notification et peut consulter le résultat et le document officiel.",
+    description: "Consulter l'accord ou le refus prononcé par la Direction.",
+    icon: Bell,
+    roles: "Collaborateur",
+    href: "/dashboard/decisions",
+    action: "Voir mes décisions",
+    steps: [
+      "Ouvrez « Décisions reçues » dans le menu.",
+      "Consultez la période, le nombre de jours et le statut final.",
+      "En cas de refus, lisez le motif communiqué.",
+      "Téléchargez le PDF officiel de la décision."
+    ],
+    notes: [
+      "Les demandes en cours d'instruction ne sont pas affichées comme des décisions définitives.",
+      "Le collaborateur ne peut pas modifier la décision."
+    ]
   },
   {
     id: "notifications",

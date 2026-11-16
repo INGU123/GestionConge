@@ -141,8 +141,12 @@ public class CircuitDemandeCongeService {
         if (!Boolean.TRUE.equals(dep.getActif())) throw new IllegalStateException("Département inactif.");
         if (dep.getChefId() == null || dep.getDirecteurId() == null)
             throw new IllegalStateException("Le département doit avoir un chef et un directeur actifs avant la transmission.");
-        utilisateurActif(dep.getChefId());
-        utilisateurActif(dep.getDirecteurId());
+        Utilisateur chefAffecte = utilisateurActif(dep.getChefId());
+        Utilisateur directeurAffecte = utilisateurActif(dep.getDirecteurId());
+        if (chefAffecte.getRole() != Role.CHEF_DEPARTEMENT)
+            throw new IllegalStateException("Le responsable du département n'a pas le rôle CHEF_DEPARTEMENT.");
+        if (directeurAffecte.getRole() != Role.DIRECTEUR)
+            throw new IllegalStateException("Le responsable de la Direction n'a pas le rôle DIRECTEUR.");
         d.setDepartementId(dep.getId()); d.setChefId(dep.getChefId()); d.setDirecteurId(dep.getDirecteurId());
         d.setDateSoumissionChef(LocalDateTime.now()); d.setStatut("CHEF_EN_ATTENTE");
         CircuitDemandeConge saved = circuits.save(d);

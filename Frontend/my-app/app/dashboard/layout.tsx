@@ -65,6 +65,7 @@ export default function DashboardLayout({
           if (pathname === "/dashboard") {
             const role = String(current.role || "").toUpperCase();
             const workspace: Record<string, string> = {
+              ADMIN: "/dashboard/consultation-demandes",
               MANAGER: "/dashboard/consultation-demandes",
               ASSISTANT_DIRECTION: "/dashboard/circuit-conge",
               ADMINISTRATION_PERSONNEL: "/dashboard/reliquats",
@@ -185,7 +186,7 @@ export default function DashboardLayout({
           />
         </svg>
       ),
-      show: isEmploye,
+      show: false,
     },
 
     {
@@ -213,7 +214,7 @@ export default function DashboardLayout({
           />
         </svg>
       ),
-      show: isAdmin || isEmploye,
+      show: isEmploye,
     },
 
     {
@@ -322,6 +323,13 @@ export default function DashboardLayout({
   );
 
   navItems.push({
+    href: "/dashboard/decisions",
+    label: "Décisions reçues",
+    icon: <span>✓</span>,
+    show: isEmploye,
+  });
+
+  navItems.push({
     href: "/dashboard/aide",
     label: "Aide / Guide",
     icon: (
@@ -339,7 +347,7 @@ export default function DashboardLayout({
         />
       </svg>
     ),
-    show: isAdmin || isEmploye || isAssistant,
+    show: true,
   });
 
   const visibleNavItems = navItems.filter((item) => item.show);
@@ -414,7 +422,7 @@ export default function DashboardLayout({
             </button>
 
             {/* NOTIFICATIONS */}
-            {!isManager && <NotificationHeaderMenu />}
+            {(isAdmin || isManager || isEmploye) && <NotificationHeaderMenu />}
 
             {/* UTILISATEUR */}
             <div className="text-right">

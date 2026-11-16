@@ -291,7 +291,7 @@ public class DemandeCongeService {
                 notificationService.creerNotification(
                         demande.getUtilisateurId(), "Votre demande de congé du " + demande.getDateDebut()
                                 + " au " + demande.getDateFin() + " a été VALIDÉE.",
-                        "VALIDATION", "/dashboard/demande");
+                        "VALIDATION", "/dashboard/decisions");
             } catch (Exception e) {
                 log.warn("Échec d'envoi notification validation : {}", e.getMessage());
             }
@@ -301,7 +301,7 @@ public class DemandeCongeService {
                 notificationService.creerNotification(demande.getUtilisateurId(),
                         "Votre demande de congé du " + demande.getDateDebut() + " a été REFUSÉE"
                                 + (motifRefusNormalise.isEmpty() ? "." : " (Motif : " + motifRefusNormalise + ")"),
-                        "REFUS", "/dashboard/demande");
+                        "REFUS", "/dashboard/decisions");
             } catch (Exception e) {
                 log.warn("Échec d'envoi notification refus : {}", e.getMessage());
             }
@@ -420,6 +420,27 @@ public class DemandeCongeService {
      * les mêmes règles de jours ouvrés, plafonds annuels, chevauchements et soldes
      * que le circuit historique. Aucun solde n'est débité à cette étape.
      */
+    @Transactional
+    public int calculerReliquatDisponiblePourPeriode(Long utilisateurId, Long typeCongeId,
+            LocalDate dateDebut, LocalDate dateFin) {
+        if (utilisateurId == null || typeCongeId == null || dateDebut == null || dateFin == null
+                || dateFin.isBefore(dateDebut)) {
+            throw new IllegalArgumentException("Collaborateur, type et période valides obligatoires.");
+        }
+        Map<Integer, Integer> joursParAnnee = calculerJoursOuvresParAnnee(dateDebut, dateFin);
+        if (joursParAnnee.isEmpty()) throw new IllegalArgumentException("La période ne contient aucun jour ouvré.");
+        int disponibleTotal = 0;
+        for (Integer annee : joursParAnnee.keySet()) {
+            Solde_conge solde = soldeRepo.findByUtilisateurIdAndTypeCongeIdAndPeriode(
+                    utilisateurId, typeCongeId, annee)
+                    .orElseThrow(() -> new IllegalStateException("Aucun solde enregistré pour l'année " + annee + "."));
+            int acquis = solde.getSoldeAquis() == null ? 0 : solde.getSoldeAquis();
+            int pris = solde.getSoldePris() == null ? 0 : solde.getSoldePris();
+            disponibleTotal += Math.max(0, acquis - pris);
+        }
+        return disponibleTotal;
+    }
+
     @Transactional
     public int verifierEligibiliteWorkflow(Long utilisateurId, Long typeCongeId,
             LocalDate dateDebut, LocalDate dateFin) {

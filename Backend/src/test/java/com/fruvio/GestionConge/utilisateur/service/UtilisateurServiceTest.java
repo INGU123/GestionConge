@@ -31,6 +31,7 @@ import com.fruvio.GestionConge.solde_conge.repository.Solde_congeRepository;
 import com.fruvio.GestionConge.solde_conge.service.Solde_congeService;
 import com.fruvio.GestionConge.utilisateur.dto.ForgotPasswordRequest;
 import com.fruvio.GestionConge.utilisateur.dto.EmailPasswordResetRequest;
+import com.fruvio.GestionConge.utilisateur.dto.InitialPasswordSetupRequest;
 import com.fruvio.GestionConge.utilisateur.dto.UtilisateurCreateRequest;
 import com.fruvio.GestionConge.utilisateur.controller.PasswordResetController;
 import com.fruvio.GestionConge.utilisateur.entity.PasswordResetRequestEntity;
@@ -395,6 +396,35 @@ class UtilisateurServiceTest {
                 org.mockito.ArgumentMatchers.eq("employee@example.com"),
                 org.mockito.ArgumentMatchers.eq("Demande acceptée : réinitialisation de mot de passe - SPAT"),
                 org.mockito.ArgumentMatchers.contains("/Components/mdpReset?token="));
+    }
+
+    @Test
+    void initialPasswordTokenCanBeUsedOnlyOnce() {
+        PasswordResetRequestRepository requestRepository = org.mockito.Mockito.mock(PasswordResetRequestRepository.class);
+        LocalDateTime expiry = LocalDateTime.now().plusHours(24);
+        Utilisateur employee = Utilisateur.builder().id(56L).matricule("2026556")
+                .email("employee@example.com").actif(true)
+                .resetToken("single-use-token").tokenExpiration(expiry).password("old-hash").build();
+        when(utilisateurRepository.findByResetTokenForUpdate("single-use-token"))
+                .thenReturn(Optional.of(employee), Optional.empty());
+        when(passwordEncoder.encode("NewSecure123")).thenReturn("new-bcrypt-hash");
+
+        PasswordResetController controller = new PasswordResetController(
+                utilisateurRepository, requestRepository, emailService, passwordEncoder);
+        InitialPasswordSetupRequest body = new InitialPasswordSetupRequest();
+        body.setToken("single-use-token");
+        body.setNewPassword("NewSecure123");
+        body.setConfirmation("NewSecure123");
+
+        var first = controller.setInitialPassword(body);
+        var second = controller.setInitialPassword(body);
+
+        assertEquals(200, first.getStatusCode().value());
+        assertEquals(400, second.getStatusCode().value());
+        assertEquals("new-bcrypt-hash", employee.getPassword());
+        assertEquals(null, employee.getResetToken());
+        assertEquals(null, employee.getTokenExpiration());
+        verify(utilisateurRepository, times(1)).save(employee);
     }
 
 }

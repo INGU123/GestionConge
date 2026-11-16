@@ -9,7 +9,6 @@ import {
   XCircle,
   FileText,
   PieChart,
-  Eye
 } from "lucide-react";
 
 import { getMesDemandes } from "../api/demandeConge/demandeConge";
@@ -92,23 +91,7 @@ export default function Dashboard() {
             Consultation de vos soldes réglementaires et état du traitement de vos demandes.
           </p>
         </div>
-        <div className="flex gap-3">
-          {!isAdmin && (
-            <Link
-              href="/dashboard/demande"
-              className="btn btn-primary btn-sm font-semibold gap-2 shadow"
-            >
-              Nouvelle demande
-            </Link>
-          )}
-          <Link
-            href="/dashboard/solde"
-            className="btn btn-outline btn-sm !text-white [&_svg]:!text-white border-slate-600 hover:bg-slate-800 hover:!text-white gap-2"
-          >
-            <Eye className="w-4 h-4" />
-            Consulter mes soldes
-          </Link>
-        </div>
+
       </div>
 
       {/* KPI Key Indicators */}
@@ -181,12 +164,7 @@ export default function Dashboard() {
                 <FileText className="w-5 h-5 text-blue-600" />
                 Dernières Demandes
               </h2>
-              <Link
-                href="/dashboard/demande"
-                className="text-xs font-semibold text-blue-700 hover:text-blue-900"
-              >
-                {`Voir tout l'historique`} →
-              </Link>
+
             </div>
 
             {demandes.length === 0 ? (
@@ -242,12 +220,7 @@ export default function Dashboard() {
               <PieChart className="w-5 h-5 text-blue-600" />
               Répartition des Soldes de Congés — SPAT
             </h2>
-            <Link
-              href="/dashboard/solde"
-              className="text-xs font-semibold text-blue-700 hover:text-blue-900"
-            >
-              Consulter le détail →
-            </Link>
+
           </div>
 
           <p className="text-xs text-slate-500 mb-4">Synthèse des droits acquis, jours consommés et reliquats enregistrés pour votre compte agent.</p>

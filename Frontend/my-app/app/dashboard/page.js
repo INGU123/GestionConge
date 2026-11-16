@@ -83,7 +83,7 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="spat-workspace spat-workspace--home space-y-6">
       {/* Dynamic Institution Banner */}
       <div className="bg-slate-900 text-white rounded-2xl p-6 shadow-md border-l-4 border-blue-600 flex justify-between items-center flex-wrap gap-4">
         <div>

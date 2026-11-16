@@ -422,7 +422,7 @@ export default function DashboardLayout({
             </button>
 
             {/* NOTIFICATIONS */}
-            {!isManager && <NotificationHeaderMenu />}
+            {(isAdmin || isManager || isEmploye) && <NotificationHeaderMenu />}
 
             {/* UTILISATEUR */}
             <div className="text-right">

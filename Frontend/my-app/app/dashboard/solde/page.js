@@ -25,10 +25,12 @@ import {
 export default function SoldeConge() {
   const [user] = useState(() => getCurrentUser());
   const router = useRouter();
-  const isAdmin = user?.role?.toString().trim().toUpperCase().replace(/^ROLE_/, "") === "ADMIN";
+  const role = user?.role?.toString().trim().toUpperCase().replace(/^ROLE_/, "") || "";
+  const isAdmin = role === "ADMIN";
+  const isEmploye = role === "EMPLOYE";
   useEffect(() => {
-    if (isAdmin) router.replace("/dashboard");
-  }, [isAdmin, router]);
+    if (!isEmploye) router.replace("/dashboard");
+  }, [isEmploye, router]);
 
   const [soldes, setSoldes] = useState([]);
   const [typesConge, setTypesConge] = useState([]);
@@ -60,6 +62,11 @@ export default function SoldeConge() {
    */
   useEffect(() => {
     const loadData = async () => {
+      // Ne jamais appeler les anciennes API de soldes pour les rôles non autorisés.
+      if (!isEmploye) {
+        setLoading(false);
+        return;
+      }
       if (!selectedUserId) {
         setLoading(false);
         return;
@@ -85,7 +92,7 @@ export default function SoldeConge() {
     };
 
     void loadData();
-  }, [selectedUserId]);
+  }, [selectedUserId, isEmploye]);
 
   /*
    * CHARGEMENT DES UTILISATEURS POUR L'ADMIN

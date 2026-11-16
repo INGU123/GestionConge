@@ -51,7 +51,7 @@ export default function SuiviReliquatsPage() {
 
   if (role !== "ADMIN") {
     return (
-      <section className="space-y-3">
+      <section className="spat-workspace spat-workspace--consultation space-y-3">
         <h1 className="text-2xl font-bold">Circuit des reliquats</h1>
         <p className="text-sm text-slate-500">
           Votre rôle ne dispose pas d&apos;un écran de consultation administrative du circuit.
@@ -62,7 +62,7 @@ export default function SuiviReliquatsPage() {
   }
 
   return (
-    <section className="space-y-5">
+    <section className="spat-workspace spat-workspace--consultation space-y-5">
       <header>
         <h1 className="text-2xl font-bold">Suivi des dossiers de reliquat</h1>
         <p className="text-sm text-slate-500">

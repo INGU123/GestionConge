@@ -6,7 +6,7 @@ import {
   getHistoriqueUtilisateur,
 } from "../../api/historiqueMouvements/historiqueMouvement";
 import { getAllTypeConge } from "../../api/typeConge/typeConge";
-import { getCurrentUser, authFetch } from "@/lib/apiClient";
+import { getCurrentUser, authFetch, API_BASE_URL } from "@/lib/apiClient";
 import {
   History,
   User,
@@ -17,11 +17,10 @@ import {
   Users,
   Layers,
   ShieldCheck,
-  Download,
   FileText,
   FileSpreadsheet,
 } from "lucide-react";
-import { useToast } from "../../components/ToastProvider";
+import { useToast } from "../../Components/ToastProvider";
 
 export default function HistoriquePage() {
   const [currentUser, setCurrentUser] = useState(null);
@@ -36,15 +35,19 @@ export default function HistoriquePage() {
 
 
   useEffect(() => {
-    const user = getCurrentUser();
-    if (!user) {
-      setLoading(false);
-      return;
-    }
-
-    setCurrentUser(user);
-    const role = String(user.role || "").trim().toUpperCase().replace(/^ROLE_/, "");
-    setViewAll(role === "ADMIN" || role === "MANAGER");
+    let active = true;
+    Promise.resolve()
+      .then(() => getCurrentUser())
+      .then((user) => {
+        if (!active || !user) return;
+        setCurrentUser(user);
+        const role = String(user.role || "").trim().toUpperCase().replace(/^ROLE_/, "");
+        setViewAll(role === "ADMIN" || role === "MANAGER");
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => { active = false; };
   }, []);
 
   useEffect(() => {
@@ -62,7 +65,7 @@ export default function HistoriquePage() {
             : getHistoriqueUtilisateur(currentUser.id),
           getAllTypeConge().catch(() => []),
           canViewAll
-            ? authFetch("http://localhost:8080/utilisateur/all")
+            ? authFetch(`${API_BASE_URL}/utilisateur/all`)
                 .then((r) => (r.ok ? r.json() : []))
                 .catch(() => [])
             : Promise.resolve([]),
@@ -105,6 +108,7 @@ export default function HistoriquePage() {
 
   const currentRole = String(currentUser?.role || "").trim().toUpperCase().replace(/^ROLE_/, "");
   const isManager = currentRole === "ADMIN" || currentRole === "MANAGER";
+  const canExport = !["EMPLOYE", "MANAGER"].includes(currentRole);
 
   const handleExportPdf = () => {
     try {
@@ -400,28 +404,16 @@ export default function HistoriquePage() {
               </button>
             </div>
           )}
-          <button
-            type="button"
-            onClick={handleExportPdf}
-            disabled={loading || mouvements.length === 0}
-            className="inline-flex items-center gap-2 rounded-xl bg-rose-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            <FileText className="h-4 w-4" />
-            Exportation PDF
-          </button>
-          <button
-            type="button"
-            onClick={handleExportExcel}
-            disabled={loading || mouvements.length === 0 || exporting}
-            className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {exporting ? (
-              <span className="loading loading-spinner loading-xs" />
-            ) : (
-              <FileSpreadsheet className="h-4 w-4" />
-            )}
-            Exportation Excel
-          </button>
+          {canExport && (
+            <>
+              <button type="button" onClick={handleExportPdf} disabled={loading || mouvements.length === 0} className="inline-flex items-center gap-2 rounded-xl bg-rose-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-60">
+                <FileText className="h-4 w-4" /> Exportation PDF
+              </button>
+              <button type="button" onClick={handleExportExcel} disabled={loading || mouvements.length === 0 || exporting} className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60">
+                {exporting ? <span className="loading loading-spinner loading-xs" /> : <FileSpreadsheet className="h-4 w-4" />} Exportation Excel
+              </button>
+            </>
+          )}
         </div>
       </div>
 

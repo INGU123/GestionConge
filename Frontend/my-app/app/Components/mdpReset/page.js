@@ -1,5 +1,7 @@
 "use client";
 
+import { API_BASE_URL } from "@/lib/apiClient";
+
 import { Suspense, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
@@ -17,7 +19,7 @@ import {
   FiEyeOff,
 } from "react-icons/fi";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+const API_URL = API_BASE_URL;
 
 export default function ResetPasswordPage() {
   return (
@@ -117,7 +119,7 @@ function ResetPasswordForm() {
           <div className="login-brand-copy">
             <span className="login-eyebrow"><span /> SÉCURITÉ DU COMPTE</span>
             <h1>Un nouvel accès, <em>en toute sécurité.</em></h1>
-            <p>Remplacez le mot de passe temporaire reçu par e-mail par un mot de passe personnel.</p>
+            <p>Utilisez votre lien personnel pour définir un nouveau mot de passe en toute sécurité.</p>
           </div>
 
           <div className="login-brand-visual" aria-hidden="true">
@@ -150,8 +152,8 @@ function ResetPasswordForm() {
               <p className="login-overline">CHANGEMENT DE MOT DE PASSE</p>
               <h2>Définissez votre mot de passe</h2>
               <p>{initialToken
-                ? "Votre compte a reçu un mot de passe généré automatiquement. Définissez maintenant votre mot de passe personnel."
-                : "Saisissez votre matricule et le mot de passe temporaire reçu, puis choisissez et confirmez votre nouveau mot de passe."}</p>
+                ? "Votre demande a été approuvée. Définissez maintenant votre nouveau mot de passe à l'aide de ce lien sécurisé."
+                : "Saisissez votre matricule et votre mot de passe actuel, puis choisissez et confirmez votre nouveau mot de passe."}</p>
             </div>
 
             {message.text && (
@@ -175,13 +177,13 @@ function ResetPasswordForm() {
                 <label htmlFor="matricule">Matricule professionnel</label>
                 <div className="login-input-wrap">
                   <FiUser className="login-input-icon" aria-hidden="true" />
-                  <input id="matricule" type="text" placeholder="Ex. SPAT-001" value={matricule}
+                  <input id="matricule" type="text" placeholder="Ex. 2026100" value={matricule}
                     onChange={(event) => setMatricule(event.target.value)} autoComplete="username" required disabled={loading} />
                 </div>
               </div>
 
               <div className="login-field">
-                <label htmlFor="ancienMotDePasse">Mot de passe temporaire (ancien mot de passe)</label>
+                <label htmlFor="ancienMotDePasse">Mot de passe actuel</label>
                 <div className="login-input-wrap" style={{ position: "relative" }}>
                   <FiKey className="login-input-icon" aria-hidden="true" />
                   <input id="ancienMotDePasse" type={visiblePasswords.ancienMotDePasse ? "text" : "password"} placeholder="Mot de passe reçu par e-mail"

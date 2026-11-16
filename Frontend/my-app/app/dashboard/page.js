@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import {
   CalendarDays,
   Clock,
@@ -9,13 +8,11 @@ import {
   XCircle,
   FileText,
   PieChart,
-  Eye
 } from "lucide-react";
 
-import { getMesDemandes } from "../api/demandeConge/demandeConge";
 import { getSoldesUtilisateur } from "../api/soldeConge/soldeConge";
 import { getAllTypeConge } from "../api/typeConge/typeConge";
-import { getCurrentUser } from "@/lib/apiClient";
+import { getCurrentUser, authFetch, API_BASE_URL } from "@/lib/apiClient";
 
 export default function Dashboard() {
   const [user, setUser] = useState(null);
@@ -34,10 +31,18 @@ export default function Dashboard() {
         }
         setUser(currentUser);
 
+        const role = String(currentUser.role || "").trim().toUpperCase().replace(/^ROLE_/, "");
+        // Le tableau de bord racine est réservé à l'espace collaborateur.
+        // Les autres rôles sont redirigés vers leur espace dédié par le layout.
+        if (role !== "EMPLOYE") {
+          setLoading(false);
+          return;
+        }
+
         const currentUserId = Number(currentUser.id);
         if (currentUserId) {
           const [demandesData, soldesData, typesData] = await Promise.all([
-            getMesDemandes(currentUserId).catch(() => []),
+            authFetch(`${API_BASE_URL}/circuit-conge/employe/mes-decisions`).then((r) => r.ok ? r.json() : []),
             getSoldesUtilisateur(currentUserId).catch(() => []),
             getAllTypeConge().catch(() => []),
           ]);
@@ -59,13 +64,13 @@ export default function Dashboard() {
     (acc, s) => acc + (Number(s.soldeRestant) || 0),
     0
   );
-  const enAttenteCount = demandes.filter((d) => d.statut === "EN_ATTENTE").length;
+  const enAttenteCount = demandes.filter((d) => !["VALIDEE", "REFUSEE", "ANNULEE"].includes(String(d.statut || "").toUpperCase())).length;
   const valideCount = demandes.filter((d) => d.statut === "VALIDEE").length;
   const refuseCount = demandes.filter((d) => d.statut === "REFUSEE").length;
   const isAdmin = ["ADMIN", "ROLE_ADMIN"].includes(user?.role?.toUpperCase());
 
   const getTypeLabel = (typeId) => {
-    const found = typesConge.find((t) => t.id === typeId);
+    const found = typesConge.find((t) => String(t.id) === String(typeId));
     return found?.libelle || found?.code || `Type #${typeId}`;
   };
 
@@ -92,27 +97,12 @@ export default function Dashboard() {
             Consultation de vos soldes réglementaires et état du traitement de vos demandes.
           </p>
         </div>
-        <div className="flex gap-3">
-          {!isAdmin && (
-            <Link
-              href="/dashboard/demande"
-              className="btn btn-primary btn-sm font-semibold gap-2 shadow"
-            >
-              Nouvelle demande
-            </Link>
-          )}
-          <Link
-            href="/dashboard/solde"
-            className="btn btn-outline btn-sm !text-white [&_svg]:!text-white border-slate-600 hover:bg-slate-800 hover:!text-white gap-2"
-          >
-            <Eye className="w-4 h-4" />
-            Consulter mes soldes
-          </Link>
-        </div>
+
       </div>
 
       {/* KPI Key Indicators */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {!isAdmin && (
         <div className="bg-white rounded-xl p-5 shadow-sm border border-slate-200 flex items-center justify-between">
           <div>
             <p className="text-xs font-bold uppercase text-slate-500 tracking-wider">
@@ -127,6 +117,8 @@ export default function Dashboard() {
             <CalendarDays className="w-6 h-6" />
           </div>
         </div>
+
+        )}
 
         <div className="bg-white rounded-xl p-5 shadow-sm border border-slate-200 flex items-center justify-between">
           <div>
@@ -172,7 +164,8 @@ export default function Dashboard() {
       </div>
 
       {/* Tables section : Recent Demandes & Solde Summary */}
-      <div className={`grid grid-cols-1 ${isAdmin ? "" : "lg:grid-cols-2"} gap-6`}>
+      {!isAdmin && (
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Recent Demandes - Masqué pour les Administrateurs */}
         {!isAdmin && (
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
@@ -181,12 +174,7 @@ export default function Dashboard() {
                 <FileText className="w-5 h-5 text-blue-600" />
                 Dernières Demandes
               </h2>
-              <Link
-                href="/dashboard/demande"
-                className="text-xs font-semibold text-blue-700 hover:text-blue-900"
-              >
-                {`Voir tout l'historique`} →
-              </Link>
+
             </div>
 
             {demandes.length === 0 ? (
@@ -204,7 +192,7 @@ export default function Dashboard() {
                     </tr>
                   </thead>
                   <tbody>
-                    {demandes.slice(-5).reverse().map((d) => (
+                    {demandes.slice().sort((a, b) => new Date(b.dateCreation || b.dateDebut) - new Date(a.dateCreation || a.dateDebut)).slice(0, 5).map((d) => (
                       <tr key={d.id} className="hover:bg-slate-50/80 border-b border-slate-100">
                         <td className="font-medium text-slate-800">
                           {getTypeLabel(d.typeCongeId)}
@@ -223,7 +211,17 @@ export default function Dashboard() {
                                     : "badge-warning text-slate-800"
                               }`}
                           >
-                            {d.statut === "EN_ATTENTE" ? "En attente" : d.statut}
+                            {{
+                              RELIQUAT_EN_ATTENTE: "Vérification RH",
+                              RELIQUAT_A_CORRIGER: "Correction RH",
+                              RELIQUAT_RETOURNE: "Contrôle assistant",
+                              CHEF_EN_ATTENTE: "Avis du chef",
+                              DIRECTEUR_EN_ATTENTE: "Décision de la Direction",
+                              VALIDEE: "Validée",
+                              REFUSEE: "Refusée",
+                              EN_ATTENTE: "En attente",
+                              ANNULEE: "Annulée",
+                            }[String(d.statut || "").toUpperCase()] || d.statut}
                           </span>
                         </td>
                       </tr>
@@ -242,12 +240,7 @@ export default function Dashboard() {
               <PieChart className="w-5 h-5 text-blue-600" />
               Répartition des Soldes de Congés — SPAT
             </h2>
-            <Link
-              href="/dashboard/solde"
-              className="text-xs font-semibold text-blue-700 hover:text-blue-900"
-            >
-              Consulter le détail →
-            </Link>
+
           </div>
 
           <p className="text-xs text-slate-500 mb-4">Synthèse des droits acquis, jours consommés et reliquats enregistrés pour votre compte agent.</p>
@@ -289,6 +282,7 @@ export default function Dashboard() {
           )}
         </div>
       </div>
+      )}
     </div>
   );
 }

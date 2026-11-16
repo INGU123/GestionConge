@@ -105,7 +105,7 @@ public class UtilisateurController {
     // MISE A JOUR DU COMPTE
     // =========================================================
 
-    @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYE', 'ASSISTANT_DIRECTION', 'ADMINISTRATION_PERSONNEL', 'CHEF_DEPARTEMENT', 'DIRECTEUR')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'EMPLOYE', 'ASSISTANT_DIRECTION', 'ADMINISTRATION_PERSONNEL', 'CHEF_DEPARTEMENT', 'DIRECTEUR')")
     @PutMapping("/update")
     public ResponseEntity<?> update(@Valid @RequestBody UtilisateurUpdateRequest request) {
         Utilisateur currentUser = getCurrentAuthenticatedUser();
@@ -118,7 +118,7 @@ public class UtilisateurController {
     // CHANGEMENT DE MOT DE PASSE PAR L'UTILISATEUR
     // =========================================================
 
-    @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYE', 'ASSISTANT_DIRECTION', 'ADMINISTRATION_PERSONNEL', 'CHEF_DEPARTEMENT', 'DIRECTEUR')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'EMPLOYE', 'ASSISTANT_DIRECTION', 'ADMINISTRATION_PERSONNEL', 'CHEF_DEPARTEMENT', 'DIRECTEUR')")
     @PutMapping("/change-password")
     public ResponseEntity<?> changePassword(@Valid @RequestBody ChangePasswordRequest request) {
         Utilisateur currentUser = getCurrentAuthenticatedUser();
@@ -157,7 +157,7 @@ public class UtilisateurController {
     // CONSULTATION D'UN COLLABORATEUR PAR ID
     // =========================================================
 
-    @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYE', 'ASSISTANT_DIRECTION', 'ADMINISTRATION_PERSONNEL', 'CHEF_DEPARTEMENT', 'DIRECTEUR')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'EMPLOYE', 'ASSISTANT_DIRECTION', 'ADMINISTRATION_PERSONNEL', 'CHEF_DEPARTEMENT', 'DIRECTEUR')")
     @GetMapping("/{id}")
     public ResponseEntity<?> getById(@PathVariable Long id) {
         Utilisateur currentUser = getCurrentAuthenticatedUser();

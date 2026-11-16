@@ -221,16 +221,17 @@ public class EmailService {
                 }
 
                 plainText.append("Votre compte sur la plateforme de Gestion des Congés a été créé avec succès.\n\n")
-                                .append("Vos identifiants :\n")
-                                .append("Matricule / Identifiant : ").append(matricule).append("\n")
-                                .append("Mot de passe initial : ").append(rawPassword).append("\n\n");
-
+                                .append("Votre identifiant : ").append(matricule).append("\n");
                 if (generatedAutomatically) {
-                        plainText.append("Nous vous recommandons de définir votre mot de passe personnel dès maintenant.\n\n");
+                        plainText.append("Utilisez le lien sécurisé ci-dessus pour définir votre mot de passe personnel.\n\n");
                 } else {
-                        plainText.append("Conservez ce mot de passe en sécurité. Vous pourrez le modifier depuis votre espace personnel.\n\n");
+                        plainText.append("Le mot de passe initial a été défini par l'administration. Pour votre sécurité, il n'est pas transmis par e-mail.\n\n");
                 }
                 plainText.append("Cordialement,\nL'équipe RH");
+
+                String credentialNotice = generatedAutomatically
+                                ? "Définissez votre mot de passe personnel à l'aide du lien sécurisé ci-dessus."
+                                : "Le mot de passe initial a été défini par l'administration et n'est pas transmis par e-mail.";
 
                 String html = """
                                 <!doctype html>
@@ -247,7 +248,7 @@ public class EmailService {
                                       <div style="padding:18px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;">
                                         <p style="margin:0 0 12px;font-weight:700;color:#0f172a;">Vos identifiants de connexion</p>
                                         <p style="margin:7px 0;">Matricule / Identifiant : <strong>{{MATRICULE}}</strong></p>
-                                        <p style="margin:7px 0;">Mot de passe initial : <strong style="font-family:monospace;">{{PASSWORD}}</strong></p>
+                                        <p style="margin:7px 0;line-height:1.6;">{{CREDENTIAL_NOTICE}}</p>
                                       </div>
                                       <p style="margin:22px 0 0;line-height:1.6;">Cordialement,<br><strong>L'équipe RH</strong></p>
                                     </div>
@@ -255,7 +256,7 @@ public class EmailService {
                                 </html>
                                 """.replace("{{ACTION}}", actionHtml)
                                         .replace("{{MATRICULE}}", escapeHtml(matricule))
-                                        .replace("{{PASSWORD}}", escapeHtml(rawPassword));
+                                        .replace("{{CREDENTIAL_NOTICE}}", escapeHtml(credentialNotice));
 
                 sendHtmlEmail(toEmail, subject, plainText.toString(), html);
         }

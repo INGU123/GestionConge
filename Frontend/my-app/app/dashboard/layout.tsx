@@ -185,7 +185,7 @@ export default function DashboardLayout({
           />
         </svg>
       ),
-      show: isEmploye,
+      show: false,
     },
 
     {
@@ -213,7 +213,7 @@ export default function DashboardLayout({
           />
         </svg>
       ),
-      show: isAdmin || isEmploye,
+      show: isEmploye,
     },
 
     {
@@ -320,6 +320,13 @@ export default function DashboardLayout({
     { href: "/dashboard/directeur", label: "Décisions du directeur", icon: <span>⚖</span>, show: isDirecteur },
     { href: "/dashboard/departements", label: "Départements", icon: <span>⌂</span>, show: isAdmin }
   );
+
+  navItems.push({
+    href: "/dashboard/decisions",
+    label: "Décisions reçues",
+    icon: <span>✓</span>,
+    show: isEmploye,
+  });
 
   navItems.push({
     href: "/dashboard/aide",

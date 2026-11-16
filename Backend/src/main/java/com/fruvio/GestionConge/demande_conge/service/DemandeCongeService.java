@@ -421,6 +421,25 @@ public class DemandeCongeService {
      * que le circuit historique. Aucun solde n'est débité à cette étape.
      */
     @Transactional
+    public int calculerReliquatDisponiblePourPeriode(Long utilisateurId, Long typeCongeId,
+            LocalDate dateDebut, LocalDate dateFin) {
+        if (utilisateurId == null || typeCongeId == null || dateDebut == null || dateFin == null
+                || dateFin.isBefore(dateDebut)) {
+            throw new IllegalArgumentException("Collaborateur, type et période valides obligatoires.");
+        }
+        int disponibleTotal = 0;
+        for (int annee = dateDebut.getYear(); annee <= dateFin.getYear(); annee++) {
+            Solde_conge solde = soldeRepo.findByUtilisateurIdAndTypeCongeIdAndPeriode(
+                    utilisateurId, typeCongeId, annee)
+                    .orElseThrow(() -> new IllegalStateException("Aucun solde enregistré pour l'année " + annee + "."));
+            int acquis = solde.getSoldeAquis() == null ? 0 : solde.getSoldeAquis();
+            int pris = solde.getSoldePris() == null ? 0 : solde.getSoldePris();
+            disponibleTotal += Math.max(0, acquis - pris);
+        }
+        return disponibleTotal;
+    }
+
+    @Transactional
     public int verifierEligibiliteWorkflow(Long utilisateurId, Long typeCongeId,
             LocalDate dateDebut, LocalDate dateFin) {
         if (utilisateurId == null || typeCongeId == null || dateDebut == null || dateFin == null

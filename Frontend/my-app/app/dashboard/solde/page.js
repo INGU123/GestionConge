@@ -7,7 +7,7 @@ import {
   ajustSolde,
 } from "../../api/soldeConge/soldeConge";
 import { getAllTypeConge } from "../../api/typeConge/typeConge";
-import { getCurrentUser, authFetch } from "@/lib/apiClient";
+import { getCurrentUser, authFetch, API_BASE_URL } from "@/lib/apiClient";
 import {
   FiActivity as Scale,
   FiCalendar as CalendarDays,
@@ -98,7 +98,7 @@ export default function SoldeConge() {
 
       try {
         const response = await authFetch(
-          "http://localhost:8080/utilisateur/all"
+          `${API_BASE_URL}/utilisateur/all`
         );
 
         const data = response.ok ? await response.json() : [];

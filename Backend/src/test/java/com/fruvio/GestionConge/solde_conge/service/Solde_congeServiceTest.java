@@ -1,9 +1,12 @@
 package com.fruvio.GestionConge.solde_conge.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.*;
 
 import java.util.List;
+import java.util.Optional;
+import java.util.Optional;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -65,4 +68,35 @@ class Solde_congeServiceTest {
         assertEquals(List.of(soldeActuel), service.getSoldesParUtilisateur(1L, employe));
         verify(soldeCongeRepository, never()).delete(any());
     }
+    @Test
+    void ajustementSoldeRequiresActiveAdministrator() {
+        when(utilisateurRepository.findByIdForUpdate(9L)).thenReturn(Optional.of(
+                Utilisateur.builder().id(9L).role(Role.MANAGER).actif(true).build()));
+
+        assertThrows(org.springframework.security.access.AccessDeniedException.class,
+                () -> service.ajusterSolde(4L, 12, 9L, "Correction administrative"));
+
+        verify(soldeCongeRepository, never()).findByIdForUpdate(anyLong());
+    }
+
+    @Test
+    void ajustementSoldePreservesConsumedDaysAndLocksTargetBalance() {
+        Utilisateur admin = Utilisateur.builder().id(1L).role(Role.ADMIN).actif(true).build();
+        Solde_conge solde = Solde_conge.builder().id(7L).utilisateurId(2L).typeCongeId(3L)
+                .soldeAquis(30).soldePris(5).soldeRestant(25).build();
+        when(utilisateurRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(admin));
+        when(soldeCongeRepository.findByIdForUpdate(7L)).thenReturn(Optional.of(solde));
+        when(soldeCongeRepository.save(solde)).thenReturn(solde);
+
+        Solde_conge updated = service.ajusterSolde(7L, 20, 1L, "Correction justifiée du reliquat");
+
+        assertEquals(25, updated.getSoldeAquis());
+        assertEquals(5, updated.getSoldePris());
+        assertEquals(20, updated.getSoldeRestant());
+        verify(soldeCongeRepository).findByIdForUpdate(7L);
+        verify(historiqueMouvementService).enregistrerMouvement(
+                2L, "AJUSTEMENT_SOLDE", 5, 3L, null,
+                "Ajustement manuel du solde : 25 -> 20 | Motif : Correction justifiée du reliquat", 1L);
+    }
+
 }

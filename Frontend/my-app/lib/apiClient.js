@@ -1,5 +1,7 @@
 // Client centralisé pour tous les appels API avec injection automatique du token JWT
 
+export const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080").replace(/\/+$/, "");
+
 export function getAuthToken() {
   if (typeof window === "undefined") return null;
   return localStorage.getItem("token");

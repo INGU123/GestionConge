@@ -7,8 +7,6 @@ import Image from "next/image";
 import {
   FiBookOpen as BookOpen,
   FiSearch as Search,
-  FiLogIn as LogIn,
-  FiGrid as LayoutDashboard,
   FiClipboard as ClipboardList,
   FiCalendar as CalendarDays,
   FiClock as History,
@@ -251,6 +249,7 @@ export default function GuideUtilisateurPage() {
   const [currentUser, setCurrentUser] = useState(null);
   const [userLoading, setUserLoading] = useState(true);
 
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     let active = true;
 
@@ -266,6 +265,7 @@ export default function GuideUtilisateurPage() {
 
     return () => { active = false; };
   }, []);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const role = (currentUser?.role || "").toString().trim().toUpperCase().replace(/^ROLE_/, "");
   const isAdmin = role === "ADMIN";

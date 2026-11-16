@@ -2,9 +2,9 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { FiCheck as Check, FiX as X, FiRefreshCw as RefreshCw, FiShield as ShieldCheck } from "react-icons/fi";
-import { authFetch, getCurrentUser } from "@/lib/apiClient";
+import { authFetch, getCurrentUser, API_BASE_URL } from "@/lib/apiClient";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+const API_URL = API_BASE_URL;
 
 export default function ReinitialisationsPage() {
   const [requests, setRequests] = useState([]);
@@ -28,6 +28,7 @@ export default function ReinitialisationsPage() {
     }
   }, [isAdmin]);
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { loadRequests(true); }, [loadRequests]);
 
   const handleDecision = async (id, decision) => {
@@ -46,13 +47,13 @@ export default function ReinitialisationsPage() {
     }
   };
 
-  if (!isAdmin) return <div className="alert alert-error">Cette rubrique est réservée à l'administrateur.</div>;
+  if (!isAdmin) return <div className="alert alert-error">Cette rubrique est réservée à l&apos;administrateur.</div>;
 
   return (
     <div className="space-y-6">
       <div className="bg-slate-900 text-white rounded-2xl p-6 border-l-4 border-blue-600">
         <h1 className="text-2xl font-bold flex items-center gap-2"><ShieldCheck className="w-6 h-6 text-blue-400" /> Réinitialisations de mot de passe</h1>
-        <p className="text-slate-300 text-sm mt-2">Examinez les demandes des agents SPAT. Après acceptation, un mot de passe temporaire est généré et envoyé à l'adresse e-mail enregistrée.</p>
+        <p className="text-slate-300 text-sm mt-2">Examinez les demandes des agents SPAT. Après acceptation, un lien personnel à usage unique est envoyé à l&apos;adresse e-mail enregistrée.</p>
       </div>
       {message && <div className="alert alert-info"><span>{message}</span></div>}
       <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-5">

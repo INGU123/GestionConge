@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
-import { authFetch, getCurrentUser } from "@/lib/apiClient";
-import { useToast } from "../../components/ToastProvider";
+import { authFetch, getCurrentUser, API_BASE_URL } from "@/lib/apiClient";
+import { useToast } from "../../Components/ToastProvider";
 import {
   Users,
   UserPlus,
@@ -89,7 +89,7 @@ export default function UtilisateursPage() {
     const loadUsers = async () => {
       try {
         setLoading(true);
-        const res = await authFetch("http://localhost:8080/utilisateur/all");
+        const res = await authFetch(`${API_BASE_URL}/utilisateur/all`);
         if (res.ok) {
           const data = await res.json();
           if (isMounted) {
@@ -120,7 +120,7 @@ export default function UtilisateursPage() {
     const loadServices = async () => {
       try {
         setServicesLoading(true);
-        const res = await authFetch("http://localhost:8080/services");
+        const res = await authFetch(`${API_BASE_URL}/services`);
         if (!res.ok) throw new Error("Impossible de charger les services.");
         const data = await res.json();
         if (isMounted) setServices(Array.isArray(data) ? data : []);
@@ -137,7 +137,7 @@ export default function UtilisateursPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!/^\\d+$/.test(String(newUser.matricule ?? "").trim())) {
+    if (!/^\d+$/.test(String(newUser.matricule ?? "").trim())) {
       showToast("Le matricule doit contenir uniquement des chiffres (ex. 2026100).", "warning");
       return;
     }
@@ -146,7 +146,7 @@ export default function UtilisateursPage() {
         newUser.matricule, newUser.nom, newUser.prenom, newUser.numero_cin,
         newUser.date_naissance, newUser.telephone, newUser.adresse,
         newUser.role, newUser.date_embauche, newUser.fonction, newUser.type_contrat,
-        newUser.service_id, newUser.manager_id,
+        newUser.service_id,
       ];
       if (requiredValues.some((value) => value == null || String(value).trim() === "")) {
         showToast("Compléter toutes les informations de l'utilisateur", "warning");
@@ -175,7 +175,7 @@ export default function UtilisateursPage() {
       };
 
       const res = await authFetch(
-        `http://localhost:8080/utilisateur/${editingUser ? "update" : "create"}`,
+        `${API_BASE_URL}/utilisateur/${editingUser ? "update" : "create"}`,
         {
           method: editingUser ? "PUT" : "POST",
           body: JSON.stringify(payload),
@@ -222,7 +222,7 @@ export default function UtilisateursPage() {
     const user = userToDelete;
     setDeletingUserId(user.id);
     try {
-      const res = await authFetch(`http://localhost:8080/utilisateur/${user.id}`, {
+      const res = await authFetch(`${API_BASE_URL}/utilisateur/${user.id}`, {
         method: "DELETE",
         body: JSON.stringify({ motif: archiveReason.trim() || null }),
       });
@@ -251,7 +251,7 @@ export default function UtilisateursPage() {
   const loadArchivedUsers = async () => {
     setArchivedLoading(true);
     try {
-      const res = await authFetch("http://localhost:8080/utilisateur/archived");
+      const res = await authFetch(`${API_BASE_URL}/utilisateur/archived`);
       if (!res.ok) throw new Error(await res.text());
       const data = await res.json();
       setArchivedUsers(Array.isArray(data) ? data : []);
@@ -278,7 +278,7 @@ export default function UtilisateursPage() {
 
   const handleRestore = async (user) => {
     try {
-      const res = await authFetch(`http://localhost:8080/utilisateur/restore/${user.id}`, {
+      const res = await authFetch(`${API_BASE_URL}/utilisateur/restore/${user.id}`, {
         method: "PUT",
       });
       if (!res.ok) {
@@ -289,8 +289,8 @@ export default function UtilisateursPage() {
       }
 
       const [activeResponse, archivedResponse] = await Promise.all([
-        authFetch("http://localhost:8080/utilisateur/all"),
-        authFetch("http://localhost:8080/utilisateur/archived"),
+        authFetch(`${API_BASE_URL}/utilisateur/all`),
+        authFetch(`${API_BASE_URL}/utilisateur/archived`),
       ]);
       if (activeResponse.ok) setUsers(await activeResponse.json());
       if (archivedResponse.ok) setArchivedUsers(await archivedResponse.json());
@@ -310,7 +310,7 @@ export default function UtilisateursPage() {
         actif: updatedStatus,
       };
 
-      const res = await authFetch(`http://localhost:8080/utilisateur/update`, {
+      const res = await authFetch(`${API_BASE_URL}/utilisateur/update`, {
         method: "PUT",
         body: JSON.stringify(payload),
       });
@@ -960,9 +960,8 @@ export default function UtilisateursPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-bold uppercase text-slate-600 mb-1">Responsable hiérarchique</label>
+                  <label className="block text-xs font-bold uppercase text-slate-600 mb-1">Responsable hiérarchique (facultatif)</label>
                   <select
-                    required={!editingUser}
                     value={newUser.manager_id == null ? "" : String(newUser.manager_id)}
                     onChange={(e) => setNewUser({ ...newUser, manager_id: e.target.value })}
                     className="select select-bordered select-sm w-full bg-white text-slate-800 focus:outline-hidden"
@@ -1008,11 +1007,11 @@ export default function UtilisateursPage() {
         <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/60 p-4">
           <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
             <h2 className="text-lg font-bold text-slate-900">Mot de passe généré</h2>
-            <p className="mt-2 text-sm text-slate-600">Aucune adresse e-mail n'a été renseignée. Copiez ce mot de passe et transmettez-le au collaborateur de manière sécurisée. Il ne sera plus affiché après fermeture de cette fenêtre.</p>
+            <p className="mt-2 text-sm text-slate-600">Aucune adresse e-mail n&apos;a été renseignée. Copiez ce mot de passe et transmettez-le au collaborateur de manière sécurisée. Il ne sera plus affiché après fermeture de cette fenêtre.</p>
             <div className="mt-4 rounded-lg border bg-slate-50 p-4 text-center font-mono text-lg font-bold tracking-wider text-slate-900">{generatedPassword}</div>
             <div className="mt-5 flex justify-end gap-2">
               <button type="button" className="btn btn-outline btn-sm" onClick={async () => { try { await navigator.clipboard.writeText(generatedPassword); showToast("Mot de passe copié.", "success"); } catch { showToast("Copie impossible : sélectionnez le mot de passe manuellement.", "warning"); } }}>Copier</button>
-              <button type="button" className="btn btn-primary btn-sm text-white" onClick={() => setGeneratedPassword("")}>J'ai noté le mot de passe</button>
+              <button type="button" className="btn btn-primary btn-sm text-white" onClick={() => setGeneratedPassword("")}>J&apos;ai noté le mot de passe</button>
             </div>
           </div>
         </div>

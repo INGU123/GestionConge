@@ -41,7 +41,9 @@ public class CircuitDemandeCongeService {
     public CircuitDemandeConge creer(Long employeId, Long typeId, java.time.LocalDate debut,
             java.time.LocalDate fin, String commentaire, Utilisateur assistant) {
         exiger(assistant, Role.ASSISTANT_DIRECTION);
-        Utilisateur employe = utilisateurActif(employeId);
+        Utilisateur employe = utilisateurs.findByIdForUpdate(employeId)
+                .orElseThrow(() -> new IllegalArgumentException("Collaborateur introuvable."));
+        if (!employe.isEnabled()) throw new IllegalArgumentException("Le collaborateur est inactif ou archivé.");
         if (employe.getService_id() == null) throw new IllegalStateException("Le collaborateur n'est affecté à aucun service.");
         Services serviceEmploye = services.findById(employe.getService_id()).orElseThrow(() -> new IllegalStateException("Service du collaborateur introuvable."));
         if (serviceEmploye.getDepartementId() == null) throw new IllegalStateException("Le service du collaborateur doit être rattaché à un département avant la création du dossier.");

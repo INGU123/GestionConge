@@ -8,6 +8,7 @@ import {
 } from "../../api/soldeConge/soldeConge";
 import { getAllTypeConge } from "../../api/typeConge/typeConge";
 import { getCurrentUser, authFetch } from "@/lib/apiClient";
+import { useRouter } from "next/navigation";
 import {
   FiActivity as Scale,
   FiCalendar as CalendarDays,
@@ -23,6 +24,11 @@ import {
 
 export default function SoldeConge() {
   const [user] = useState(() => getCurrentUser());
+  const router = useRouter();
+  const isAdmin = user?.role?.toString().trim().toUpperCase().replace(/^ROLE_/, "") === "ADMIN";
+  useEffect(() => {
+    if (isAdmin) router.replace("/dashboard");
+  }, [isAdmin, router]);
 
   const [soldes, setSoldes] = useState([]);
   const [typesConge, setTypesConge] = useState([]);
@@ -252,7 +258,6 @@ export default function SoldeConge() {
   /*
    * ROLE ADMIN
    */
-  const isAdmin = user?.role?.toString().trim().toUpperCase() === "ADMIN";
   const canAdjust = false;
 
   /*
@@ -272,6 +277,8 @@ export default function SoldeConge() {
   const totalRestant = Math.round(
     soldes.reduce((acc, s) => acc + (Number(s.soldeRestant) || 0), 0)
   );
+
+  if (isAdmin) return null;
 
   return (
     <div className="space-y-6">

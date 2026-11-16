@@ -38,6 +38,8 @@ public class CircuitDemandeCongeController {
             @Size(max=1500) String commentaire) {}
     public record ReliquatRequest(@NotNull @Min(0) Integer reliquatJours, @Size(max=1500) String commentaire) {}
     public record DecisionRequest(@NotBlank String decision, String motif) {}
+    public record ChefTransmissionRequest(@NotBlank String avis, @Size(max=1500) String commentaire) {}
+    public record CorrectionRequest(@NotBlank @Size(max=1500) String commentaire) {}
 
     @PostMapping
     @PreAuthorize("hasRole('ASSISTANT_DIRECTION')")
@@ -49,6 +51,16 @@ public class CircuitDemandeCongeController {
     @GetMapping("/assistant/mes-dossiers")
     @PreAuthorize("hasRole('ASSISTANT_DIRECTION')")
     public List<CircuitDemandeConge> mesDossiers() { return service.dossiersAssistant(currentUser()); }
+
+    @GetMapping("/employe/mes-decisions")
+    @PreAuthorize("hasRole('EMPLOYE')")
+    public List<CircuitDemandeConge> mesDecisions() { return service.dossiersEmploye(currentUser()); }
+
+    @PostMapping("/{id}/retourner-correction")
+    @PreAuthorize("hasRole('ASSISTANT_DIRECTION')")
+    public CircuitDemandeConge retournerPourCorrection(@PathVariable Long id, @Valid @RequestBody CorrectionRequest body) {
+        return service.demanderCorrectionReliquat(id, body.commentaire(), currentUser());
+    }
 
     @GetMapping("/admin/consultation")
     @PreAuthorize("hasRole('ADMIN')")
@@ -80,8 +92,8 @@ public class CircuitDemandeCongeController {
 
     @PostMapping("/{id}/transmettre-directeur")
     @PreAuthorize("hasRole('CHEF_DEPARTEMENT')")
-    public CircuitDemandeConge transmettreDirecteur(@PathVariable Long id) {
-        return service.transmettreAuDirecteur(id, currentUser());
+    public CircuitDemandeConge transmettreDirecteur(@PathVariable Long id, @Valid @RequestBody ChefTransmissionRequest body) {
+        return service.transmettreAuDirecteur(id, body.avis(), body.commentaire(), currentUser());
     }
 
     @PostMapping("/{id}/decision")
@@ -91,12 +103,17 @@ public class CircuitDemandeCongeController {
     }
 
     @GetMapping("/{id}/pdf")
-    @PreAuthorize("hasRole('ASSISTANT_DIRECTION')")
+    @PreAuthorize("hasAnyRole('ASSISTANT_DIRECTION','EMPLOYE')")
     public ResponseEntity<byte[]> telechargerDecision(@PathVariable Long id) {
-        Utilisateur assistant = currentUser();
-        CircuitDemandeConge d = service.dossiersAssistant(assistant).stream()
-                .filter(x -> x.getId().equals(id)).findFirst()
-                .orElseThrow(() -> new AccessDeniedException("Ce dossier ne vous appartient pas."));
+        Utilisateur requester = currentUser();
+        boolean autorise = requester.getRole() == com.fruvio.GestionConge.utilisateur.entity.Role.ASSISTANT_DIRECTION
+                ? service.dossiersAssistant(requester).stream().anyMatch(x -> x.getId().equals(id))
+                : requester.getRole() == com.fruvio.GestionConge.utilisateur.entity.Role.EMPLOYE
+                    && service.dossiersEmploye(requester).stream().anyMatch(x -> x.getId().equals(id));
+        if (!autorise) throw new AccessDeniedException("Ce dossier ne vous appartient pas.");
+        CircuitDemandeConge d = requester.getRole() == com.fruvio.GestionConge.utilisateur.entity.Role.ASSISTANT_DIRECTION
+                ? service.dossiersAssistant(requester).stream().filter(x -> x.getId().equals(id)).findFirst().orElseThrow()
+                : service.dossiersEmploye(requester).stream().filter(x -> x.getId().equals(id)).findFirst().orElseThrow();
         if (!List.of("VALIDEE", "REFUSEE").contains(d.getStatut())) {
             throw new IllegalStateException("Le PDF sera disponible après la décision du directeur.");
         }

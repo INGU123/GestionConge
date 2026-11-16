@@ -137,8 +137,8 @@ export default function UtilisateursPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!/^\\d+$/.test(String(newUser.matricule ?? "").trim())) {
-      showToast("Le matricule doit contenir uniquement des chiffres (ex. 2026100).", "warning");
+    if (!/^[0-9]{7}$/.test(String(newUser.matricule ?? "").trim())) {
+      showToast("Le matricule doit contenir exactement 7 chiffres (ex. 2026100).", "warning");
       return;
     }
     if (!editingUser) {
@@ -761,11 +761,12 @@ export default function UtilisateursPage() {
                 <input
                   type="text"
                   inputMode="numeric"
-                  pattern="[0-9]+"
+                  pattern="[0-9]{7}"
+                  maxLength={7}
                   required
                   placeholder="Ex. 2026100"
                   value={newUser.matricule ?? ""}
-                  onChange={(e) => setNewUser({ ...newUser, matricule: e.target.value.replace(/[^0-9]/g, "") })}
+                  onChange={(e) => setNewUser({ ...newUser, matricule: e.target.value.replace(/[^0-9]/g, "").slice(0, 7) })}
                   className="input input-bordered input-sm w-full bg-white text-slate-800 focus:outline-hidden"
                 />
               </div>

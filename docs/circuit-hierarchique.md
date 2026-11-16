@@ -40,3 +40,9 @@ La migration autorise les comptes sans e-mail, crée `departement` et `circuit_d
 ## Hors périmètre temporaire
 
 L'envoi des identifiants par SMS pour la récupération par matricule est volontairement différé. Aucun SMS n'est simulé.
+
+## Référentiel de consolidation
+
+Le référentiel métier détaillé, les transitions autorisées, les responsabilités, les règles de sécurité, les choix conservateurs et les tests d'acceptation sont centralisés dans [workflow-spat-reference.md](workflow-spat-reference.md).
+
+Attention : le code actuel utilise encore les fonctions professionnelles comme valeurs de l'enum `Role`. La séparation durable entre rôle technique, fonction professionnelle et permission métier est une évolution de modèle de données à réaliser avec une migration additive et des tests de compatibilité ; elle n'est pas réputée terminée par la seule documentation.

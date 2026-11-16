@@ -411,6 +411,8 @@ public class DemandeCongeService {
                 .mapToInt(solde -> {
                     int acquis = solde.getSoldeAquis() == null ? 0 : solde.getSoldeAquis();
                     int pris = solde.getSoldePris() == null ? 0 : solde.getSoldePris();
+                    // Recalculer depuis les données de base : soldeRestant peut être obsolète
+                    // (notamment lorsqu'il vaut 0 par défaut malgré un solde acquis positif).
                     return Math.max(0, acquis - pris);
                 }).sum();
     }

@@ -25,6 +25,11 @@ const Home = () => {
     e.preventDefault();
     setError("");
 
+    if (!/^[0-9]{7}$/.test(matricule.trim())) {
+      setError("Le matricule doit contenir exactement 7 chiffres.");
+      return;
+    }
+
     try {
       const data = await loginUser(matricule, motDePass);
 
@@ -122,10 +127,11 @@ const Home = () => {
                     id="matricule"
                     type="text"
                     inputMode="numeric"
-                    pattern="[0-9]+"
+                    pattern="[0-9]{7}"
+                    maxLength={7}
                     placeholder="Ex. 2026100"
                     value={matricule}
-                    onChange={(e) => setMatricule(e.target.value.replace(/[^0-9]/g, ""))}
+                    onChange={(e) => setMatricule(e.target.value.replace(/[^0-9]/g, "").slice(0, 7))}
                     autoComplete="username"
                     required
                   />

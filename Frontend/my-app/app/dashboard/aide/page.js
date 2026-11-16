@@ -387,9 +387,13 @@ export default function GuideUtilisateurPage() {
       </div>
       <div className="grid gap-3 sm:grid-cols-2">
         {[
-          { label: "Collaborateur", detail: "Déposer et suivre ses demandes", icon: ClipboardList, visible: !isAdmin },
-          { label: "Manager", detail: "Examiner les demandes accessibles", icon: CheckCircle2, visible: isManager },
-          { label: "Administrateur", detail: "Gérer les comptes et les paramètres RH", icon: Users, visible: isAdmin },
+          { label: "Collaborateur", detail: "Recevoir et consulter les décisions finales", icon: ClipboardList, visible: role === "EMPLOYE" },
+          { label: "Manager", detail: "Consulter les demandes de son périmètre", icon: CheckCircle2, visible: isManager },
+          { label: "Assistant de direction", detail: "Constituer et suivre les dossiers", icon: ClipboardList, visible: role === "ASSISTANT_DIRECTION" },
+          { label: "Administration du personnel", detail: "Vérifier les reliquats", icon: CheckCircle2, visible: role === "ADMINISTRATION_PERSONNEL" },
+          { label: "Chef de département", detail: "Émettre un avis hiérarchique", icon: Users, visible: role === "CHEF_DEPARTEMENT" },
+          { label: "Direction", detail: "Prendre la décision finale", icon: ShieldCheck, visible: role === "DIRECTEUR" },
+          { label: "Administrateur", detail: "Gérer les comptes et la configuration", icon: Users, visible: isAdmin },
           { label: "Tous les utilisateurs", detail: "Notifications et sécurité", icon: ShieldCheck, visible: true },
         ].filter((item) => item.visible).map((role) => {
           const Icon = role.icon;

@@ -102,7 +102,8 @@ public class CircuitDemandeCongeService {
                 d.getUtilisateurId(), d.getTypeCongeId(), d.getDateDebut(), d.getDateFin());
         if (joursVerifies != d.getNombreJours())
             throw new IllegalStateException("Le nombre de jours ouvrés du dossier a changé. Corrigez le dossier avant de continuer.");
-        int disponible = demandesHistoriques.calculerReliquatDisponible(d.getUtilisateurId(), d.getTypeCongeId());
+        int disponible = demandesHistoriques.calculerReliquatDisponiblePourPeriode(
+                d.getUtilisateurId(), d.getTypeCongeId(), d.getDateDebut(), d.getDateFin());
         if (reliquat != disponible)
             throw new IllegalArgumentException("Discordance du reliquat : le système calcule " + disponible
                     + " jour(s), mais " + reliquat + " jour(s) ont été saisis. Vérifiez les soldes par exercice.");
@@ -125,7 +126,8 @@ public class CircuitDemandeCongeService {
                 d.getUtilisateurId(), d.getTypeCongeId(), d.getDateDebut(), d.getDateFin());
         if (joursVerifies != d.getNombreJours())
             throw new IllegalStateException("Le nombre de jours ouvrés a changé. Retournez le dossier pour correction.");
-        int disponibleActuel = demandesHistoriques.calculerReliquatDisponible(d.getUtilisateurId(), d.getTypeCongeId());
+        int disponibleActuel = demandesHistoriques.calculerReliquatDisponiblePourPeriode(
+                d.getUtilisateurId(), d.getTypeCongeId(), d.getDateDebut(), d.getDateFin());
         if (d.getReliquatJours() == null || !d.getReliquatJours().equals(disponibleActuel))
             throw new IllegalStateException("Le solde a changé depuis le contrôle RH. Retournez le dossier à l'Administration du personnel pour une nouvelle vérification.");
         if (disponibleActuel < d.getNombreJours())
@@ -185,8 +187,8 @@ public class CircuitDemandeCongeService {
             if (joursVerifies != d.getNombreJours())
                 throw new IllegalStateException("Le nombre de jours ouvrés a changé depuis la création du dossier. La décision est suspendue pour éviter un débit incorrect.");
             // Actualise le relevé final après recontrôle transactionnel des soldes.
-            d.setReliquatJours(demandesHistoriques.calculerReliquatDisponible(
-                    d.getUtilisateurId(), d.getTypeCongeId()));
+            d.setReliquatJours(demandesHistoriques.calculerReliquatDisponiblePourPeriode(
+                    d.getUtilisateurId(), d.getTypeCongeId(), d.getDateDebut(), d.getDateFin()));
         }
         DemandeConge legacy = DemandeConge.builder().utilisateurId(d.getUtilisateurId()).typeCongeId(d.getTypeCongeId())
                 .dateDebut(d.getDateDebut()).dateFin(d.getDateFin()).nombreJours(d.getNombreJours())

@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import {
   CalendarDays,
   Clock,
@@ -96,6 +95,7 @@ export default function Dashboard() {
 
       {/* KPI Key Indicators */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {!isAdmin && (
         <div className="bg-white rounded-xl p-5 shadow-sm border border-slate-200 flex items-center justify-between">
           <div>
             <p className="text-xs font-bold uppercase text-slate-500 tracking-wider">
@@ -110,6 +110,8 @@ export default function Dashboard() {
             <CalendarDays className="w-6 h-6" />
           </div>
         </div>
+
+        )}
 
         <div className="bg-white rounded-xl p-5 shadow-sm border border-slate-200 flex items-center justify-between">
           <div>

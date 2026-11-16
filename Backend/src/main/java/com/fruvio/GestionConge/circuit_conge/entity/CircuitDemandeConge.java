@@ -27,6 +27,9 @@ public class CircuitDemandeConge {
     @Column(name="reliquat_jours") private Integer reliquatJours;
     @Column(name="reliquat_commentaire", length=1500) private String reliquatCommentaire;
     @Column(name="motif_refus", length=1500) private String motifRefus;
+    @Column(name="assistant_correction", length=1500) private String assistantCorrection;
+    @Column(name="avis_chef", length=20) private String avisChef;
+    @Column(name="commentaire_chef", length=1500) private String commentaireChef;
     @Column(name="date_creation", nullable=false) private LocalDateTime dateCreation;
     @Column(name="date_reliquat") private LocalDateTime dateReliquat;
     @Column(name="date_soumission_chef") private LocalDateTime dateSoumissionChef;

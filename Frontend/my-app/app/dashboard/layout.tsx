@@ -8,6 +8,7 @@ import { FiMoon, FiSun, FiChevronLeft, FiChevronRight, FiLogOut } from "react-ic
 import { getCurrentUser, clearAuthSession } from "@/lib/apiClient";
 import NotificationHeaderMenu from "./notifications/page";
 import { ToastProvider } from "../Components/ToastProvider";
+import "./workspace-ui.css";
 
 interface DashboardUser {
   id?: number;
@@ -517,7 +518,7 @@ export default function DashboardLayout({
 
           {/* MAIN */}
           <main
-            className="flex-1 p-6 md:p-8 overflow-y-auto min-h-[calc(100vh-4rem)]"
+            className="spat-dashboard-main flex-1 p-6 md:p-8 overflow-y-auto min-h-[calc(100vh-4rem)]"
             style={{ background: "var(--page-bg)" }}
           >
             {children}

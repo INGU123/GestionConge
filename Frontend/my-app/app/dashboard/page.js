@@ -13,7 +13,7 @@ import {
 import { getMesDemandes } from "../api/demandeConge/demandeConge";
 import { getSoldesUtilisateur } from "../api/soldeConge/soldeConge";
 import { getAllTypeConge } from "../api/typeConge/typeConge";
-import { getCurrentUser } from "@/lib/apiClient";
+import { getCurrentUser, authFetch } from "@/lib/apiClient";
 
 export default function Dashboard() {
   const [user, setUser] = useState(null);
@@ -34,8 +34,12 @@ export default function Dashboard() {
 
         const currentUserId = Number(currentUser.id);
         if (currentUserId) {
+          const role = String(currentUser.role || "").trim().toUpperCase().replace(/^ROLE_/, "");
+          const demandesPromise = role === "EMPLOYE"
+            ? authFetch("http://localhost:8080/circuit-conge/employe/mes-decisions").then((r) => r.ok ? r.json() : [])
+            : getMesDemandes(currentUserId).catch(() => []);
           const [demandesData, soldesData, typesData] = await Promise.all([
-            getMesDemandes(currentUserId).catch(() => []),
+            demandesPromise,
             getSoldesUtilisateur(currentUserId).catch(() => []),
             getAllTypeConge().catch(() => []),
           ]);
@@ -57,13 +61,13 @@ export default function Dashboard() {
     (acc, s) => acc + (Number(s.soldeRestant) || 0),
     0
   );
-  const enAttenteCount = demandes.filter((d) => d.statut === "EN_ATTENTE").length;
+  const enAttenteCount = demandes.filter((d) => !["VALIDEE", "REFUSEE", "ANNULEE"].includes(String(d.statut || "").toUpperCase())).length;
   const valideCount = demandes.filter((d) => d.statut === "VALIDEE").length;
   const refuseCount = demandes.filter((d) => d.statut === "REFUSEE").length;
   const isAdmin = ["ADMIN", "ROLE_ADMIN"].includes(user?.role?.toUpperCase());
 
   const getTypeLabel = (typeId) => {
-    const found = typesConge.find((t) => t.id === typeId);
+    const found = typesConge.find((t) => String(t.id) === String(typeId));
     return found?.libelle || found?.code || `Type #${typeId}`;
   };
 
@@ -185,7 +189,7 @@ export default function Dashboard() {
                     </tr>
                   </thead>
                   <tbody>
-                    {demandes.slice(-5).reverse().map((d) => (
+                    {demandes.slice().sort((a, b) => new Date(b.dateCreation || b.dateDebut) - new Date(a.dateCreation || a.dateDebut)).slice(0, 5).map((d) => (
                       <tr key={d.id} className="hover:bg-slate-50/80 border-b border-slate-100">
                         <td className="font-medium text-slate-800">
                           {getTypeLabel(d.typeCongeId)}
@@ -204,7 +208,17 @@ export default function Dashboard() {
                                     : "badge-warning text-slate-800"
                               }`}
                           >
-                            {d.statut === "EN_ATTENTE" ? "En attente" : d.statut}
+                            {{
+                              RELIQUAT_EN_ATTENTE: "Vérification RH",
+                              RELIQUAT_A_CORRIGER: "Correction RH",
+                              RELIQUAT_RETOURNE: "Contrôle assistant",
+                              CHEF_EN_ATTENTE: "Avis du chef",
+                              DIRECTEUR_EN_ATTENTE: "Décision de la Direction",
+                              VALIDEE: "Validée",
+                              REFUSEE: "Refusée",
+                              EN_ATTENTE: "En attente",
+                              ANNULEE: "Annulée",
+                            }[String(d.statut || "").toUpperCase()] || d.statut}
                           </span>
                         </td>
                       </tr>

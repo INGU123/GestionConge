@@ -10,7 +10,6 @@ import {
   PieChart,
 } from "lucide-react";
 
-import { getMesDemandes } from "../api/demandeConge/demandeConge";
 import { getSoldesUtilisateur } from "../api/soldeConge/soldeConge";
 import { getAllTypeConge } from "../api/typeConge/typeConge";
 import { getCurrentUser, authFetch } from "@/lib/apiClient";
@@ -32,14 +31,18 @@ export default function Dashboard() {
         }
         setUser(currentUser);
 
+        const role = String(currentUser.role || "").trim().toUpperCase().replace(/^ROLE_/, "");
+        // Le tableau de bord racine est réservé à l'espace collaborateur.
+        // Les autres rôles sont redirigés vers leur espace dédié par le layout.
+        if (role !== "EMPLOYE") {
+          setLoading(false);
+          return;
+        }
+
         const currentUserId = Number(currentUser.id);
         if (currentUserId) {
-          const role = String(currentUser.role || "").trim().toUpperCase().replace(/^ROLE_/, "");
-          const demandesPromise = role === "EMPLOYE"
-            ? authFetch("http://localhost:8080/circuit-conge/employe/mes-decisions").then((r) => r.ok ? r.json() : [])
-            : getMesDemandes(currentUserId).catch(() => []);
           const [demandesData, soldesData, typesData] = await Promise.all([
-            demandesPromise,
+            authFetch("http://localhost:8080/circuit-conge/employe/mes-decisions").then((r) => r.ok ? r.json() : []),
             getSoldesUtilisateur(currentUserId).catch(() => []),
             getAllTypeConge().catch(() => []),
           ]);

@@ -1,0 +1,149 @@
+/* Harmonisation visuelle des espaces métier — aucune règle fonctionnelle */
+.theme-shell main > :is(section, div) {
+  width: 100%;
+  max-width: 1600px;
+  margin-inline: auto;
+}
+.theme-shell main > :is(section, div) > header:first-child {
+  position: relative;
+  margin-bottom: 1.5rem;
+  padding: 1.35rem 1.5rem;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at 96% 0%, rgba(59,130,246,.12), transparent 34%),
+    var(--panel);
+  box-shadow: 0 8px 22px var(--shadow);
+}
+.theme-shell main > :is(section, div) > header:first-child::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 4px;
+  background: linear-gradient(180deg, #1682d8, #0757a7);
+}
+.theme-shell main > :is(section, div) > header:first-child h1 {
+  margin: 0;
+  color: var(--text-main);
+  font-size: clamp(1.25rem, 2vw, 1.7rem);
+  line-height: 1.25;
+  font-weight: 800;
+  letter-spacing: -.04em;
+}
+.theme-shell main > :is(section, div) > header:first-child p {
+  max-width: 850px;
+  margin-top: .55rem;
+  color: var(--text-muted);
+  font-size: .86rem;
+  line-height: 1.65;
+}
+.theme-shell main :is(section, div) > .card,
+.theme-shell main article.card {
+  border: 1px solid var(--border) !important;
+  border-radius: 16px !important;
+  background: var(--panel) !important;
+  box-shadow: 0 7px 22px var(--shadow) !important;
+}
+.theme-shell main article.card {
+  position: relative;
+  transition: border-color .18s ease, box-shadow .18s ease, transform .18s ease;
+}
+.theme-shell main article.card:hover {
+  border-color: rgba(37,130,210,.42) !important;
+  box-shadow: 0 12px 28px var(--shadow) !important;
+  transform: translateY(-1px);
+}
+.theme-shell main form.card {
+  padding: clamp(1rem, 2.2vw, 1.6rem) !important;
+  gap: 1rem;
+}
+.theme-shell main form.card h2,
+.theme-shell main .card > h2 {
+  color: var(--text-main);
+  font-size: 1rem;
+  font-weight: 800;
+  letter-spacing: -.025em;
+}
+.theme-shell main :is(input, textarea, select, .input, .select, .textarea) {
+  min-height: 42px;
+  border-radius: 10px;
+  font-size: .86rem;
+}
+.theme-shell main textarea,
+.theme-shell main .textarea { min-height: 104px; padding: .8rem .9rem; }
+.theme-shell main label .label-text {
+  display: inline-block;
+  margin-bottom: .42rem;
+  color: var(--text-muted);
+  font-size: .76rem;
+  font-weight: 750;
+}
+.theme-shell main :is(button, .btn) { letter-spacing: -.01em; }
+.theme-shell main .btn:not(.btn-square) { padding-inline: 1rem; }
+.theme-shell main .overflow-x-auto {
+  border-radius: 12px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+.theme-shell main table.table {
+  width: 100%;
+  min-width: 620px;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+.theme-shell main table.table thead th {
+  padding: .9rem .85rem;
+  white-space: nowrap;
+}
+.theme-shell main table.table tbody td {
+  padding: .82rem .85rem;
+  line-height: 1.5;
+  vertical-align: middle;
+}
+.theme-shell main table.table tbody tr:last-child td { border-bottom: 0; }
+.theme-shell main table.table tbody tr:hover td { background: var(--primary-soft); }
+.theme-shell main :is(section, div) > p.text-slate-500:only-child,
+.theme-shell main :is(section, div) > p.text-slate-400:only-child {
+  padding: 2rem 1rem;
+  border: 1px dashed var(--border);
+  border-radius: 14px;
+  background: var(--panel);
+  color: var(--text-muted) !important;
+  text-align: center;
+}
+.theme-shell main .badge {
+  min-height: 1.55rem;
+  padding-inline: .65rem;
+  border-radius: 999px;
+  font-size: .68rem;
+}
+.theme-shell main .grid > .bg-white.rounded-xl {
+  border-radius: 15px;
+}
+.theme-shell main .grid > .bg-white.rounded-xl > div:last-child {
+  flex: 0 0 auto;
+}
+.theme-shell main :is(.btn, button):focus-visible,
+.theme-shell main :is(input, select, textarea):focus-visible {
+  outline: 3px solid rgba(37,130,210,.2);
+  outline-offset: 2px;
+}
+.theme-shell[data-theme="night"] main > :is(section, div) > header:first-child {
+  background:
+    radial-gradient(circle at 96% 0%, rgba(59,130,246,.13), transparent 34%),
+    var(--panel);
+}
+.theme-shell[data-theme="night"] main article.card:hover {
+  border-color: rgba(96,165,250,.5) !important;
+}
+@media (max-width: 720px) {
+  .theme-shell main > :is(section, div) > header:first-child {
+    padding: 1.1rem 1rem 1.1rem 1.2rem;
+    border-radius: 14px;
+  }
+  .theme-shell main form.card { padding: 1rem !important; }
+  .theme-shell main :is(section, div) > .card,
+  .theme-shell main article.card { border-radius: 13px !important; }
+  .theme-shell main table.table { min-width: 580px; }
+}

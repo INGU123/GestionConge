@@ -37,7 +37,7 @@ export default function CircuitCongePage() {
   const submit=async id=>{try{const r=await authFetch(API+`/circuit-conge/${id}/soumettre-chef`,{method:"POST"});const d=await r.json();if(!r.ok)throw new Error(d.message||"Transmission impossible");toast("Dossier transmis au chef de département.","success");await load();}catch(e){toast(e.message,"error");}};
   const returnForCorrection=async id=>{const commentaire=(corrections[id]||"").trim();if(!commentaire){toast("Décris précisément la discordance constatée.","warning");return;}try{const r=await authFetch(API+`/circuit-conge/${id}/retourner-correction`,{method:"POST",body:JSON.stringify({commentaire})});const d=await r.json();if(!r.ok)throw new Error(d.message||"Retour impossible");toast("Dossier retourné à l'Administration du personnel.","success");setCorrections({...corrections,[id]:""});await load();}catch(e){toast(e.message,"error");}};
   const download=async id=>{try{const r=await authFetch(API+`/circuit-conge/${id}/pdf`);if(!r.ok)throw new Error("PDF indisponible");const blob=await r.blob();const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=`decision-conge-${id}.pdf`;a.click();URL.revokeObjectURL(url);}catch(e){toast(e.message,"error");}};
-  return <div className="space-y-6">
+  return <div className="spat-workspace spat-workspace--circuit space-y-6">
     <header><h1 className="text-2xl font-bold">Assistant de direction — Circuit des congés</h1><p className="text-sm text-slate-500">Création du dossier verbal, contrôle du reliquat et réception des décisions.</p></header>
     <form onSubmit={create} className="card bg-base-100 border p-5 grid md:grid-cols-2 gap-3">
       <h2 className="font-semibold md:col-span-2">Nouvelle demande de reliquat</h2>

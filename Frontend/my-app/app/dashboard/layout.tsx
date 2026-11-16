@@ -8,6 +8,7 @@ import { FiMoon, FiSun, FiChevronLeft, FiChevronRight, FiLogOut } from "react-ic
 import { getCurrentUser, clearAuthSession } from "@/lib/apiClient";
 import NotificationHeaderMenu from "./notifications/page";
 import { ToastProvider } from "../components/ToastProvider";
+import "./workspace-polish.css";
 
 interface DashboardUser {
   id?: number;

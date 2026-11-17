@@ -416,6 +416,29 @@ public class DemandeCongeService {
     }
 
     /**
+     * Calcule le reliquat uniquement sur les exercices couverts par la période demandée.
+     * Les soldes d'années étrangères à la demande ne doivent pas gonfler le montant vérifié.
+     */
+    @Transactional(readOnly = true)
+    public int calculerReliquatDisponible(Long utilisateurId, Long typeCongeId,
+            LocalDate dateDebut, LocalDate dateFin) {
+        if (utilisateurId == null || typeCongeId == null || dateDebut == null || dateFin == null
+                || dateFin.isBefore(dateDebut)) {
+            throw new IllegalArgumentException("Collaborateur, type et période valides obligatoires.");
+        }
+        int disponible = 0;
+        for (int annee = dateDebut.getYear(); annee <= dateFin.getYear(); annee++) {
+            Solde_conge solde = soldeRepo.findByUtilisateurIdAndTypeCongeIdAndPeriode(
+                    utilisateurId, typeCongeId, annee).orElse(null);
+            if (solde == null) continue;
+            int acquis = solde.getSoldeAquis() == null ? 0 : solde.getSoldeAquis();
+            int pris = solde.getSoldePris() == null ? 0 : solde.getSoldePris();
+            disponible += Math.max(0, acquis - pris);
+        }
+        return disponible;
+    }
+
+    /**
      * Vérifie l'éligibilité d'un dossier préparé par l'assistant en réutilisant
      * les mêmes règles de jours ouvrés, plafonds annuels, chevauchements et soldes
      * que le circuit historique. Aucun solde n'est débité à cette étape.

@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from "react";
 import { authFetch, getCurrentUser } from "@/lib/apiClient";
-import { useToast } from "../../components/ToastProvider";
+import { useToast } from "../../Components/ToastProvider";
 import {
   Users,
   UserPlus,

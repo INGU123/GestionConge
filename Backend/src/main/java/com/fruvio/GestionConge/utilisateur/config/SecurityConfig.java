@@ -45,8 +45,8 @@ public class SecurityConfig {
 
                         // Endpoints réservés à l'ADMIN
                         .requestMatchers(HttpMethod.POST, "/utilisateur/create").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.POST, "/solde/initialiser/**").denyAll()
-                        .requestMatchers(HttpMethod.PUT, "/solde/ajuster/**").denyAll()
+                        .requestMatchers(HttpMethod.POST, "/solde/initialiser/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/solde/ajuster/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.POST, "/type-conge/create").denyAll()
                         .requestMatchers(HttpMethod.PUT, "/type-conge/update/**").denyAll()
                         .requestMatchers(HttpMethod.DELETE, "/type-conge/delete/**").denyAll()

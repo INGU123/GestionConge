@@ -279,6 +279,13 @@ export default function DashboardLayout({
       ),
       show: isAdmin || isEmploye,
     },
+
+    {
+      href: "/dashboard/demande",
+      label: "Mes demandes",
+      icon: <span>▤</span>,
+      show: isAdmin || isEmploye,
+    },
   ];
 
   navItems.push(

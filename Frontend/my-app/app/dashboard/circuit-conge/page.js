@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { authFetch } from "@/lib/apiClient";
-import { useToast } from "../../components/ToastProvider";
+import { useToast } from "../../Components/ToastProvider";
 
 const API = "http://localhost:8080";
 export default function CircuitCongePage() {

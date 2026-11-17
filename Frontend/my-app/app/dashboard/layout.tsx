@@ -142,7 +142,8 @@ export default function DashboardLayout({
   const isPersonnel = userRoleClean === "ADMINISTRATION_PERSONNEL";
   const isChef = userRoleClean === "CHEF_DEPARTEMENT";
   const isDirecteur = userRoleClean === "DIRECTEUR";
-  const isEmploye = userRoleClean === "EMPLOYE";
+  // ADMIN est également un collaborateur : il conserve ses propres demandes et soldes.
+  const isEmploye = userRoleClean === "EMPLOYE" || isAdmin;
 
   const isNight = theme === "night";
 

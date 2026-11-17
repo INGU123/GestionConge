@@ -21,7 +21,7 @@ import {
   FileText,
   FileSpreadsheet,
 } from "lucide-react";
-import { useToast } from "../../components/ToastProvider";
+import { useToast } from "../../Components/ToastProvider";
 
 export default function HistoriquePage() {
   const [currentUser, setCurrentUser] = useState(null);

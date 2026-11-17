@@ -59,7 +59,7 @@ public class SecurityConfig {
 
                         // Endpoints réservés à ADMIN et MANAGER
                         .requestMatchers("/utilisateur/all").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.PUT, "/conge/*/traiter").hasRole("DIRECTEUR")
+                        .requestMatchers(HttpMethod.PUT, "/conge/*/traiter").denyAll()
                         .requestMatchers(HttpMethod.GET, "/conge/manager/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.GET, "/conge/en-attente").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.GET, "/conge/all").hasAnyRole("ADMIN", "MANAGER")

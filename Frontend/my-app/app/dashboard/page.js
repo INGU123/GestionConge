@@ -9,7 +9,6 @@ import {
   XCircle,
   FileText,
   PieChart,
-  Eye
 } from "lucide-react";
 
 import { getMesDemandes } from "../api/demandeConge/demandeConge";
@@ -62,7 +61,8 @@ export default function Dashboard() {
   const enAttenteCount = demandes.filter((d) => d.statut === "EN_ATTENTE").length;
   const valideCount = demandes.filter((d) => d.statut === "VALIDEE").length;
   const refuseCount = demandes.filter((d) => d.statut === "REFUSEE").length;
-  const isAdmin = ["ADMIN", "ROLE_ADMIN"].includes(user?.role?.toUpperCase());
+  // Le rôle technique ADMIN conserve un accueil collaborateur pour ses propres congés.
+  const isAdmin = false;
 
   const getTypeLabel = (typeId) => {
     const found = typesConge.find((t) => t.id === typeId);

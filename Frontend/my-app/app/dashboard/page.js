@@ -92,23 +92,7 @@ export default function Dashboard() {
             Consultation de vos soldes réglementaires et état du traitement de vos demandes.
           </p>
         </div>
-        <div className="flex gap-3">
-          {!isAdmin && (
-            <Link
-              href="/dashboard/demande"
-              className="btn btn-primary btn-sm font-semibold gap-2 shadow"
-            >
-              Nouvelle demande
-            </Link>
-          )}
-          <Link
-            href="/dashboard/solde"
-            className="btn btn-outline btn-sm !text-white [&_svg]:!text-white border-slate-600 hover:bg-slate-800 hover:!text-white gap-2"
-          >
-            <Eye className="w-4 h-4" />
-            Consulter mes soldes
-          </Link>
-        </div>
+        {/* Actions de demande et de solde disponibles depuis le menu latéral */}
       </div>
 
       {/* KPI Key Indicators */}

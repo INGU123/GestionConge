@@ -49,7 +49,7 @@ public class Solde_congeController {
 
     // Initialiser le solde d'un utilisateur pour une année (Strictement réservé à
     // l'Admin)
-    @PreAuthorize("denyAll()")
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/initialiser/{utilisateurId}")
     public ResponseEntity<Void> initialiserSoldesAnnuels(@PathVariable Long utilisateurId, @RequestParam int annee) {
         soldeCongeService.initialiserSoldesPourUtilisateur(utilisateurId, annee);
@@ -57,7 +57,7 @@ public class Solde_congeController {
     }
 
     // Ajuster manuellement le solde (Strictement réservé à l'Admin)
-    @PreAuthorize("denyAll()")
+    @PreAuthorize("hasRole('ADMIN')")
     @PutMapping("/ajuster/{soldeId}")
     public ResponseEntity<Solde_conge> ajusterSolde(@PathVariable Long soldeId,
             @RequestParam int nouveauNombreJoursRestants, @RequestParam String motif) {

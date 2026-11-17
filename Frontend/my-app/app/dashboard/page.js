@@ -12,6 +12,10 @@ const roleLinks = {
   ADMIN: [
     { href: "/dashboard/consultation-demandes", label: "Consultation des demandes", description: "Suivre les demandes et les décisions.", icon: ClipboardList },
     { href: "/dashboard/solde", label: "Gestion des soldes", description: "Consulter et administrer les soldes.", icon: CalendarDays },
+    { href: "/dashboard/demande", label: "Mes demandes", description: "Consulter les demandes liées à votre compte.", icon: ClipboardList },
+    { href: "/dashboard/historique", label: "Mon historique", description: "Retrouver les mouvements liés à vos congés.", icon: History },
+    { href: "/dashboard/typeConge", label: "Types de congés", description: "Administrer les types de congés disponibles.", icon: FileCheck2 },
+    { href: "/dashboard/services", label: "Services", description: "Gérer les services et leurs rattachements.", icon: Building2 },
     { href: "/dashboard/utilisateurs", label: "Collaborateurs", description: "Gérer les comptes et les affectations.", icon: Users },
     { href: "/dashboard/departements", label: "Départements", description: "Consulter l'organisation des départements.", icon: Building2 },
   ],

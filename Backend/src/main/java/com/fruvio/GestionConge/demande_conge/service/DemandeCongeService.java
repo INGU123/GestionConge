@@ -63,7 +63,7 @@ public class DemandeCongeService {
             throw new AccessDeniedException("Authentification requise.");
         }
 
-        if (currentUser.getRole() != Role.ADMIN && !Objects.equals(currentUser.getId(), utilisateurId)) {
+        if (!Objects.equals(currentUser.getId(), utilisateurId)) {
             throw new AccessDeniedException("Vous ne pouvez soumettre une demande que pour votre propre compte.");
         }
 

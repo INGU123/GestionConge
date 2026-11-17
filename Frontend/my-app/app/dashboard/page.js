@@ -2,148 +2,100 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { CalendarDays, PieChart } from "lucide-react";
-import { getSoldesUtilisateur } from "../api/soldeConge/soldeConge";
-import { getAllTypeConge } from "../api/typeConge/typeConge";
+import {
+  CalendarDays, ClipboardList, GitBranch, Users, ShieldCheck,
+  FileCheck2, Building2, History, ArrowRight, Bell,
+} from "lucide-react";
 import { getCurrentUser } from "@/lib/apiClient";
+
+const roleLinks = {
+  ADMIN: [
+    { href: "/dashboard/consultation-demandes", label: "Consultation des demandes", description: "Suivre les demandes et les décisions.", icon: ClipboardList },
+    { href: "/dashboard/solde", label: "Gestion des soldes", description: "Consulter et administrer les soldes.", icon: CalendarDays },
+    { href: "/dashboard/utilisateurs", label: "Collaborateurs", description: "Gérer les comptes et les affectations.", icon: Users },
+    { href: "/dashboard/departements", label: "Départements", description: "Consulter l'organisation des départements.", icon: Building2 },
+  ],
+  MANAGER: [
+    { href: "/dashboard/consultation-demandes", label: "Demandes de mon équipe", description: "Consulter les demandes de vos collaborateurs.", icon: ClipboardList },
+  ],
+  EMPLOYE: [
+    { href: "/dashboard/demande", label: "Mes demandes", description: "Consulter l'état et l'historique de vos demandes.", icon: ClipboardList },
+    { href: "/dashboard/solde", label: "Mes soldes", description: "Consulter vos droits et jours restants.", icon: CalendarDays },
+    { href: "/dashboard/historique", label: "Mon historique", description: "Retrouver les mouvements liés à vos congés.", icon: History },
+  ],
+  ASSISTANT_DIRECTION: [
+    { href: "/dashboard/circuit-conge", label: "Circuit des congés", description: "Enregistrer les demandes verbales et suivre les dossiers.", icon: GitBranch },
+  ],
+  ADMINISTRATION_PERSONNEL: [
+    { href: "/dashboard/reliquats", label: "Vérification des reliquats", description: "Contrôler et retourner les reliquats des dossiers.", icon: ShieldCheck },
+  ],
+  CHEF_DEPARTEMENT: [
+    { href: "/dashboard/chef-departement", label: "Examen du chef", description: "Examiner les dossiers de votre département.", icon: FileCheck2 },
+  ],
+  DIRECTEUR: [
+    { href: "/dashboard/directeur", label: "Décisions du directeur", description: "Consulter les dossiers et rendre une décision.", icon: ShieldCheck },
+  ],
+};
 
 export default function Dashboard() {
   const [user, setUser] = useState(null);
-  const [soldes, setSoldes] = useState([]);
-  const [typesConge, setTypesConge] = useState([]);
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const currentUser = getCurrentUser();
-        if (!currentUser) return;
-        setUser(currentUser);
-
-        const currentUserId = Number(currentUser.id);
-        if (currentUserId) {
-          const [soldesData, typesData] = await Promise.all([
-            getSoldesUtilisateur(currentUserId).catch(() => []),
-            getAllTypeConge().catch(() => []),
-          ]);
-          setSoldes(Array.isArray(soldesData) ? soldesData : []);
-          setTypesConge(Array.isArray(typesData) ? typesData : []);
-        }
-      } catch (err) {
-        console.error("Erreur chargement dashboard:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
+    setUser(getCurrentUser());
   }, []);
 
-  const totalRestant = soldes.reduce(
-    (acc, s) => acc + (Number(s.soldeRestant) || 0),
-    0
-  );
-
-  const getTypeLabel = (typeId) => {
-    const found = typesConge.find((t) => t.id === typeId);
-    return found?.libelle || found?.code || `Type #${typeId}`;
-  };
-
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center h-64">
-        <span className="loading loading-spinner loading-lg text-primary"></span>
-      </div>
-    );
-  }
+  const role = String(user?.role || "").trim().toUpperCase().replace(/^ROLE_/, "");
+  const links = roleLinks[role] || [];
 
   return (
-    <div className="space-y-6">
-      <div className="bg-slate-900 text-white rounded-2xl p-6 shadow-md border-l-4 border-blue-600 flex justify-between items-center flex-wrap gap-4">
-        <div>
-          <div className="text-xs font-semibold uppercase tracking-widest text-blue-400 mb-1">
-            SPAT — Gestion des Congés & Permissions
-          </div>
-          <h1 className="text-2xl font-bold tracking-tight">
-            Bienvenue, {user?.prenom ? `${user.prenom} ${user.nom || ""}` : user?.email || "Agent SPAT"}
-          </h1>
-          <p className="text-slate-400 text-sm mt-1">
-            Vue d’ensemble de vos droits à congé.
-          </p>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div className="bg-white rounded-xl p-5 shadow-sm border border-slate-200 flex items-center justify-between">
-          <div>
-            <p className="text-xs font-bold uppercase text-slate-500 tracking-wider">
-              Solde Restant Global
-            </p>
-            <p className="text-3xl font-bold text-slate-800 mt-1">
-              {totalRestant}{" "}
-              <span className="text-sm font-normal text-slate-500">jours</span>
-            </p>
-          </div>
-          <div className="w-12 h-12 rounded-lg bg-blue-50 text-blue-700 flex items-center justify-center border border-blue-100">
-            <CalendarDays className="w-6 h-6" />
-          </div>
-        </div>
-      </div>
-
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
-        <div className="flex justify-between items-center mb-4 pb-2 border-b border-slate-100">
-          <h2 className="text-base font-bold text-slate-800 flex items-center gap-2">
-            <PieChart className="w-5 h-5 text-blue-600" />
-            Répartition des Soldes de Congés — SPAT
-          </h2>
-          <Link
-            href="/dashboard/solde"
-            className="text-xs font-semibold text-blue-700 hover:text-blue-900"
-          >
-            Consulter le détail →
-          </Link>
-        </div>
-
-        <p className="text-xs text-slate-500 mb-4">
-          Synthèse des droits acquis, jours consommés et reliquats enregistrés pour votre compte agent.
+    <main className="space-y-7">
+      <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+        <p className="text-xs font-bold uppercase tracking-[0.18em] text-blue-700">
+          SPAT · Gestion des congés
         </p>
-        {soldes.length === 0 ? (
-          <div className="text-center py-8 text-slate-400 text-sm">
-            Aucun solde de congé initialisé.
+        <h1 className="mt-3 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
+          Bienvenue{user?.prenom ? `, ${user.prenom}` : ""}
+        </h1>
+        <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
+          Retrouvez ici les espaces de travail correspondant à votre fonction.
+          Chaque espace dispose de sa propre page pour consulter et traiter les informations.
+        </p>
+      </section>
+
+      <section>
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-semibold text-slate-900">Vos espaces de travail</h2>
+            <p className="mt-1 text-sm text-slate-500">Accès direct aux fonctionnalités de votre rôle.</p>
+          </div>
+          <Bell className="h-5 w-5 text-slate-400" aria-hidden="true" />
+        </div>
+
+        {links.length ? (
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {links.map(({ href, label, description, icon: Icon }) => (
+              <Link
+                key={href}
+                href={href}
+                className="group rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-blue-300 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <div className="flex items-start justify-between gap-4">
+                  <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-50 text-blue-700">
+                    <Icon className="h-5 w-5" />
+                  </span>
+                  <ArrowRight className="h-4 w-4 text-slate-400 transition group-hover:translate-x-1 group-hover:text-blue-700" />
+                </div>
+                <h3 className="mt-4 font-semibold text-slate-900">{label}</h3>
+                <p className="mt-1 text-sm leading-5 text-slate-500">{description}</p>
+              </Link>
+            ))}
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="table table-sm w-full">
-              <thead>
-                <tr className="text-slate-500 border-b text-xs">
-                  <th>Motif / Type</th>
-                  <th>Droits</th>
-                  <th>Consommés</th>
-                  <th>Solde restant</th>
-                </tr>
-              </thead>
-              <tbody>
-                {soldes.map((s) => (
-                  <tr key={s.id} className="hover:bg-slate-50/80 border-b border-slate-100">
-                    <td className="font-medium text-slate-800">
-                      {getTypeLabel(s.typeCongeId)}
-                    </td>
-                    <td className="text-slate-600 font-medium">
-                      {s.soldeAquis ?? s.soldeAcquis ?? 0} j
-                    </td>
-                    <td className="text-slate-600 font-medium">
-                      {s.soldePris ?? 0} j
-                    </td>
-                    <td className="text-blue-700 font-bold">
-                      {s.soldeRestant ?? 0} j
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <p className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+            Aucun espace n'est associé à ce rôle. Contactez l'administrateur.
+          </p>
         )}
-      </div>
-    </div>
+      </section>
+    </main>
   );
 }

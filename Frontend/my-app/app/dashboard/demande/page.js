@@ -3,7 +3,7 @@ import {useEffect,useState} from "react";
 import {getMesDemandes} from "@/app/api/demandeConge/demandeConge";
 import {getAllTypeConge} from "@/app/api/typeConge/typeConge";
 import {getCurrentUser} from "@/lib/apiClient";
-import {useToast} from "../../components/ToastProvider";
+import {useToast} from "../../Components/ToastProvider";
 
 export default function DemandesPage(){
  const [rows,setRows]=useState([]),[types,setTypes]=useState([]),[loading,setLoading]=useState(true);const toast=useToast();

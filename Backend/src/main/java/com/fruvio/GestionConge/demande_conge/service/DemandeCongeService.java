@@ -320,7 +320,7 @@ public class DemandeCongeService {
         DemandeConge demande = demandeRepo.findByIdForUpdate(demandeId)
                 .orElseThrow(() -> new IllegalArgumentException("Demande non trouvée avec l'ID : " + demandeId));
 
-        if (currentUser.getRole() != Role.ADMIN && !Objects.equals(currentUser.getId(), demande.getUtilisateurId())) {
+        if (!Objects.equals(currentUser.getId(), demande.getUtilisateurId())) {
             throw new AccessDeniedException("Vous ne pouvez annuler que vos propres demandes.");
         }
 

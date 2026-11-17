@@ -7,7 +7,7 @@ import { useRouter, usePathname } from "next/navigation";
 import { FiMoon, FiSun, FiChevronLeft, FiChevronRight, FiLogOut } from "react-icons/fi";
 import { getCurrentUser, clearAuthSession } from "@/lib/apiClient";
 import NotificationHeaderMenu from "./notifications/page";
-import { ToastProvider } from "../components/ToastProvider";
+import { ToastProvider } from "../Components/ToastProvider";
 import "./workspace-polish.css";
 
 interface DashboardUser {

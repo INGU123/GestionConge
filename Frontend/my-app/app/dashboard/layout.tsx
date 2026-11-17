@@ -181,7 +181,7 @@ export default function DashboardLayout({
 
     {
       href: "/dashboard/solde",
-      label: isAdmin ? "Soldes & Quotas" : "Mes Soldes",
+      label: "Mes Soldes",
       icon: (
         <svg
           className="w-4 h-4"

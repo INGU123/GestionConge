@@ -314,6 +314,13 @@ public class PasswordResetController {
                     "message", "Ce lien de changement de mot de passe est invalide ou expiré."));
         }
 
+        if (!user.getMatricule().equals(body.getMatricule().trim())
+                || user.getPassword() == null
+                || !passwordEncoder.matches(body.getAncienMotDePasse(), user.getPassword())) {
+            return ResponseEntity.badRequest().body(Map.of("success", false,
+                    "message", "Matricule ou mot de passe temporaire incorrect."));
+        }
+
         if (!body.getNewPassword().equals(body.getConfirmation())) {
             return ResponseEntity.badRequest().body(Map.of("success", false,
                     "message", "La confirmation ne correspond pas au nouveau mot de passe."));

@@ -184,9 +184,14 @@ public class UtilisateurController {
                     .body(Map.of("message", "Collaborateur introuvable ou déjà archivé."));
         }
 
+        Utilisateur archived = utilisateurRepository.findById(id).orElse(null);
+        boolean emailAvailable = archived != null && archived.getEmail() != null
+                && !archived.getEmail().isBlank();
         return ResponseEntity.ok(Map.of(
-                "message", "Collaborateur archivé. La notification a été envoyée à son adresse e-mail.",
-                "emailNotification", "envoyée"));
+                "message", emailAvailable
+                        ? "Collaborateur archivé. La notification a été envoyée par e-mail."
+                        : "Collaborateur archivé. Aucune adresse e-mail n'était renseignée.",
+                "emailNotification", emailAvailable ? "envoyée" : "non disponible"));
     }
 
     @PreAuthorize("hasRole('ADMIN')")

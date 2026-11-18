@@ -141,7 +141,6 @@ function ResetPasswordForm() {
         <section className="login-form-panel">
           <div className="login-form-topline">
             <span className="login-secure-label"><FiShield /> RÉINITIALISATION SÉCURISÉE</span>
-            <span className="login-language">FR <span>⌄</span></span>
           </div>
 
           <div className="login-form-content">

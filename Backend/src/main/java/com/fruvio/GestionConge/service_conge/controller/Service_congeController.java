@@ -53,7 +53,7 @@ public class Service_congeController {
     }
 
     // Mettre à jour un service existant (Strictement ADMIN)
-    @PreAuthorize("denyAll()")
+    @PreAuthorize("hasRole('ADMIN')")
     @PutMapping("/{id}")
     public ResponseEntity<Services> updateService(@PathVariable Long id, @RequestBody Services updatedService) {
         return serviceRepository.findById(id)

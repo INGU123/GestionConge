@@ -31,7 +31,7 @@ public class Solde_congeController {
     }
 
     // Récupérer tous les soldes selon périmètre (Admin : tous, Manager : équipe)
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     @GetMapping({ "", "/all" })
     public ResponseEntity<List<Solde_conge>> getAllSoldes() {
         Utilisateur currentUser = getCurrentAuthenticatedUser();
@@ -40,7 +40,7 @@ public class Solde_congeController {
 
     // Récupérer tous les soldes d'un utilisateur (Employé : soi-même, Manager :
     // équipe, Admin : tous)
-    @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYE', 'ADMINISTRATION_PERSONNEL')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'EMPLOYE', 'ADMINISTRATION_PERSONNEL')")
     @GetMapping("/utilisateur/{utilisateurId}")
     public ResponseEntity<List<Solde_conge>> getSoldesParUtilisateur(@PathVariable Long utilisateurId) {
         Utilisateur currentUser = getCurrentAuthenticatedUser();

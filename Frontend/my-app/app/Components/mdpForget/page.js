@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import {
   FiArrowLeft,
   FiArrowRight,
@@ -15,6 +14,21 @@ import {
 } from "react-icons/fi";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+
+function CloudSideDivider() {
+  return (
+    <div className="spat-auth-cloud-divider" aria-hidden="true">
+      <svg className="spat-cloud-svg-desktop" viewBox="0 0 120 800" preserveAspectRatio="none">
+        <path d="M68,0 C95,45 92,95 62,135 C40,165 45,210 74,240 C104,272 102,325 68,365 C38,400 42,455 75,490 C106,522 102,575 66,615 C38,645 45,700 76,735 C96,758 95,782 82,800 L120,800 L120,0 Z" fill="#9ec5f8" opacity="0.55" />
+        <path d="M82,0 C112,42 108,92 78,132 C52,166 58,212 88,242 C118,274 114,328 80,368 C50,404 56,458 88,492 C118,524 112,578 78,618 C50,650 58,702 88,736 C108,758 106,782 94,800 L120,800 L120,0 Z" fill="#ffffff" />
+      </svg>
+      <svg className="spat-cloud-svg-mobile" viewBox="0 0 800 90" preserveAspectRatio="none">
+        <path d="M0,45 C50,15 110,15 160,42 C210,70 270,68 320,38 C375,8 435,10 490,40 C545,70 610,68 665,38 C715,12 760,15 800,38 L800,90 L0,90 Z" fill="#9ec5f8" opacity="0.55" />
+        <path d="M0,58 C55,28 115,28 165,54 C215,80 275,78 325,48 C380,18 440,20 495,50 C550,80 615,78 670,48 C720,22 762,25 800,48 L800,90 L0,90 Z" fill="#ffffff" />
+      </svg>
+    </div>
+  );
+}
 
 export default function ForgotPassword() {
   const [mode, setMode] = useState("matricule");
@@ -31,7 +45,6 @@ export default function ForgotPassword() {
       setMessage({ text: "Le matricule doit contenir uniquement des chiffres (ex. 2026100).", type: "error" });
       return;
     }
-
     if (!value) {
       setMessage({ text: mode === "matricule" ? "Veuillez saisir votre numéro matricule." : "Veuillez saisir votre adresse e-mail.", type: "error" });
       return;
@@ -39,7 +52,6 @@ export default function ForgotPassword() {
 
     setLoading(true);
     setMessage({ text: "", type: "" });
-
     try {
       const res = await fetch(`${API_URL}/auth/forgot-password${mode === "email" ? "/email" : ""}`, {
         method: "POST",
@@ -47,7 +59,6 @@ export default function ForgotPassword() {
         body: JSON.stringify(mode === "matricule" ? { matricule: value } : { email: value }),
       });
       const data = await res.json().catch(() => ({}));
-
       if (res.ok) {
         setMessage({
           text: data.message || "Votre demande a été transmise à l'administrateur. Vous recevrez un e-mail après validation.",
@@ -56,172 +67,108 @@ export default function ForgotPassword() {
         setMatricule("");
         setEmail("");
       } else {
-        setMessage({
-          text: data.message || "La demande n'a pas pu être envoyée. Vérifiez votre matricule.",
-          type: "error",
-        });
+        setMessage({ text: data.message || "La demande n'a pas pu être envoyée. Vérifiez votre matricule.", type: "error" });
       }
     } catch {
-      setMessage({
-        text: "Impossible de contacter le serveur. Veuillez réessayer plus tard.",
-        type: "error",
-      });
+      setMessage({ text: "Impossible de contacter le serveur. Veuillez réessayer plus tard.", type: "error" });
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <main className="login-page">
-      <div className="login-frame">
-        <section className="login-brand-panel" aria-label="Présentation du Port de Toamasina">
-          <div className="login-brand-top">
-            <div className="login-logo-wrap">
-              <Image
-                src="/SpatLogo.png"
-                alt="Logo SPAT"
-                width={58}
-                height={58}
-                priority
-                className="login-logo"
-              />
-            </div>
-            <div>
-              <p className="login-brand-kicker">SOCIÉTÉ PORTUAIRE</p>
-              <p className="login-brand-name">Port de Toamasina</p>
-            </div>
+    <main className="spat-auth-page">
+      <section className="spat-auth-card">
+        <div className="spat-auth-brand">
+          <div className="spat-auth-welcome">Bienvenue sur</div>
+          <div className="spat-auth-brand-center">
+            <div className="spat-auth-logo"><img src="/SpatLogo.png" alt="Logo SPAT" /></div>
+            <h1>SPAT</h1>
+            <p className="spat-auth-brand-subtitle">Gestion des congés</p>
+            <p className="spat-auth-description">Société du Port à Gestion Autonome de Toamasina.<br />Une gestion simple et efficace des demandes de congés.</p>
           </div>
-
-          <div className="login-brand-copy">
-            <span className="login-eyebrow"><span /> ASSISTANCE AU PERSONNEL</span>
-            <h1>Retrouvez votre accès, <em>en toute sécurité.</em></h1>
-            <p>
-              Une difficulté pour vous connecter ? Envoyez une demande à
-              l’administrateur à l’aide de votre matricule professionnel.
-            </p>
+          <div className="spat-auth-brand-footer">
+            <span>SOCIÉTÉ DU PORT</span><span className="spat-auth-footer-separator">|</span><span>TOAMASINA</span>
           </div>
+          <CloudSideDivider />
+        </div>
 
-          <div className="login-brand-visual" aria-hidden="true">
-            <div className="login-orbit login-orbit-one" />
-            <div className="login-orbit login-orbit-two" />
-            <div className="login-visual-card">
-              <div className="login-visual-icon"><FiShield /></div>
-              <div>
-                <strong>Une procédure sécurisée</strong>
-                <span>Votre demande est traitée par l’administration</span>
-              </div>
-              <span className="login-visual-check">✓</span>
-            </div>
-          </div>
-
-          <div className="login-brand-footer">
-            <span>SPAT · Madagascar</span>
-            <span className="login-footer-dot" />
-            <span>Portail interne du personnel</span>
-          </div>
-        </section>
-
-        <section className="login-form-panel">
-          <div className="login-form-topline">
-            <span className="login-secure-label"><FiShield /> RÉCUPÉRATION SÉCURISÉE</span>
-          </div>
-
-          <div className="login-form-content">
-            <div className="login-form-heading">
-              <span className="login-heading-mark" />
-              <p className="login-overline">RÉCUPÉRATION DU COMPTE</p>
-              <h2>Mot de passe oublié ?</h2>
-              <p>
-                Choisissez une récupération par matricule avec validation administrative ou par e-mail avec traitement automatique.
-              </p>
-            </div>
+        <div className="spat-auth-form-panel">
+          <div className="spat-auth-form-content">
+            <div className="spat-auth-mobile-logo"><img src="/SpatLogo.png" alt="Logo SPAT" /></div>
+            <h2>Mot de passe oublié ?</h2>
+            <p className="spat-auth-intro">Choisissez une récupération par matricule avec validation administrative ou par e-mail.</p>
 
             {message.text && (
-              <div
-                role={message.type === "error" ? "alert" : "status"}
-                style={{
-                  display: "flex",
-                  alignItems: "flex-start",
-                  gap: "10px",
-                  marginBottom: "22px",
-                  padding: "13px 14px",
-                  borderRadius: "11px",
-                  border: message.type === "success" ? "1px solid #a7f3d0" : "1px solid #fecdd3",
-                  background: message.type === "success" ? "#ecfdf5" : "#fff1f2",
-                  color: message.type === "success" ? "#047857" : "#a51d37",
-                  fontSize: "12px",
-                  lineHeight: 1.6,
-                }}
-              >
+              <div role={message.type === "error" ? "alert" : "status"} style={{
+                display: "flex", alignItems: "flex-start", gap: 10, marginBottom: 20,
+                padding: "11px 12px", borderRadius: 7,
+                border: message.type === "success" ? "1px solid #a7f3d0" : "1px solid #fecdd3",
+                background: message.type === "success" ? "#ecfdf5" : "#fff1f2",
+                color: message.type === "success" ? "#047857" : "#a51d37",
+                fontSize: 12, lineHeight: 1.6,
+              }}>
                 {message.type === "success" ? <FiCheckCircle size={18} /> : <FiAlertCircle size={18} />}
                 <span>{message.text}</span>
               </div>
             )}
 
-            <div className="mb-5 flex gap-2 rounded-xl border border-slate-200 bg-slate-50 p-1">
-              <button
-                type="button"
-                onClick={() => { setMode("matricule"); setMessage({ text: "", type: "" }); }}
-                aria-pressed={mode === "matricule"}
-                className={"flex-1 rounded-lg px-3 py-2.5 text-xs font-bold transition " + (mode === "matricule" ? "bg-gradient-to-r from-[#0752a0] to-[#023e8a] text-white shadow-md" : "text-slate-600 hover:bg-white hover:text-blue-900")}
-              >
-                Par matricule
-              </button>
-              <button
-                type="button"
-                onClick={() => { setMode("email"); setMessage({ text: "", type: "" }); }}
-                aria-pressed={mode === "email"}
-                className={"flex-1 rounded-lg px-3 py-2.5 text-xs font-bold transition " + (mode === "email" ? "bg-gradient-to-r from-[#0752a0] to-[#023e8a] text-white shadow-md" : "text-slate-600 hover:bg-white hover:text-blue-900")}
-              >
-                Par e-mail
-              </button>
+            <div style={{ display: "flex", gap: 8, padding: 4, marginBottom: 22, borderRadius: 9, background: "#f1f6fc", border: "1px solid #dce8f5" }}>
+              {["matricule", "email"].map((item) => (
+                <button key={item} type="button" onClick={() => { setMode(item); setMessage({ text: "", type: "" }); }}
+                  aria-pressed={mode === item}
+                  style={{
+                    flex: 1, minHeight: 36, border: 0, borderRadius: 7, cursor: "pointer",
+                    background: mode === item ? "linear-gradient(90deg,#0875cf,#0754a5)" : "transparent",
+                    color: mode === item ? "#fff" : "#526b89", fontSize: 12, fontWeight: 700,
+                  }}>
+                  {item === "matricule" ? "Par matricule" : "Par e-mail"}
+                </button>
+              ))}
             </div>
-            <form onSubmit={handleSubmit} className="login-form">
-              <div className="login-field">
-                <label htmlFor={mode === "matricule" ? "matricule" : "email"}>{mode === "matricule" ? "Matricule professionnel" : "Adresse e-mail enregistrée"}</label>
-                <div className="login-input-wrap">
-                  <FiUser className="login-input-icon" aria-hidden="true" />
+
+            <form onSubmit={handleSubmit}>
+              <div className="spat-auth-field">
+                <label htmlFor={mode === "matricule" ? "matricule" : "email"}>
+                  {mode === "matricule" ? "Matricule professionnel" : "Adresse e-mail enregistrée"}
+                </label>
+                <div className="spat-auth-input-icon">
+                  <FiUser aria-hidden="true" />
                   <input
                     id={mode === "matricule" ? "matricule" : "email"}
                     type={mode === "matricule" ? "text" : "email"}
                     inputMode={mode === "matricule" ? "numeric" : undefined}
                     pattern={mode === "matricule" ? "[0-9]+" : undefined}
-                    placeholder={mode === "matricule" ? "Ex. 2026100" : "nom@exemple.mg"}
+                    placeholder={mode === "matricule" ? "Entrez votre matricule" : "nom@exemple.mg"}
                     value={mode === "matricule" ? matricule : email}
                     onChange={(e) => mode === "matricule" ? setMatricule(e.target.value.replace(/[^0-9]/g, "")) : setEmail(e.target.value)}
                     autoComplete={mode === "matricule" ? "username" : "email"}
-                    required
-                    disabled={loading}
+                    required disabled={loading}
                   />
                 </div>
               </div>
 
-              <button type="submit" className="login-submit" disabled={loading}>
-                <span>{loading ? "Envoi en cours..." : mode === "matricule" ? "Envoyer ma demande" : "Recevoir mes informations"}</span>
-                <span className="login-submit-icon">
-                  {loading ? <FiKey /> : <FiArrowRight />}
-                </span>
+              <button type="submit" className="spat-auth-submit" disabled={loading}>
+                {loading ? "Envoi en cours..." : mode === "matricule" ? "Envoyer ma demande" : "Recevoir mes informations"}
+                <span style={{ marginLeft: 8, display: "inline-flex", verticalAlign: "middle" }}>{loading ? <FiKey /> : <FiArrowRight />}</span>
               </button>
             </form>
 
-            <div className="login-security-note">
-              <FiLock aria-hidden="true" />
-              <span>{mode === "matricule" ? "La demande nécessite une validation administrative. La transmission par SMS sera ajoutée ultérieurement." : "Les informations de connexion et le lien de changement seront envoyés à votre adresse enregistrée."}</span>
-            </div>
+            <p className="spat-auth-security" style={{ lineHeight: 1.6 }}>
+              <FiLock style={{ display: "inline", marginRight: 6, verticalAlign: "middle" }} />
+              {mode === "matricule"
+                ? "La demande nécessite une validation administrative. La transmission par SMS sera ajoutée ultérieurement."
+                : "Les informations de connexion et le lien de changement seront envoyés à votre adresse enregistrée."}
+            </p>
 
-            <div className="login-forgot-row" style={{ justifyContent: "flex-start", marginTop: "24px" }}>
-              <Link href="/" style={{ display: "inline-flex", alignItems: "center", gap: "8px" }}>
+            <div className="spat-auth-forgot" style={{ justifyContent: "center", marginTop: 22, marginBottom: 0 }}>
+              <Link href="/" style={{ display: "inline-flex", alignItems: "center", gap: 7 }}>
                 <FiArrowLeft aria-hidden="true" /> Retour à la connexion
               </Link>
             </div>
           </div>
-
-          <footer className="login-form-footer">
-            <span>© {new Date().getFullYear()} SPAT Madagascar</span>
-            <span>Tous droits réservés</span>
-          </footer>
-        </section>
-      </div>
+        </div>
+      </section>
     </main>
   );
 }

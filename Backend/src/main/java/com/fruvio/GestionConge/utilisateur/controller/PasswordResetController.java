@@ -260,15 +260,24 @@ public class PasswordResetController {
                 + "\nMatricule : " + safe(user.getMatricule())
                 + "\nAucun mot de passe temporaire n'a été généré. Si vous pensez qu'il s'agit d'une erreur, contactez l'administration ou effectuez une nouvelle demande :\n"
                 + newRequestLink + "\n\nService RH - SPAT";
-        try {
-            emailService.sendEmail(user.getEmail(), "Demande refusée : réinitialisation de mot de passe - SPAT", emailText);
-        } catch (Exception ex) {
-            log.error("L'e-mail de refus de la demande {} a échoué ; la transaction doit être annulée.", id, ex);
-            throw new IllegalStateException("L'e-mail de notification du refus n'a pas pu être envoyé.", ex);
+
+        boolean emailSent = false;
+        String email = user.getEmail() == null ? "" : user.getEmail().trim();
+        if (!email.isEmpty()) {
+            try {
+                emailService.sendEmail(email, "Demande refusée : réinitialisation de mot de passe - SPAT", emailText);
+                emailSent = true;
+            } catch (Exception ex) {
+                log.error("La demande {} est refusée, mais l'e-mail d'information n'a pas pu être envoyé.", id, ex);
+            }
         }
 
-        return ResponseEntity.ok(Map.of("success", true,
-                "message", "Demande refusée. Un e-mail d'information a été envoyé à l'agent."));
+        return ResponseEntity.ok(Map.of(
+                "success", true,
+                "message", emailSent
+                        ? "Demande refusée. Un e-mail d'information a été envoyé à l'agent."
+                        : "Demande refusée. Aucun e-mail n'a été envoyé : informez directement l'agent.",
+                "emailSent", emailSent));
     }
 
     @PostMapping("/complete-password-reset")

@@ -640,18 +640,25 @@ public class UtilisateurService {
                 targetUser.setDeletedBy(currentUser.getId());
                 targetUser.setDeletionReason(normalizedReason);
 
-                // Si l'e-mail échoue, la transaction est annulée : aucun archivage silencieux.
-                try {
-                        emailService.sendAccountArchivedEmail(
-                                targetUser.getEmail(), targetUser.getMatricule(),
-                                targetUser.getNom(), targetUser.getPrenom(),
-                                archivedAt, normalizedReason);
-                        targetUser.setArchiveEmailSentAt(LocalDateTime.now());
-                } catch (Exception e) {
-                        log.error("Échec de la notification d'archivage pour le collaborateur #{} [{}].",
-                                targetUser.getId(), targetUser.getEmail(), e);
-                        throw new IllegalStateException(
-                                "Le compte n'a pas été archivé : la notification par e-mail n'a pas pu être envoyée.", e);
+                // L'e-mail est facultatif : archiver normalement si aucune adresse n'est renseignée.
+                String targetEmail = targetUser.getEmail() == null ? "" : targetUser.getEmail().trim();
+                if (!targetEmail.isEmpty()) {
+                        // Si une adresse existe mais que l'envoi échoue, l'archivage est annulé.
+                        try {
+                                emailService.sendAccountArchivedEmail(
+                                        targetEmail, targetUser.getMatricule(),
+                                        targetUser.getNom(), targetUser.getPrenom(),
+                                        archivedAt, normalizedReason);
+                                targetUser.setArchiveEmailSentAt(LocalDateTime.now());
+                        } catch (Exception e) {
+                                log.error("Échec de la notification d'archivage pour le collaborateur #{} [{}].",
+                                        targetUser.getId(), targetEmail, e);
+                                throw new IllegalStateException(
+                                        "Le compte n'a pas été archivé : la notification par e-mail n'a pas pu être envoyée.", e);
+                        }
+                } else {
+                        log.info("Collaborateur #{} archivé sans notification e-mail : aucune adresse renseignée.",
+                                targetUser.getId());
                 }
 
                 utilisateurRepository.save(targetUser);

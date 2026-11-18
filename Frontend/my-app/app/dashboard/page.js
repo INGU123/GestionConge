@@ -16,8 +16,9 @@ const roleLinks = {
     { href: "/dashboard/historique", label: "Mon historique", description: "Retrouver les mouvements liés à vos congés.", icon: History },
     { href: "/dashboard/typeConge", label: "Types de congés", description: "Administrer les types de congés disponibles.", icon: FileCheck2 },
     { href: "/dashboard/services", label: "Services", description: "Gérer les services et leurs rattachements.", icon: Building2 },
-    { href: "/dashboard/utilisateurs", label: "Collaborateurs", description: "Gérer les comptes et les affectations.", icon: Users },
-    { href: "/dashboard/departements", label: "Départements", description: "Consulter l'organisation des départements.", icon: Building2 },
+    { href: "/dashboard/utilisateurs", label: "Collaborateurs", description: "Gérer les comptes, les rôles et les affectations.", icon: Users },
+    { href: "/dashboard/reinitialisations", label: "Réinitialisations", description: "Examiner et traiter les demandes de réinitialisation des comptes.", icon: ShieldCheck },
+    { href: "/dashboard/departements", label: "Départements", description: "Administrer l'organisation des départements.", icon: Building2 },
   ],
   MANAGER: [
     { href: "/dashboard/consultation-demandes", label: "Demandes de mon équipe", description: "Consulter les demandes de vos collaborateurs.", icon: ClipboardList },

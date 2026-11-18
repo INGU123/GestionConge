@@ -54,7 +54,7 @@ function ResetPasswordForm() {
     event.preventDefault();
     const normalizedMatricule = matricule.trim();
 
-    if ((!initialToken && (!normalizedMatricule || !ancienMotDePasse)) || !nouveauMotDePasse || !confirmation) {
+    if (!normalizedMatricule || !/^[0-9]+$/.test(normalizedMatricule) || !ancienMotDePasse || !nouveauMotDePasse || !confirmation) {
       setMessage({ text: "Veuillez remplir tous les champs.", type: "error" });
       return;
     }
@@ -78,7 +78,7 @@ function ResetPasswordForm() {
         ? `${API_URL}/auth/initial-password`
         : `${API_URL}/auth/complete-password-reset`;
       const payload = initialToken
-        ? { token: initialToken, newPassword: nouveauMotDePasse, confirmation }
+        ? { token: initialToken, matricule: normalizedMatricule, ancienMotDePasse, newPassword: nouveauMotDePasse, confirmation }
         : { matricule: normalizedMatricule, ancienMotDePasse, nouveauMotDePasse, confirmation };
       const response = await fetch(endpoint, {
         method: "POST",
@@ -141,7 +141,6 @@ function ResetPasswordForm() {
         <section className="login-form-panel">
           <div className="login-form-topline">
             <span className="login-secure-label"><FiShield /> RÉINITIALISATION SÉCURISÉE</span>
-            <span className="login-language">FR <span>⌄</span></span>
           </div>
 
           <div className="login-form-content">
@@ -169,55 +168,51 @@ function ResetPasswordForm() {
             )}
 
             <form onSubmit={handleSubmit} className="login-form">
-              {!initialToken && (
-                <>
               <div className="login-field">
                 <label htmlFor="matricule">Matricule professionnel</label>
                 <div className="login-input-wrap">
                   <FiUser className="login-input-icon" aria-hidden="true" />
-                  <input id="matricule" type="text" placeholder="Ex. SPAT-001" value={matricule}
-                    onChange={(event) => setMatricule(event.target.value)} autoComplete="username" required disabled={loading} />
+                  <input
+                    id="matricule"
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]+"
+                    placeholder="Ex. 2026100"
+                    value={matricule}
+                    onChange={(event) => setMatricule(event.target.value.replace(/[^0-9]/g, ""))}
+                    autoComplete="username"
+                    required
+                    disabled={loading}
+                  />
                 </div>
               </div>
 
               <div className="login-field">
-                <label htmlFor="ancienMotDePasse">Mot de passe temporaire (ancien mot de passe)</label>
-                <div className="login-input-wrap" style={{ position: "relative" }}>
+                <label htmlFor="ancienMotDePasse">Ancien mot de passe (mot de passe temporaire)</label>
+                <div className="login-input-wrap">
                   <FiKey className="login-input-icon" aria-hidden="true" />
-                  <input id="ancienMotDePasse" type={visiblePasswords.ancienMotDePasse ? "text" : "password"} placeholder="Mot de passe reçu par e-mail"
-                    value={ancienMotDePasse} onChange={(event) => setAncienMotDePasse(event.target.value)}
-                    autoComplete="current-password" required disabled={loading} style={{ paddingRight: "48px" }} />
+                  <input
+                    id="ancienMotDePasse"
+                    type={visiblePasswords.ancienMotDePasse ? "text" : "password"}
+                    placeholder="Saisissez le mot de passe automatique reçu"
+                    value={ancienMotDePasse}
+                    onChange={(event) => setAncienMotDePasse(event.target.value)}
+                    autoComplete="current-password"
+                    required
+                    disabled={loading}
+                  />
                   <button
                     type="button"
+                    className="login-password-toggle"
                     aria-label={visiblePasswords.ancienMotDePasse ? "Masquer le mot de passe" : "Afficher le mot de passe"}
                     aria-pressed={visiblePasswords.ancienMotDePasse}
                     onClick={() => togglePassword("ancienMotDePasse")}
                     disabled={loading}
-                    style={{
-                      position: "absolute",
-                      right: "12px",
-                      top: "50%",
-                      transform: "translateY(-50%)",
-                      background: "transparent",
-                      border: "none",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      width: "24px",
-                      height: "24px",
-                      padding: 0,
-                      color: "#64748b",
-                      cursor: loading ? "not-allowed" : "pointer",
-                      zIndex: 2,
-                    }}
                   >
-                    {visiblePasswords.ancienMotDePasse ? <FiEyeOff size={18} /> : <FiEye size={18} />}
+                    {visiblePasswords.ancienMotDePasse ? <FiEyeOff /> : <FiEye />}
                   </button>
                 </div>
               </div>
-
-                </>
-              )}
 
               <div className="login-field">
                 <label htmlFor="nouveauMotDePasse">Nouveau mot de passe</label>
@@ -299,9 +294,7 @@ function ResetPasswordForm() {
 
             <div className="login-security-note">
               <FiLock aria-hidden="true" />
-              <span>{initialToken
-                ? "Ce lien personnel est temporaire et ne peut être utilisé qu'une seule fois."
-                : "Le mot de passe temporaire ne sera plus utilisable après la modification."}</span>
+              <span>Le matricule et le mot de passe temporaire vérifient votre identité. Le lien sécurisé est également personnel et temporaire.</span>
             </div>
 
             <div className="login-forgot-row" style={{ justifyContent: "flex-start", marginTop: "24px" }}>

@@ -14,6 +14,13 @@ public class InitialPasswordSetupRequest {
     @NotBlank(message = "Le jeton de sécurité est obligatoire.")
     private String token;
 
+    @NotBlank(message = "Le matricule est obligatoire.")
+    @jakarta.validation.constraints.Pattern(regexp = "^[0-9]+$", message = "Le matricule doit contenir uniquement des chiffres.")
+    private String matricule;
+
+    @NotBlank(message = "Le mot de passe temporaire est obligatoire.")
+    private String ancienMotDePasse;
+
     @NotBlank(message = "Le nouveau mot de passe est obligatoire.")
     @Size(min = 6, message = "Le mot de passe doit comporter au moins 6 caractères.")
     private String newPassword;

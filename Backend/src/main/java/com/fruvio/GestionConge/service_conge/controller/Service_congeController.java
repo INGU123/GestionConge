@@ -46,7 +46,7 @@ public class Service_congeController {
     }
 
     // Créer un nouveau service (Strictement ADMIN)
-    @PreAuthorize("denyAll()")
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/create")
     public Services createService(@RequestBody Services service) {
         return serviceRepository.save(service);
@@ -79,7 +79,7 @@ public class Service_congeController {
     }
 
     // Supprimer un service (Strictement ADMIN)
-    @PreAuthorize("denyAll()")
+    @PreAuthorize("hasRole('ADMIN')")
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteService(@PathVariable Long id) {
         return serviceRepository.findById(id)

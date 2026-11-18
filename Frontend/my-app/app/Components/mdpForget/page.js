@@ -161,10 +161,34 @@ export default function ForgotPassword() {
                 : "Les informations de connexion et le lien de changement seront envoyés à votre adresse enregistrée."}
             </p>
 
-            <div className="spat-auth-forgot" style={{ justifyContent: "center", marginTop: 22, marginBottom: 0 }}>
-              <Link href="/" style={{ display: "inline-flex", alignItems: "center", gap: 7 }}>
-                <FiArrowLeft aria-hidden="true" /> Retour à la connexion
-              </Link>
+            <div style={{ marginTop: 24, display: "grid", gap: 12 }}>
+              <div style={{
+                padding: "14px 15px", border: "1px solid #cfe0f3", borderRadius: 12,
+                background: "linear-gradient(135deg, #f7fbff 0%, #eef5fd 100%)",
+              }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 9, marginBottom: 6, color: "#174a7e", fontSize: 13, fontWeight: 700 }}>
+                  <FiKey size={17} aria-hidden="true" />
+                  Vous avez déjà reçu votre mot de passe temporaire ?
+                </div>
+                <p style={{ margin: "0 0 11px", color: "#60758d", fontSize: 12, lineHeight: 1.5 }}>
+                  Accédez directement au formulaire pour choisir votre nouveau mot de passe.
+                </p>
+                <Link href="/Components/mdpReset" style={{
+                  display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                  width: "100%", minHeight: 42, padding: "10px 14px", borderRadius: 8,
+                  border: "1px solid #0b65b5", background: "#fff", color: "#07549a",
+                  fontSize: 13, fontWeight: 700, textDecoration: "none",
+                  transition: "background 160ms ease, color 160ms ease",
+                }}>
+                  Changer mon mot de passe <FiArrowRight aria-hidden="true" />
+                </Link>
+              </div>
+
+              <div className="spat-auth-forgot" style={{ justifyContent: "center", marginTop: 2, marginBottom: 0 }}>
+                <Link href="/" style={{ display: "inline-flex", alignItems: "center", gap: 7 }}>
+                  <FiArrowLeft aria-hidden="true" /> Retour à la connexion
+                </Link>
+              </div>
             </div>
           </div>
         </div>

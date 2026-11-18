@@ -124,7 +124,6 @@ export default function ForgotPassword() {
         <section className="login-form-panel">
           <div className="login-form-topline">
             <span className="login-secure-label"><FiShield /> RÉCUPÉRATION SÉCURISÉE</span>
-            <span className="login-language">FR <span>⌄</span></span>
           </div>
 
           <div className="login-form-content">
@@ -159,9 +158,23 @@ export default function ForgotPassword() {
               </div>
             )}
 
-            <div className="flex gap-2 mb-5">
-              <button type="button" onClick={() => setMode("matricule")} className={"btn btn-sm flex-1 " + (mode === "matricule" ? "btn-primary" : "btn-outline")}>Par matricule</button>
-              <button type="button" onClick={() => setMode("email")} className={"btn btn-sm flex-1 " + (mode === "email" ? "btn-primary" : "btn-outline")}>Par e-mail</button>
+            <div className="mb-5 flex gap-2 rounded-xl border border-slate-200 bg-slate-50 p-1">
+              <button
+                type="button"
+                onClick={() => { setMode("matricule"); setMessage({ text: "", type: "" }); }}
+                aria-pressed={mode === "matricule"}
+                className={"flex-1 rounded-lg px-3 py-2.5 text-xs font-bold transition " + (mode === "matricule" ? "bg-gradient-to-r from-[#0752a0] to-[#023e8a] text-white shadow-md" : "text-slate-600 hover:bg-white hover:text-blue-900")}
+              >
+                Par matricule
+              </button>
+              <button
+                type="button"
+                onClick={() => { setMode("email"); setMessage({ text: "", type: "" }); }}
+                aria-pressed={mode === "email"}
+                className={"flex-1 rounded-lg px-3 py-2.5 text-xs font-bold transition " + (mode === "email" ? "bg-gradient-to-r from-[#0752a0] to-[#023e8a] text-white shadow-md" : "text-slate-600 hover:bg-white hover:text-blue-900")}
+              >
+                Par e-mail
+              </button>
             </div>
             <form onSubmit={handleSubmit} className="login-form">
               <div className="login-field">

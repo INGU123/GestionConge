@@ -1025,7 +1025,10 @@ export default function UtilisateursPage() {
             <h2 className="text-lg font-bold text-slate-900">Archiver ce collaborateur ?</h2>
             <p className="mt-2 text-sm text-slate-600">
               Le compte de {userToDelete.prenom} {userToDelete.nom} sera désactivé. Ses demandes de congé,
-              soldes et historiques seront conservés. Une notification sera envoyée à son adresse e-mail.
+              soldes et historiques seront conservés.{" "}
+              {userToDelete.email
+                ? "Une notification sera envoyée à son adresse e-mail."
+                : "Aucune adresse e-mail n'est renseignée : l'archivage sera effectué sans notification e-mail."}
             </p>
             <label className="mt-4 block text-xs font-bold uppercase text-slate-600">
               Motif (facultatif)

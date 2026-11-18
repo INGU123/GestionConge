@@ -237,10 +237,11 @@ export default function UtilisateursPage() {
         return;
       }
 
+      const result = await res.json();
       setUsers((prev) => prev.filter((item) => item.id !== user.id));
       setUserToDelete(null);
       setArchiveReason("");
-      showToast("Collaborateur archivé. La notification e-mail a été envoyée.", "success");
+      showToast(result.message || "Collaborateur archivé avec succès.", "success");
     } catch (err) {
       showToast(`Erreur : ${err.message}`, "error");
     } finally {

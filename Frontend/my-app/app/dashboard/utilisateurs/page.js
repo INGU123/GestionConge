@@ -137,7 +137,7 @@ export default function UtilisateursPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!/^\\d+$/.test(String(newUser.matricule ?? "").trim())) {
+    if (!/^[0-9]+$/.test(String(newUser.matricule ?? "").trim())) {
       showToast("Le matricule doit contenir uniquement des chiffres (ex. 2026100).", "warning");
       return;
     }

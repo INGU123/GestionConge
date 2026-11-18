@@ -844,3 +844,389 @@ body {
   .theme-shell .spat-sidebar .spat-nav-link > span:last-child { display: none; }
   .theme-shell main { padding: 14px !important; }
 }
+
+
+
+/* ===== SPAT : maquette de connexion inspirée de la référence ===== */
+
+.spat-auth-page {
+  min-height: 100vh;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 38px 24px;
+  background: #d1d1d1;
+  box-sizing: border-box;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+.spat-auth-card {
+  position: relative;
+  display: grid;
+  grid-template-columns: 46% 54%;
+  width: min(1120px, 100%);
+  min-height: 570px;
+  background: #fff;
+  border-radius: 15px;
+  overflow: hidden;
+  box-shadow: 0 18px 35px rgba(0, 0, 0, 0.24);
+}
+
+.spat-auth-brand {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  padding: 62px 58px 28px;
+  color: #fff;
+  background: linear-gradient(155deg, #0750a0 0%, #0874d4 58%, #168ce9 100%);
+  text-align: center;
+}
+
+.spat-auth-welcome {
+  width: 100%;
+  font-size: 16px;
+  font-weight: 500;
+  letter-spacing: 0.2px;
+}
+
+.spat-auth-brand-center {
+  width: 100%;
+  max-width: 340px;
+  margin: auto 0;
+  transform: translateY(-8px);
+}
+
+.spat-auth-logo {
+  width: 100px;
+  height: 100px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 12px;
+  overflow: hidden;
+  border-radius: 50%;
+  background: #fff;
+}
+
+.spat-auth-logo img {
+  width: 84%;
+  height: 84%;
+  object-fit: contain;
+}
+
+.spat-auth-brand-center h1 {
+  margin: 0;
+  color: #fff;
+  font-size: 27px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+}
+
+.spat-auth-brand-subtitle {
+  margin: 5px 0 30px;
+  color: rgba(255, 255, 255, 0.95);
+  font-size: 15px;
+}
+
+.spat-auth-description {
+  margin: 0 auto;
+  max-width: 330px;
+  color: rgba(255, 255, 255, 0.76);
+  font-size: 11px;
+  line-height: 1.7;
+}
+
+.spat-auth-brand-footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  width: 100%;
+  color: rgba(255, 255, 255, 0.76);
+  font-size: 9px;
+  letter-spacing: 1px;
+}
+
+.spat-auth-footer-separator {
+  opacity: 0.65;
+}
+
+.spat-auth-wave {
+  position: absolute !important;
+  z-index: 10 !important;
+  display: block !important;
+  top: 0 !important;
+  right: -1px !important;
+  width: 125px !important;
+  height: 100% !important;
+  object-fit: fill !important;
+  opacity: 1 !important;
+  filter: none !important;
+  pointer-events: none !important;
+}
+
+.spat-auth-form-panel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 65px 75px 55px 62px;
+  background: #fff;
+}
+
+.spat-auth-form-content {
+  width: 100%;
+  max-width: 390px;
+}
+
+.spat-auth-form-content h2 {
+  margin: 0 0 12px;
+  color: #252525;
+  font-size: 27px;
+  font-weight: 600;
+  text-align: left;
+}
+
+.spat-auth-intro {
+  margin: 0 0 38px;
+  color: #929292;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.spat-auth-field {
+  margin-bottom: 25px;
+}
+
+.spat-auth-field label {
+  display: block;
+  margin-bottom: 8px;
+  color: #333;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.spat-auth-field input {
+  display: block;
+  width: 100%;
+  height: 35px;
+  padding: 5px 2px;
+  border: 0;
+  border-bottom: 1px solid #a8d8ed;
+  border-radius: 0;
+  outline: none;
+  background: transparent;
+  color: #222;
+  font-size: 12px;
+  transition: border-color 0.2s ease;
+}
+
+.spat-auth-field input::placeholder {
+  color: #b8b8b8;
+  font-size: 11px;
+}
+
+.spat-auth-field input:focus {
+  border-bottom: 2px solid #0878cf;
+}
+
+.spat-auth-forgot {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: -8px;
+  margin-bottom: 28px;
+}
+
+.spat-auth-forgot a {
+  color: #0876c9;
+  font-size: 11px;
+  text-decoration: none;
+}
+
+.spat-auth-forgot a:hover {
+  text-decoration: underline;
+}
+
+.spat-auth-submit {
+  display: block;
+  width: 100%;
+  min-height: 43px;
+  border: 0;
+  border-radius: 24px;
+  background: linear-gradient(90deg, #0875cf, #0754a5);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 5px 12px rgba(0, 91, 170, 0.18);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.spat-auth-submit:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 7px 16px rgba(0, 91, 170, 0.25);
+}
+
+.spat-auth-submit:disabled {
+  opacity: 0.65;
+  cursor: wait;
+  transform: none;
+}
+
+.spat-auth-error {
+  margin: -10px 0 18px;
+  padding: 10px 12px;
+  border-radius: 6px;
+  background: #fff0f0;
+  color: #bd2929;
+  font-size: 12px;
+}
+
+.spat-auth-security {
+  margin: 27px 0 0;
+  color: #aaa;
+  font-size: 10px;
+  text-align: center;
+}
+
+.spat-auth-mobile-logo {
+  display: none;
+}
+
+@media (max-width: 760px) {
+  .spat-auth-page {
+    min-height: 100vh;
+    padding: 20px 14px;
+    background: #f1f3f6;
+  }
+
+  .spat-auth-card {
+    grid-template-columns: 1fr;
+    max-width: 470px;
+    min-height: auto;
+    border-radius: 14px;
+  }
+
+  .spat-auth-brand {
+    min-height: 235px;
+    padding: 25px 25px 20px;
+  }
+
+  .spat-auth-welcome {
+    font-size: 13px;
+  }
+
+  .spat-auth-brand-center {
+    margin: 20px 0;
+    transform: none;
+  }
+
+  .spat-auth-logo {
+    width: 65px;
+    height: 65px;
+    margin-bottom: 7px;
+  }
+
+  .spat-auth-brand-center h1 {
+    font-size: 21px;
+  }
+
+  .spat-auth-brand-subtitle {
+    margin: 2px 0 10px;
+    font-size: 12px;
+  }
+
+  .spat-auth-description {
+    display: none;
+  }
+
+  .spat-auth-brand-footer {
+    font-size: 8px;
+  }
+
+  .spat-auth-wave {
+    display: none;
+  }
+
+  .spat-auth-form-panel {
+    padding: 35px 28px 32px;
+  }
+
+  .spat-auth-form-content h2 {
+    font-size: 24px;
+  }
+
+  .spat-auth-intro {
+    margin-bottom: 28px;
+  }
+
+  .spat-auth-mobile-logo {
+    display: none;
+  }
+}
+
+@media (max-width: 380px) {
+  .spat-auth-form-panel {
+    padding-right: 21px;
+    padding-left: 21px;
+  }
+}
+
+
+/* Icônes React des champs de connexion */
+.spat-auth-input-icon {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.spat-auth-input-icon > svg {
+  position: absolute;
+  left: 2px;
+  width: 17px;
+  height: 17px;
+  fill: none;
+  stroke: #1683c7;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  pointer-events: none;
+}
+
+.spat-auth-input-icon input {
+  padding-left: 28px !important;
+  padding-right: 34px !important;
+}
+
+.spat-auth-eye {
+  position: absolute;
+  right: 2px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 5px;
+  border: 0;
+  background: transparent;
+  color: #1683c7;
+  cursor: pointer;
+}
+
+.spat-auth-eye svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.spat-auth-eye:hover {
+  color: #064d91;
+}

@@ -1,0 +1,194 @@
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import Image from "next/image";
+import {
+  FiArrowRight,
+  FiEye,
+  FiEyeOff,
+  FiLock,
+  FiShield,
+  FiUser,
+} from "react-icons/fi";
+import { loginUser } from "@/services/authService";
+
+export default function Home() {
+  const router = useRouter();
+
+  const [matricule, setMatricule] = useState("");
+  const [motDePass, setMotDePass] = useState("");
+  const [error, setError] = useState("");
+  const [mdpSee, setMdpSee] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+
+    try {
+      const data = await loginUser(matricule, motDePass);
+
+      if (data.token) {
+        localStorage.setItem("token", data.token);
+      }
+
+      const utilisateur = data.utilisateur || data;
+      localStorage.setItem("user", JSON.stringify(utilisateur));
+
+      router.push("/dashboard");
+    } catch (err) {
+      setError(
+        err?.response?.data?.message ||
+          err?.message ||
+          "Matricule ou mot de passe incorrect."
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <main className="login-page">
+      <div className="login-container">
+        <section className="login-welcome-panel">
+          <div className="login-brand">
+            <Image
+              src="/SpatLogo.png"
+              alt="Logo SPAT"
+              width={100}
+              height={100}
+              priority
+            />
+            <span>SPAT</span>
+          </div>
+
+          <div className="login-welcome-content">
+            <span className="login-eyebrow">PORTAIL DU PERSONNEL</span>
+
+            <h1>
+              Bienvenue sur votre espace professionnel
+            </h1>
+
+            <p>
+              Accédez à votre espace de gestion des congés et
+              retrouvez vos informations professionnelles en
+              toute simplicité.
+            </p>
+
+            <div className="login-features">
+              <div>
+                <FiShield />
+                <span>Accès sécurisé à votre espace</span>
+              </div>
+              <div>
+                <FiUser />
+                <span>Gestion de vos demandes de congé</span>
+              </div>
+              <div>
+                <FiLock />
+                <span>Suivi de votre situation administrative</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="login-welcome-footer">
+            Société du Port à Gestion Autonome de Toamasina
+          </div>
+        </section>
+
+        <section className="login-form-panel">
+          <div className="login-form-content">
+            <div className="login-form-heading">
+              <span className="login-eyebrow">ESPACE PERSONNEL</span>
+              <h2>Authentification</h2>
+              <p>
+                Connectez-vous avec votre matricule et votre
+                mot de passe.
+              </p>
+            </div>
+
+            <form onSubmit={handleLogin}>
+              <div className="login-field">
+                <label htmlFor="matricule">Matricule</label>
+                <div className="login-input-wrapper">
+                  <FiUser />
+                  <input
+                    id="matricule"
+                    type="text"
+                    inputMode="numeric"
+                    placeholder="Votre matricule"
+                    value={matricule}
+                    onChange={(e) => setMatricule(e.target.value)}
+                    required
+                    autoComplete="username"
+                  />
+                </div>
+              </div>
+
+              <div className="login-field">
+                <label htmlFor="password">Mot de passe</label>
+                <div className="login-input-wrapper">
+                  <FiLock />
+                  <input
+                    id="password"
+                    type={mdpSee ? "text" : "password"}
+                    placeholder="Votre mot de passe"
+                    value={motDePass}
+                    onChange={(e) => setMotDePass(e.target.value)}
+                    required
+                    autoComplete="current-password"
+                  />
+                  <button
+                    type="button"
+                    className="login-password-toggle"
+                    onClick={() => setMdpSee(!mdpSee)}
+                    aria-label={
+                      mdpSee
+                        ? "Masquer le mot de passe"
+                        : "Afficher le mot de passe"
+                    }
+                  >
+                    {mdpSee ? <FiEyeOff /> : <FiEye />}
+                  </button>
+                </div>
+              </div>
+
+              <div className="login-forgot">
+                <Link href="/Components/mdpForget">
+                  Mot de passe oublié ?
+                </Link>
+              </div>
+
+              {error && (
+                <div className="login-error" role="alert">
+                  {error}
+                </div>
+              )}
+
+              <button
+                type="submit"
+                className="login-submit"
+                disabled={loading}
+              >
+                {loading ? "Connexion..." : "Se connecter"}
+                {!loading && <FiArrowRight />}
+              </button>
+            </form>
+
+            <div className="login-security">
+              <FiShield />
+              <span>Connexion sécurisée et réservée au personnel SPAT.</span>
+            </div>
+          </div>
+
+          <footer className="login-form-footer">
+            © {new Date().getFullYear()} SPAT — Tous droits réservés
+          </footer>
+        </section>
+      </div>
+    </main>
+  );
+}

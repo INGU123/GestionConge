@@ -1,186 +1,632 @@
 "use client";
 
-import { loginUser } from "@/lib/apiLogin.js";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import Image from "next/image";
-import {
-  FiArrowRight,
-  FiEye,
-  FiEyeOff,
-  FiLock,
-  FiShield,
-  FiUser,
-} from "react-icons/fi";
+import { loginUser } from "@/lib/apiLogin.js";
 
-const Home = () => {
+function CloudSideDivider() {
+  return (
+    <div className="spat-auth-cloud-divider" aria-hidden="true">
+    {/* Séparateur vertical nuageux (desktop) */}
+    <svg
+    className="spat-cloud-svg-desktop"
+    viewBox="0 0 120 800"
+    preserveAspectRatio="none"
+    >
+    {/* Couche arrière bleue claire pour l'effet de profondeur */}
+    <path
+    d="M68,0
+    C95,45 92,95 62,135
+    C40,165 45,210 74,240
+    C104,272 102,325 68,365
+    C38,400 42,455 75,490
+    C106,522 102,575 66,615
+    C38,645 45,700 76,735
+    C96,758 95,782 82,800
+    L120,800 L120,0 Z"
+    fill="#9ec5f8"
+    opacity="0.55"
+    />
+    {/* Couche avant blanche principale */}
+    <path
+    d="M82,0
+    C112,42 108,92 78,132
+    C52,166 58,212 88,242
+    C118,274 114,328 80,368
+    C50,404 56,458 88,492
+    C118,524 112,578 78,618
+    C50,650 58,702 88,736
+    C108,758 106,782 94,800
+    L120,800 L120,0 Z"
+    fill="#ffffff"
+    />
+    </svg>
+
+    {/* Séparateur horizontal nuageux (mobile) */}
+    <svg
+    className="spat-cloud-svg-mobile"
+    viewBox="0 0 800 90"
+    preserveAspectRatio="none"
+    >
+    <path
+    d="M0,45
+    C50,15 110,15 160,42
+    C210,70 270,68 320,38
+    C375,8 435,10 490,40
+    C545,70 610,68 665,38
+    C715,12 760,15 800,38
+    L800,90 L0,90 Z"
+    fill="#9ec5f8"
+    opacity="0.55"
+    />
+    <path
+    d="M0,58
+    C55,28 115,28 165,54
+    C215,80 275,78 325,48
+    C380,18 440,20 495,50
+    C550,80 615,78 670,48
+    C720,22 762,25 800,48
+    L800,90 L0,90 Z"
+    fill="#ffffff"
+    />
+    </svg>
+    </div>
+  );
+}
+
+export default function LoginPage() {
+  const router = useRouter();
   const [matricule, setMatricule] = useState("");
   const [motDePass, setMotDePass] = useState("");
-  const [error, setError] = useState("");
-  const [mdpSee, setMdpSee] = useState(false);
-  const router = useRouter();
+  const [erreur, setErreur] = useState("");
+  const [chargement, setChargement] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
-  const handleLogin = async (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    setError("");
+    setErreur("");
+    setChargement(true);
 
     try {
       const data = await loginUser(matricule, motDePass);
 
-      if (data?.token) {
-        localStorage.setItem("token", data.token);
-      }
-      if (data?.utilisateur) {
-        localStorage.setItem("user", JSON.stringify(data.utilisateur));
-      } else {
-        localStorage.setItem("user", JSON.stringify(data));
-      }
+      localStorage.setItem("token", data.token);
+      localStorage.setItem("user", JSON.stringify(data?.utilisateur || data));
 
       router.push("/dashboard");
-    } catch (err) {
-      setError(err.message || "Matricule ou mot de passe incorrect.");
+    } catch (error) {
+      setErreur(
+        error?.response?.data?.message ||
+        error?.message ||
+        "Matricule ou mot de passe incorrect."
+      );
+    } finally {
+      setChargement(false);
     }
   };
 
   return (
-    <main className="login-page">
-      <div className="login-frame">
-        <section className="login-brand-panel" aria-label="Présentation du Port de Toamasina">
-          <div className="login-brand-top">
-            <div className="login-logo-wrap">
-              <Image
-                src="/SpatLogo.png"
-                alt="Logo SPAT"
-                width={58}
-                height={58}
-                priority
-                className="login-logo"
-              />
-            </div>
-            <div>
-              <p className="login-brand-kicker">SOCIÉTÉ PORTUAIRE</p>
-              <p className="login-brand-name">Port de Toamasina</p>
-            </div>
-          </div>
+    <main className="spat-auth-page">
+    <section className="spat-auth-card">
+    <div className="spat-auth-brand">
+    <div className="spat-auth-welcome">Bienvenue sur</div>
 
-          <div className="login-brand-copy">
-            <span className="login-eyebrow"><span /> PORTAIL DU PERSONNEL</span>
-            <h1>La gestion de vos congés, <em>en toute simplicité.</em></h1>
-            <p>
-              Retrouvez vos demandes, consultez vos soldes et suivez vos démarches
-              professionnelles depuis un espace unique et sécurisé.
-            </p>
-          </div>
+    <div className="spat-auth-brand-center">
+    <div className="spat-auth-logo">
+    <img src="/SpatLogo.png" alt="Logo SPAT" />
+    </div>
 
-          <div className="login-brand-visual" aria-hidden="true">
-            <div className="login-orbit login-orbit-one" />
-            <div className="login-orbit login-orbit-two" />
-            <div className="login-visual-card">
-              <div className="login-visual-icon"><FiShield /></div>
-              <div>
-                <strong>Un espace sécurisé</strong>
-                <span>Vos informations professionnelles protégées</span>
-              </div>
-              <span className="login-visual-check">✓</span>
-            </div>
-          </div>
+    <h1>SPAT</h1>
+    <p className="spat-auth-brand-subtitle">
+    Gestion des congés
+    </p>
 
-          <div className="login-brand-footer">
-            <span>SPAT · Madagascar</span>
-            <span className="login-footer-dot" />
-            <span>Portail interne du personnel</span>
-          </div>
-        </section>
+    <p className="spat-auth-description">
+    Société du Port à Gestion Autonome de Toamasina.
+    <br />
+    Une gestion simple et efficace des demandes de congés.
+    </p>
+    </div>
 
-        <section className="login-form-panel">
-          <div className="login-form-topline">
-            <span className="login-secure-label"><FiShield /> ACCÈS SÉCURISÉ</span>
-          </div>
+    <div className="spat-auth-brand-footer">
+    <span>SOCIÉTÉ DU PORT</span>
+    <span className="spat-auth-footer-separator">|</span>
+    <span>TOAMASINA</span>
+    </div>
 
-          <div className="login-form-content">
-            <div className="login-form-heading">
-              <span className="login-heading-mark" />
-              <p className="login-overline">VOTRE ESPACE PERSONNEL</p>
-              <h2>Bon retour parmi nous.</h2>
-              <p>Connectez-vous avec vos identifiants SPAT pour continuer.</p>
-            </div>
+    <CloudSideDivider />
+    </div>
 
-            {error && (
-              <div className="login-error" role="alert">
-                <span className="login-error-mark">!</span>
-                <span>{error}</span>
-              </div>
-            )}
+    <div className="spat-auth-form-panel">
+    <div className="spat-auth-form-content">
+    <div className="spat-auth-mobile-logo">
+    <img src="/SpatLogo.png" alt="Logo SPAT" />
+    </div>
 
-            <form onSubmit={handleLogin} className="login-form">
-              <div className="login-field">
-                <label htmlFor="matricule">Matricule</label>
-                <div className="login-input-wrap">
-                  <FiUser className="login-input-icon" aria-hidden="true" />
-                  <input
-                    id="matricule"
-                    type="text"
-                    inputMode="numeric"
-                    pattern="[0-9]+"
-                    placeholder="Ex. 2026100"
-                    value={matricule}
-                    onChange={(e) => setMatricule(e.target.value.replace(/[^0-9]/g, ""))}
-                    autoComplete="username"
-                    required
-                  />
-                </div>
-              </div>
+    <h2>Authentification</h2>
+    <p className="spat-auth-intro">
+    Connectez-vous à votre espace de gestion des congés.
+    </p>
 
-              <div className="login-field">
-                <label htmlFor="mot-de-passe">Mot de passe</label>
-                <div className="login-input-wrap">
-                  <FiLock className="login-input-icon" aria-hidden="true" />
-                  <input
-                    id="mot-de-passe"
-                    type={mdpSee ? "text" : "password"}
-                    placeholder="Saisissez votre mot de passe"
-                    value={motDePass}
-                    onChange={(e) => setMotDePass(e.target.value)}
-                    autoComplete="current-password"
-                    required
-                  />
-                  <button
-                    type="button"
-                    className="login-password-toggle"
-                    onClick={() => setMdpSee(!mdpSee)}
-                    aria-label={mdpSee ? "Masquer le mot de passe" : "Afficher le mot de passe"}
-                    title={mdpSee ? "Masquer le mot de passe" : "Afficher le mot de passe"}
-                  >
-                    {mdpSee ? <FiEyeOff /> : <FiEye />}
-                  </button>
-                </div>
-              </div>
+    <form onSubmit={handleSubmit}>
+    <div className="spat-auth-field">
+    <label htmlFor="matricule">Matricule</label>
+    <div className="spat-auth-input-icon">
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+    <rect x="3" y="5" width="18" height="14" rx="2" />
+    <circle cx="9" cy="11" r="2" />
+    <path d="M6 16c.8-2 5.2-2 6 0M14 10h4M14 14h4" />
+    </svg>
+    <input
+    id="matricule"
+    type="text"
+    inputMode="numeric"
+    pattern="[0-9]+"
+    placeholder="Entrez votre matricule"
+    value={matricule}
+    onChange={(e) => setMatricule(e.target.value.replace(/\D/g, ""))}
+    autoComplete="username"
+    required
+    />
+    </div>
+    </div>
 
-              <div className="login-forgot-row">
-                <Link href="/Components/mdpForget">Mot de passe oublié ?</Link>
-              </div>
+    <div className="spat-auth-field">
+    <label htmlFor="motDePass">Mot de passe</label>
+    <div className="spat-auth-input-icon">
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+    <rect x="4" y="10" width="16" height="11" rx="2" />
+    <path d="M8 10V7a4 4 0 0 1 8 0v3" />
+    </svg>
+    <input
+    id="motDePass"
+    type={showPassword ? "text" : "password"}
+    placeholder="Entrez votre mot de passe"
+    value={motDePass}
+    onChange={(e) => setMotDePass(e.target.value)}
+    autoComplete="current-password"
+    required
+    />
+    <button
+    type="button"
+    className="spat-auth-eye"
+    onClick={() => setShowPassword(!showPassword)}
+    aria-label={showPassword ? "Masquer le mot de passe" : "Afficher le mot de passe"}
+    title={showPassword ? "Masquer" : "Afficher"}
+    >
+    {showPassword ? (
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M3 3l18 18M10.6 10.6a2 2 0 0 0 2.8 2.8" />
+      <path d="M9.9 5.2A10.8 10.8 0 0 1 12 5c5 0 8.5 4.5 9 7-.2 1.1-1 2.3-2.2 3.4M6.2 6.2C3.8 7.7 2.3 10 2 12c.5 2.5 4 7 10 7 1.1 0 2.1-.2 3-.5" />
+      </svg>
+    ) : (
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z" />
+      <circle cx="12" cy="12" r="3" />
+      </svg>
+    )}
+    </button>
+    </div>
+    </div>
 
-              <button type="submit" className="login-submit">
-                <span>Se connecter</span>
-                <span className="login-submit-icon"><FiArrowRight /></span>
-              </button>
-            </form>
+    <div className="spat-auth-forgot">
+    <Link href="/Components/mdpForget">
+    Mot de passe oublié ?
+    </Link>
+    </div>
 
-            <div className="login-security-note">
-              <FiLock aria-hidden="true" />
-              <span>Connexion réservée au personnel autorisé de la SPAT.</span>
-            </div>
-          </div>
-
-          <footer className="login-form-footer">
-            <span>© {new Date().getFullYear()} SPAT Madagascar</span>
-            <span>Tous droits réservés</span>
-          </footer>
-        </section>
+    {erreur && (
+      <div className="spat-auth-error" role="alert">
+      {erreur}
       </div>
-    </main>
-  );
-};
+    )}
 
-export default Home;
+    <button
+    type="submit"
+    className="spat-auth-submit"
+    disabled={chargement}
+    >
+    {chargement ? "Connexion en cours..." : "Se connecter"}
+    </button>
+    </form>
+
+    <p className="spat-auth-security">
+    Accès réservé au personnel autorisé de la SPAT.
+    </p>
+    </div>
+    </div>
+    </section>
+    
+<style jsx global>{`
+.spat-auth-page {
+  min-height: 100vh;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 35px 22px;
+  box-sizing: border-box;
+  background: #d4d4d4;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+.spat-auth-card {
+  position: relative;
+  display: grid;
+  grid-template-columns: 46% 54%;
+  width: min(1120px, 100%);
+  min-height: 570px;
+  overflow: hidden;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 18px 38px rgba(0,0,0,.22);
+}
+
+.spat-auth-brand {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  padding: 55px 55px 27px;
+  color: white;
+  text-align: center;
+  background: linear-gradient(145deg,#07519f 0%,#0877d2 65%,#168de5 100%);
+}
+
+.spat-auth-welcome {
+  width: 100%;
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.spat-auth-brand-center {
+  width: 100%;
+  max-width: 340px;
+  margin: auto 0;
+  transform: translateY(-8px);
+}
+
+.spat-auth-logo {
+  width: 105px;
+  height: 105px;
+  margin: 0 auto 13px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: 50%;
+  background: #fff;
+}
+
+.spat-auth-logo img {
+  width: 85%;
+  height: 85%;
+  object-fit: contain;
+}
+
+.spat-auth-brand-center h1 {
+  margin: 0;
+  color: #fff;
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+}
+
+.spat-auth-brand-subtitle {
+  margin: 5px 0 28px;
+  color: #fff;
+  font-size: 15px;
+}
+
+.spat-auth-description {
+  max-width: 330px;
+  margin: 0 auto;
+  color: rgba(255,255,255,.82);
+  font-size: 11px;
+  line-height: 1.8;
+}
+
+.spat-auth-brand-footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  width: 100%;
+  color: rgba(255,255,255,.8);
+  font-size: 9px;
+  letter-spacing: 1px;
+}
+
+.spat-auth-footer-separator {
+  opacity: .7;
+}
+
+/* Séparation nuageuse verticale */
+.spat-auth-cloud-divider {
+  position: absolute;
+  z-index: 5;
+  top: 0;
+  right: -1px;
+  width: 82px;
+  height: 100%;
+  pointer-events: none;
+}
+
+.spat-cloud-svg-desktop {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.spat-cloud-svg-mobile {
+  display: none;
+}
+
+.spat-auth-form-panel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 75px 55px 62px;
+  background: #fff;
+}
+
+.spat-auth-form-content {
+  width: 100%;
+  max-width: 390px;
+}
+
+.spat-auth-form-content h2 {
+  margin: 0 0 12px;
+  color: #252525;
+  font-size: 27px;
+  font-weight: 600;
+}
+
+.spat-auth-intro {
+  margin: 0 0 38px;
+  color: #929292;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.spat-auth-field {
+  margin-bottom: 25px;
+}
+
+.spat-auth-field label {
+  display: block;
+  margin-bottom: 8px;
+  color: #333;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.spat-auth-input-icon {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.spat-auth-input-icon > svg {
+  position: absolute;
+  left: 2px;
+  width: 17px;
+  height: 17px;
+  fill: none;
+  stroke: #1683c7;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  pointer-events: none;
+}
+
+.spat-auth-input-icon input {
+  display: block;
+  width: 100%;
+  height: 38px;
+  padding: 5px 35px 5px 29px;
+  box-sizing: border-box;
+  border: 0;
+  border-bottom: 1px solid #a8d8ed;
+  border-radius: 0;
+  outline: none;
+  background: transparent;
+  color: #222;
+  font-size: 12px;
+}
+
+.spat-auth-input-icon input::placeholder {
+  color: #b8b8b8;
+  font-size: 11px;
+}
+
+.spat-auth-input-icon input:focus {
+  border-bottom: 2px solid #0878cf;
+}
+
+.spat-auth-eye {
+  position: absolute;
+  right: 2px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 5px;
+  border: 0;
+  background: transparent;
+  color: #1683c7;
+  cursor: pointer;
+}
+
+.spat-auth-eye svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.spat-auth-forgot {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: -8px;
+  margin-bottom: 28px;
+}
+
+.spat-auth-forgot a {
+  color: #0876c9;
+  font-size: 11px;
+  text-decoration: none;
+}
+
+.spat-auth-forgot a:hover {
+  text-decoration: underline;
+}
+
+.spat-auth-submit {
+  display: block;
+  width: 100%;
+  min-height: 44px;
+  border: 0;
+  border-radius: 24px;
+  background: linear-gradient(90deg,#0875cf,#0754a5);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 5px 12px rgba(0,91,170,.18);
+  transition: transform .2s ease, box-shadow .2s ease;
+}
+
+.spat-auth-submit:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 7px 16px rgba(0,91,170,.25);
+}
+
+.spat-auth-submit:disabled {
+  opacity: .65;
+  cursor: wait;
+  transform: none;
+}
+
+.spat-auth-error {
+  margin: -10px 0 18px;
+  padding: 10px 12px;
+  border-radius: 6px;
+  background: #fff0f0;
+  color: #bd2929;
+  font-size: 12px;
+}
+
+.spat-auth-security {
+  margin: 27px 0 0;
+  color: #aaa;
+  font-size: 10px;
+  text-align: center;
+}
+
+.spat-auth-mobile-logo {
+  display: none;
+}
+
+@media (max-width: 760px) {
+  .spat-auth-page {
+    min-height: 100vh;
+    padding: 18px 13px;
+    background: #f1f3f6;
+  }
+
+  .spat-auth-card {
+    grid-template-columns: 1fr;
+    max-width: 470px;
+    min-height: auto;
+    border-radius: 14px;
+  }
+
+  .spat-auth-brand {
+    min-height: 235px;
+    padding: 22px 25px 20px;
+  }
+
+  .spat-auth-welcome {
+    font-size: 13px;
+  }
+
+  .spat-auth-brand-center {
+    margin: 18px 0;
+    transform: none;
+  }
+
+  .spat-auth-logo {
+    width: 65px;
+    height: 65px;
+    margin-bottom: 7px;
+  }
+
+  .spat-auth-brand-center h1 {
+    font-size: 21px;
+  }
+
+  .spat-auth-brand-subtitle {
+    margin: 2px 0 8px;
+    font-size: 12px;
+  }
+
+  .spat-auth-description {
+    display: none;
+  }
+
+  .spat-auth-brand-footer {
+    font-size: 8px;
+  }
+
+  .spat-auth-cloud-divider {
+    top: auto;
+    right: 0;
+    bottom: -1px;
+    left: 0;
+    width: 100%;
+    height: 42px;
+  }
+
+  .spat-cloud-svg-desktop {
+    display: none;
+  }
+
+  .spat-cloud-svg-mobile {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+
+  .spat-auth-form-panel {
+    padding: 35px 28px 32px;
+  }
+
+  .spat-auth-form-content h2 {
+    font-size: 24px;
+  }
+
+  .spat-auth-intro {
+    margin-bottom: 28px;
+  }
+}
+
+@media (max-width: 380px) {
+  .spat-auth-form-panel {
+    padding-right: 21px;
+    padding-left: 21px;
+  }
+}
+`}</style>
+</main>
+  );
+}

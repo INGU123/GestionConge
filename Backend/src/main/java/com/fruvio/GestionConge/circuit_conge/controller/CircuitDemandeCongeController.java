@@ -91,21 +91,17 @@ public class CircuitDemandeCongeController {
     }
 
     @GetMapping("/{id}/pdf")
-    @PreAuthorize("hasRole('ASSISTANT_DIRECTION')")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<byte[]> telechargerDecision(@PathVariable Long id) {
-        Utilisateur assistant = currentUser();
-        CircuitDemandeConge d = service.dossiersAssistant(assistant).stream()
-                .filter(x -> x.getId().equals(id)).findFirst()
-                .orElseThrow(() -> new AccessDeniedException("Ce dossier ne vous appartient pas."));
-        if (!List.of("VALIDEE", "REFUSEE").contains(d.getStatut())) {
-            throw new IllegalStateException("Le PDF sera disponible après la décision du directeur.");
-        }
+        CircuitDemandeConge d = service.dossierPourPdf(id, currentUser());
         Utilisateur employe = utilisateurs.findById(d.getUtilisateurId()).orElseThrow();
         Utilisateur directeur = utilisateurs.findById(d.getDirecteurId()).orElseThrow();
-        String typeLabel = typesConge.findById(d.getTypeCongeId()).map(t -> t.getLibelle()).orElse("Type #" + d.getTypeCongeId());
+        String typeLabel = typesConge.findById(d.getTypeCongeId())
+                .map(t -> t.getLibelle()).orElse("Type #" + d.getTypeCongeId());
         byte[] content = pdf.generateDecisionCongePdf(d, employe, directeur, typeLabel);
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_PDF)
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=decision-conge-" + id + ".pdf")
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=decision-conge-" + id + ".pdf")
                 .body(content);
     }
 

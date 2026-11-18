@@ -166,8 +166,34 @@ public class CircuitDemandeCongeService {
         d.setLegacyDemandeId(decisionResult.getId()); d.setMotifRefus("REFUSEE".equals(choix) ? raison : null);
         d.setDateDecision(LocalDateTime.now()); d.setStatut(choix);
         CircuitDemandeConge savedCircuit = circuits.save(d);
-        notifications.creerNotification(d.getAssistantId(), "La décision du directeur pour le dossier #" + d.getId() + " est " + choix + ". Le PDF officiel est disponible dans votre boîte de réception.", "DECISION_CONGE", "/dashboard/circuit-conge");
+        String contenu = "Votre demande de congé (dossier #" + d.getId() + ") a été "
+                + ("VALIDEE".equals(choix) ? "VALIDÉE." : "REFUSÉE.");
+        if ("REFUSEE".equals(choix)) contenu += " Motif du refus : " + raison;
+        notifications.creerNotification(d.getUtilisateurId(), contenu,
+                "DECISION_CONGE", "/circuit-conge/" + d.getId() + "/pdf");
         return savedCircuit;
+    }
+
+    public CircuitDemandeConge dossierPourPdf(Long id, Utilisateur user) {
+        if (user == null || user.getId() == null || !user.isEnabled()) {
+            throw new AccessDeniedException("Authentification requise.");
+        }
+
+        CircuitDemandeConge dossier = circuits.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Dossier introuvable."));
+
+        boolean demandeur = user.getRole() != Role.DIRECTEUR
+                && user.getId().equals(dossier.getUtilisateurId());
+        boolean assistantCreateur = user.getRole() == Role.ASSISTANT_DIRECTION
+                && user.getId().equals(dossier.getAssistantId());
+
+        if (!demandeur && !assistantCreateur) {
+            throw new AccessDeniedException("Téléchargement non autorisé.");
+        }
+        if (!List.of("VALIDEE", "REFUSEE").contains(dossier.getStatut())) {
+            throw new IllegalStateException("Le PDF sera disponible après la décision du directeur.");
+        }
+        return dossier;
     }
 
     private CircuitDemandeConge enrichir(CircuitDemandeConge dossier) {

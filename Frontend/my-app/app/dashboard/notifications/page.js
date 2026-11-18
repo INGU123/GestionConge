@@ -6,7 +6,7 @@ import {
   getToutesLesNotifications,
   marquerNotificationLue,
 } from "../../api/notificationConge/notificationConge";
-import { getCurrentUser } from "@/lib/apiClient";
+import { authFetch, getCurrentUser } from "@/lib/apiClient";
 import {
   Bell,
   Check,
@@ -97,6 +97,31 @@ export default function NotificationHeaderMenu() {
       }
     } catch (err) {
       console.error("Erreur mise à jour notification:", err);
+    }
+  };
+
+  const telechargerDecision = async (notification, event) => {
+    event.stopPropagation();
+    await handleMarquerLue(notification.id);
+
+    try {
+      const response = await authFetch(`http://localhost:8080${notification.lien}`, {
+        headers: { Accept: "application/pdf" },
+      });
+      if (!response.ok) throw new Error(`Téléchargement impossible (HTTP ${response.status}).`);
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `decision-conge-${notification.lien.split("/")[2]}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.setTimeout(() => window.URL.revokeObjectURL(url), 1000);
+    } catch (error) {
+      console.error("Erreur téléchargement PDF :", error);
+      window.alert(error.message || "Impossible de télécharger le document.");
     }
   };
 
@@ -210,6 +235,15 @@ export default function NotificationHeaderMenu() {
                     <span className="text-[10px] text-slate-400 mt-1 block">
                       {n.date_envoi ? new Date(n.date_envoi).toLocaleDateString("fr-FR") : "Aujourd'hui"}
                     </span>
+                    {/^\/circuit-conge\/\d+\/pdf$/.test(n.lien || "") && (
+                      <button
+                        type="button"
+                        onClick={(event) => telechargerDecision(n, event)}
+                        className="mt-2 inline-flex items-center gap-1 rounded-md bg-blue-50 px-2 py-1 font-semibold text-blue-700 hover:bg-blue-100"
+                      >
+                        Télécharger le document PDF
+                      </button>
+                    )}
                   </div>
                   {!n.lue && (
                     <button

@@ -224,7 +224,14 @@ export default function DashboardLayout({
           />
         </svg>
       ),
-      show: false,
+      show: isAdmin,
+    },
+
+    {
+      href: "/dashboard/services",
+      label: "Services",
+      icon: <span>⚙</span>,
+      show: isAdmin,
     },
 
     {

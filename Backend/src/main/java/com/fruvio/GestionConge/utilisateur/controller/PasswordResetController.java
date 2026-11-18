@@ -214,15 +214,29 @@ public class PasswordResetController {
                 + "\n\nConnectez-vous à l'interface de réinitialisation pour remplacer ce mot de passe temporaire par un mot de passe personnel :\n"
                 + resetLink + "\n\nPour votre sécurité, changez ce mot de passe temporaire dès que possible.\n\nService RH - SPAT";
 
-        try {
-            emailService.sendEmail(user.getEmail(), "Demande acceptée : réinitialisation de mot de passe - SPAT", emailText);
-        } catch (Exception ex) {
-            log.error("L'e-mail d'acceptation de la demande {} a échoué ; la transaction doit être annulée.", id, ex);
-            throw new IllegalStateException("L'e-mail contenant le mot de passe temporaire n'a pas pu être envoyé.", ex);
+        boolean emailSent = false;
+        String email = user.getEmail() == null ? "" : user.getEmail().trim();
+        if (!email.isEmpty()) {
+            try {
+                emailService.sendEmail(email, "Demande acceptée : réinitialisation de mot de passe - SPAT", emailText);
+                emailSent = true;
+            } catch (Exception ex) {
+                // L'acceptation ne doit pas échouer pour un agent sans e-mail ou en cas de panne SMTP.
+                log.error("La demande {} est acceptée, mais l'e-mail à l'agent n'a pas pu être envoyé.", id, ex);
+            }
         }
 
-        return ResponseEntity.ok(Map.of("success", true,
-                "message", "Demande acceptée. Les informations et le lien de changement de mot de passe ont été envoyés à l'agent."));
+        // Le secret est retourné une seule fois à l'interface ADMIN pour remise directe à l'agent.
+        return ResponseEntity.ok(Map.of(
+                "success", true,
+                "message", emailSent
+                        ? "Demande acceptée. Le mot de passe temporaire est également disponible ci-dessous pour remise à l'agent."
+                        : "Demande acceptée. Aucun e-mail n'a été envoyé : remettez directement le mot de passe temporaire à l'agent.",
+                "matricule", safe(user.getMatricule()),
+                "temporaryPassword", temporaryPassword,
+                "resetLink", resetLink,
+                "emailSent", emailSent
+        ));
     }
 
     @PostMapping("/admin/password-reset-requests/{id}/reject")

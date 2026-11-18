@@ -2,7 +2,6 @@
 
 import { Suspense, useState } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { useSearchParams } from "next/navigation";
 import {
   FiArrowLeft,
@@ -19,9 +18,39 @@ import {
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
+function CloudSideDivider() {
+  return (
+    <div className="spat-auth-cloud-divider" aria-hidden="true">
+      <svg className="spat-cloud-svg-desktop" viewBox="0 0 120 800" preserveAspectRatio="none">
+        <path d="M68,0 C95,45 92,95 62,135 C40,165 45,210 74,240 C104,272 102,325 68,365 C38,400 42,455 75,490 C106,522 102,575 66,615 C38,645 45,700 76,735 C96,758 95,782 82,800 L120,800 L120,0 Z" fill="#9ec5f8" opacity="0.55" />
+        <path d="M82,0 C112,42 108,92 78,132 C52,166 58,212 88,242 C118,274 114,328 80,368 C50,404 56,458 88,492 C118,524 112,578 78,618 C50,650 58,702 88,736 C108,758 106,782 94,800 L120,800 L120,0 Z" fill="#ffffff" />
+      </svg>
+      <svg className="spat-cloud-svg-mobile" viewBox="0 0 800 90" preserveAspectRatio="none">
+        <path d="M0,45 C50,15 110,15 160,42 C210,70 270,68 320,38 C375,8 435,10 490,40 C545,70 610,68 665,38 C715,12 760,15 800,38 L800,90 L0,90 Z" fill="#9ec5f8" opacity="0.55" />
+        <path d="M0,58 C55,28 115,28 165,54 C215,80 275,78 325,48 C380,18 440,20 495,50 C550,80 615,78 670,48 C720,22 762,25 800,48 L800,90 L0,90 Z" fill="#ffffff" />
+      </svg>
+    </div>
+  );
+}
+
 export default function ResetPasswordPage() {
   return (
-    <Suspense fallback={<main className="login-page"><div className="login-frame"><section className="login-form-panel"><div className="login-form-content"><p className="login-overline">RÉINITIALISATION DU COMPTE</p><h2>Chargement…</h2></div></section></div></main>}>
+    <Suspense fallback={
+      <main className="spat-auth-page">
+        <section className="spat-auth-card">
+          <div className="spat-auth-brand">
+            <div className="spat-auth-welcome">Bienvenue sur</div>
+            <div className="spat-auth-brand-center">
+              <div className="spat-auth-logo"><img src="/SpatLogo.png" alt="Logo SPAT" /></div>
+              <h1>SPAT</h1><p className="spat-auth-brand-subtitle">Gestion des congés</p>
+            </div>
+            <div className="spat-auth-brand-footer"><span>SOCIÉTÉ DU PORT</span><span>|</span><span>TOAMASINA</span></div>
+            <CloudSideDivider />
+          </div>
+          <div className="spat-auth-form-panel"><div className="spat-auth-form-content"><h2>Chargement…</h2></div></div>
+        </section>
+      </main>
+    }>
       <ResetPasswordForm />
     </Suspense>
   );
@@ -43,12 +72,8 @@ function ResetPasswordForm() {
   });
 
   const togglePassword = (field) => {
-    setVisiblePasswords((previous) => ({
-      ...previous,
-      [field]: !previous[field],
-    }));
+    setVisiblePasswords((previous) => ({ ...previous, [field]: !previous[field] }));
   };
-
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -74,9 +99,7 @@ function ResetPasswordForm() {
     setLoading(true);
     setMessage({ text: "", type: "" });
     try {
-      const endpoint = initialToken
-        ? `${API_URL}/auth/initial-password`
-        : `${API_URL}/auth/complete-password-reset`;
+      const endpoint = initialToken ? `${API_URL}/auth/initial-password` : `${API_URL}/auth/complete-password-reset`;
       const payload = initialToken
         ? { token: initialToken, matricule: normalizedMatricule, ancienMotDePasse, newPassword: nouveauMotDePasse, confirmation }
         : { matricule: normalizedMatricule, ancienMotDePasse, nouveauMotDePasse, confirmation };
@@ -86,9 +109,7 @@ function ResetPasswordForm() {
         body: JSON.stringify(payload),
       });
       const data = await response.json().catch(() => ({}));
-      if (!response.ok) {
-        throw new Error(data.message || "Impossible de modifier le mot de passe. Vérifiez les informations saisies.");
-      }
+      if (!response.ok) throw new Error(data.message || "Impossible de modifier le mot de passe. Vérifiez les informations saisies.");
       setMessage({ text: data.message || "Mot de passe modifié avec succès.", type: "success" });
       setAncienMotDePasse("");
       setNouveauMotDePasse("");
@@ -100,216 +121,112 @@ function ResetPasswordForm() {
     }
   };
 
+  const passwordField = (id, label, placeholder, value, setter, visibleKey, Icon) => (
+    <div className="spat-auth-field">
+      <label htmlFor={id}>{label}</label>
+      <div className="spat-auth-input-icon">
+        <Icon aria-hidden="true" />
+        <input
+          id={id}
+          type={visiblePasswords[visibleKey] ? "text" : "password"}
+          placeholder={placeholder}
+          value={value}
+          onChange={(event) => setter(event.target.value)}
+          autoComplete={visibleKey === "ancienMotDePasse" ? "current-password" : "new-password"}
+          minLength={visibleKey === "ancienMotDePasse" ? undefined : 6}
+          required
+          disabled={loading}
+        />
+        <button
+          type="button"
+          className="spat-auth-eye"
+          aria-label={visiblePasswords[visibleKey] ? "Masquer le mot de passe" : "Afficher le mot de passe"}
+          aria-pressed={visiblePasswords[visibleKey]}
+          onClick={() => togglePassword(visibleKey)}
+          disabled={loading}
+        >
+          {visiblePasswords[visibleKey] ? <FiEyeOff /> : <FiEye />}
+        </button>
+      </div>
+    </div>
+  );
+
   return (
-    <main className="login-page">
-      <div className="login-frame">
-        <section className="login-brand-panel" aria-label="Présentation du Port de Toamasina">
-          <div className="login-brand-top">
-            <div className="login-logo-wrap">
-              <Image src="/SpatLogo.png" alt="Logo SPAT" width={58} height={58} priority className="login-logo" />
-            </div>
-            <div>
-              <p className="login-brand-kicker">SOCIÉTÉ PORTUAIRE</p>
-              <p className="login-brand-name">Port de Toamasina</p>
-            </div>
+    <main className="spat-auth-page">
+      <section className="spat-auth-card">
+        <div className="spat-auth-brand">
+          <div className="spat-auth-welcome">Bienvenue sur</div>
+          <div className="spat-auth-brand-center">
+            <div className="spat-auth-logo"><img src="/SpatLogo.png" alt="Logo SPAT" /></div>
+            <h1>SPAT</h1>
+            <p className="spat-auth-brand-subtitle">Gestion des congés</p>
+            <p className="spat-auth-description">Société du Port à Gestion Autonome de Toamasina.<br />Une gestion simple et efficace des demandes de congés.</p>
           </div>
+          <div className="spat-auth-brand-footer"><span>SOCIÉTÉ DU PORT</span><span className="spat-auth-footer-separator">|</span><span>TOAMASINA</span></div>
+          <CloudSideDivider />
+        </div>
 
-          <div className="login-brand-copy">
-            <span className="login-eyebrow"><span /> SÉCURITÉ DU COMPTE</span>
-            <h1>Un nouvel accès, <em>en toute sécurité.</em></h1>
-            <p>Remplacez le mot de passe temporaire reçu par e-mail par un mot de passe personnel.</p>
-          </div>
-
-          <div className="login-brand-visual" aria-hidden="true">
-            <div className="login-orbit login-orbit-one" />
-            <div className="login-orbit login-orbit-two" />
-            <div className="login-visual-card">
-              <div className="login-visual-icon"><FiShield /></div>
-              <div>
-                <strong>Protégez votre compte</strong>
-                <span>Choisissez un mot de passe personnel</span>
-              </div>
-              <span className="login-visual-check">✓</span>
-            </div>
-          </div>
-
-          <div className="login-brand-footer">
-            <span>SPAT · Madagascar</span><span className="login-footer-dot" /><span>Portail interne du personnel</span>
-          </div>
-        </section>
-
-        <section className="login-form-panel">
-          <div className="login-form-topline">
-            <span className="login-secure-label"><FiShield /> RÉINITIALISATION SÉCURISÉE</span>
-          </div>
-
-          <div className="login-form-content">
-            <div className="login-form-heading">
-              <span className="login-heading-mark" />
-              <p className="login-overline">CHANGEMENT DE MOT DE PASSE</p>
-              <h2>Définissez votre mot de passe</h2>
-              <p>{initialToken
+        <div className="spat-auth-form-panel">
+          <div className="spat-auth-form-content">
+            <div className="spat-auth-mobile-logo"><img src="/SpatLogo.png" alt="Logo SPAT" /></div>
+            <h2>Définissez votre mot de passe</h2>
+            <p className="spat-auth-intro">
+              {initialToken
                 ? "Votre compte a reçu un mot de passe généré automatiquement. Définissez maintenant votre mot de passe personnel."
-                : "Saisissez votre matricule et le mot de passe temporaire reçu, puis choisissez et confirmez votre nouveau mot de passe."}</p>
-            </div>
+                : "Saisissez votre matricule et le mot de passe temporaire reçu, puis choisissez et confirmez votre nouveau mot de passe."}
+            </p>
 
             {message.text && (
               <div role={message.type === "error" ? "alert" : "status"} style={{
-                display: "flex", alignItems: "flex-start", gap: "10px", marginBottom: "22px",
-                padding: "13px 14px", borderRadius: "11px",
+                display: "flex", alignItems: "flex-start", gap: 10, marginBottom: 18,
+                padding: "10px 12px", borderRadius: 7,
                 border: message.type === "success" ? "1px solid #a7f3d0" : "1px solid #fecdd3",
                 background: message.type === "success" ? "#ecfdf5" : "#fff1f2",
                 color: message.type === "success" ? "#047857" : "#a51d37",
-                fontSize: "12px", lineHeight: 1.6,
+                fontSize: 12, lineHeight: 1.5,
               }}>
                 {message.type === "success" ? <FiCheckCircle size={18} /> : <FiAlertCircle size={18} />}
                 <span>{message.text}</span>
               </div>
             )}
 
-            <form onSubmit={handleSubmit} className="login-form">
-              <div className="login-field">
+            <form onSubmit={handleSubmit}>
+              <div className="spat-auth-field">
                 <label htmlFor="matricule">Matricule professionnel</label>
-                <div className="login-input-wrap">
-                  <FiUser className="login-input-icon" aria-hidden="true" />
+                <div className="spat-auth-input-icon">
+                  <FiUser aria-hidden="true" />
                   <input
-                    id="matricule"
-                    type="text"
-                    inputMode="numeric"
-                    pattern="[0-9]+"
-                    placeholder="Ex. 2026100"
-                    value={matricule}
+                    id="matricule" type="text" inputMode="numeric" pattern="[0-9]+"
+                    placeholder="Entrez votre matricule" value={matricule}
                     onChange={(event) => setMatricule(event.target.value.replace(/[^0-9]/g, ""))}
-                    autoComplete="username"
-                    required
-                    disabled={loading}
+                    autoComplete="username" required disabled={loading}
                   />
                 </div>
               </div>
 
-              <div className="login-field">
-                <label htmlFor="ancienMotDePasse">Ancien mot de passe (mot de passe temporaire)</label>
-                <div className="login-input-wrap">
-                  <FiKey className="login-input-icon" aria-hidden="true" />
-                  <input
-                    id="ancienMotDePasse"
-                    type={visiblePasswords.ancienMotDePasse ? "text" : "password"}
-                    placeholder="Saisissez le mot de passe automatique reçu"
-                    value={ancienMotDePasse}
-                    onChange={(event) => setAncienMotDePasse(event.target.value)}
-                    autoComplete="current-password"
-                    required
-                    disabled={loading}
-                  />
-                  <button
-                    type="button"
-                    className="login-password-toggle"
-                    aria-label={visiblePasswords.ancienMotDePasse ? "Masquer le mot de passe" : "Afficher le mot de passe"}
-                    aria-pressed={visiblePasswords.ancienMotDePasse}
-                    onClick={() => togglePassword("ancienMotDePasse")}
-                    disabled={loading}
-                  >
-                    {visiblePasswords.ancienMotDePasse ? <FiEyeOff /> : <FiEye />}
-                  </button>
-                </div>
-              </div>
+              {passwordField("ancienMotDePasse", "Ancien mot de passe (mot de passe temporaire)", "Saisissez le mot de passe automatique reçu", ancienMotDePasse, setAncienMotDePasse, "ancienMotDePasse", FiKey)}
+              {passwordField("nouveauMotDePasse", "Nouveau mot de passe", "6 caractères minimum", nouveauMotDePasse, setNouveauMotDePasse, "nouveauMotDePasse", FiLock)}
+              {passwordField("confirmation", "Confirmer le nouveau mot de passe", "Saisissez à nouveau le nouveau mot de passe", confirmation, setConfirmation, "confirmation", FiLock)}
 
-              <div className="login-field">
-                <label htmlFor="nouveauMotDePasse">Nouveau mot de passe</label>
-                <div className="login-input-wrap" style={{ position: "relative" }}>
-                  <FiLock className="login-input-icon" aria-hidden="true" />
-                  <input id="nouveauMotDePasse" type={visiblePasswords.nouveauMotDePasse ? "text" : "password"} placeholder="6 caractères minimum"
-                    value={nouveauMotDePasse} onChange={(event) => setNouveauMotDePasse(event.target.value)}
-                    autoComplete="new-password" minLength={6} required disabled={loading} style={{ paddingRight: "48px" }} />
-                  <button
-                    type="button"
-                    aria-label={visiblePasswords.nouveauMotDePasse ? "Masquer le mot de passe" : "Afficher le mot de passe"}
-                    aria-pressed={visiblePasswords.nouveauMotDePasse}
-                    onClick={() => togglePassword("nouveauMotDePasse")}
-                    disabled={loading}
-                    style={{
-                      position: "absolute",
-                      right: "12px",
-                      top: "50%",
-                      transform: "translateY(-50%)",
-                      background: "transparent",
-                      border: "none",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      width: "24px",
-                      height: "24px",
-                      padding: 0,
-                      color: "#64748b",
-                      cursor: loading ? "not-allowed" : "pointer",
-                      zIndex: 2,
-                    }}
-                  >
-                    {visiblePasswords.nouveauMotDePasse ? <FiEyeOff size={18} /> : <FiEye size={18} />}
-                  </button>
-                </div>
-              </div>
-
-              <div className="login-field">
-                <label htmlFor="confirmation">Confirmer le nouveau mot de passe</label>
-                <div className="login-input-wrap" style={{ position: "relative" }}>
-                  <FiLock className="login-input-icon" aria-hidden="true" />
-                  <input id="confirmation" type={visiblePasswords.confirmation ? "text" : "password"} placeholder="Saisissez à nouveau le nouveau mot de passe"
-                    value={confirmation} onChange={(event) => setConfirmation(event.target.value)}
-                    autoComplete="new-password" minLength={6} required disabled={loading} style={{ paddingRight: "48px" }} />
-                  <button
-                    type="button"
-                    aria-label={visiblePasswords.confirmation ? "Masquer le mot de passe" : "Afficher le mot de passe"}
-                    aria-pressed={visiblePasswords.confirmation}
-                    onClick={() => togglePassword("confirmation")}
-                    disabled={loading}
-                    style={{
-                      position: "absolute",
-                      right: "12px",
-                      top: "50%",
-                      transform: "translateY(-50%)",
-                      background: "transparent",
-                      border: "none",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      width: "24px",
-                      height: "24px",
-                      padding: 0,
-                      color: "#64748b",
-                      cursor: loading ? "not-allowed" : "pointer",
-                      zIndex: 2,
-                    }}
-                  >
-                    {visiblePasswords.confirmation ? <FiEyeOff size={18} /> : <FiEye size={18} />}
-                  </button>
-                </div>
-              </div>
-
-              <button type="submit" className="login-submit" disabled={loading}>
-                <span>{loading ? "Modification en cours..." : "Changer mon mot de passe"}</span>
-                <span className="login-submit-icon">{loading ? <FiKey /> : <FiArrowRight />}</span>
+              <button type="submit" className="spat-auth-submit" disabled={loading}>
+                {loading ? "Modification en cours..." : "Changer mon mot de passe"}
+                <span style={{ marginLeft: 8, display: "inline-flex", verticalAlign: "middle" }}>{loading ? <FiKey /> : <FiArrowRight />}</span>
               </button>
             </form>
 
-            <div className="login-security-note">
-              <FiLock aria-hidden="true" />
-              <span>Le matricule et le mot de passe temporaire vérifient votre identité. Le lien sécurisé est également personnel et temporaire.</span>
-            </div>
+            <p className="spat-auth-security" style={{ lineHeight: 1.5 }}>
+              <FiShield style={{ display: "inline", marginRight: 6, verticalAlign: "middle" }} />
+              Le matricule et le mot de passe temporaire vérifient votre identité. Le lien sécurisé est personnel et temporaire.
+            </p>
 
-            <div className="login-forgot-row" style={{ justifyContent: "flex-start", marginTop: "24px" }}>
-              <Link href="/" style={{ display: "inline-flex", alignItems: "center", gap: "8px" }}>
+            <div className="spat-auth-forgot" style={{ justifyContent: "center", marginTop: 18, marginBottom: 0 }}>
+              <Link href="/" style={{ display: "inline-flex", alignItems: "center", gap: 7 }}>
                 <FiArrowLeft aria-hidden="true" /> Retour à la connexion
               </Link>
             </div>
           </div>
-
-          <footer className="login-form-footer">
-            <span>© {new Date().getFullYear()} SPAT Madagascar</span>
-            <span>Tous droits réservés</span>
-          </footer>
-        </section>
-      </div>
+        </div>
+      </section>
     </main>
   );
 }

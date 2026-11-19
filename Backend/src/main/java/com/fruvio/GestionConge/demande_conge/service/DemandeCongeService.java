@@ -191,8 +191,11 @@ public class DemandeCongeService {
                 .orElseThrow(() -> new IllegalArgumentException("Demande non trouvée avec l'ID : " + demandeId));
 
         Long demandeurId = demande.getUtilisateurId();
-        Utilisateur demandeur = utilisateurRepo.findById(demandeurId)
+        Utilisateur demandeur = utilisateurRepo.findByIdForUpdate(demandeurId)
                 .orElseThrow(() -> new IllegalArgumentException("Collaborateur demandeur introuvable."));
+        if (!demandeur.isEnabled()) {
+            throw new IllegalStateException("Le compte du demandeur est inactif ou archivé.");
+        }
 
         if (Objects.equals(demandeur.getId(), currentUser.getId())) {
             throw new AccessDeniedException("Vous ne pouvez pas approuver ou refuser votre propre demande.");

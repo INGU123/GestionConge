@@ -25,8 +25,12 @@ public class Historique_mouvement {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    // utilisateurId reste renseigné pour les historiques antérieurs.
     @Column(name = "utilisateur_id")
     private Long utilisateurId;
+
+    @Column(name = "employe_id")
+    private Long employeId;
 
     @Column(name = "type_mouvement")
     private String typeMouvement;

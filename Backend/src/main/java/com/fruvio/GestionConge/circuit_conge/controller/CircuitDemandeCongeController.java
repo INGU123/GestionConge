@@ -16,6 +16,8 @@ import com.fruvio.GestionConge.export.PdfExportService;
 import com.fruvio.GestionConge.utilisateur.config.CustomUserDetails;
 import com.fruvio.GestionConge.utilisateur.entity.Utilisateur;
 import com.fruvio.GestionConge.utilisateur.repository.UtilisateurRepository;
+import com.fruvio.GestionConge.employe.entity.Employe;
+import com.fruvio.GestionConge.employe.repository.EmployeRepository;
 import com.fruvio.GestionConge.type_conge.repository.Type_congeRepository;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
@@ -27,13 +29,14 @@ public class CircuitDemandeCongeController {
     private final PdfExportService pdf;
     private final UtilisateurRepository utilisateurs;
     private final Type_congeRepository typesConge;
+    private final EmployeRepository employes;
 
     public CircuitDemandeCongeController(CircuitDemandeCongeService service, PdfExportService pdf,
-            UtilisateurRepository utilisateurs, Type_congeRepository typesConge) {
-        this.service = service; this.pdf = pdf; this.utilisateurs = utilisateurs; this.typesConge = typesConge;
+            UtilisateurRepository utilisateurs, Type_congeRepository typesConge, EmployeRepository employes) {
+        this.service = service; this.pdf = pdf; this.utilisateurs = utilisateurs; this.typesConge = typesConge; this.employes = employes;
     }
 
-    public record CreationRequest(@NotNull Long utilisateurId, @NotNull Long typeCongeId,
+    public record CreationRequest(@NotNull Long employeId, @NotNull Long typeCongeId,
             @NotNull Long serviceId, @NotNull java.time.LocalDate dateDebut, @NotNull java.time.LocalDate dateFin,
             @Size(max=1500) String commentaire) {}
     public record ReliquatRequest(@NotNull @Min(0) Integer reliquatJours, @Size(max=1500) String commentaire) {}
@@ -42,7 +45,7 @@ public class CircuitDemandeCongeController {
     @PostMapping
     @PreAuthorize("hasRole('ASSISTANT_DIRECTION')")
     public ResponseEntity<CircuitDemandeConge> creer(@Valid @RequestBody CreationRequest body) {
-        return ResponseEntity.status(201).body(service.creer(body.utilisateurId(), body.typeCongeId(), body.serviceId(),
+        return ResponseEntity.status(201).body(service.creerPourEmploye(body.employeId(), body.typeCongeId(), body.serviceId(),
                 body.dateDebut(), body.dateFin(), body.commentaire(), currentUser()));
     }
 
@@ -94,7 +97,14 @@ public class CircuitDemandeCongeController {
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<byte[]> telechargerDecision(@PathVariable Long id) {
         CircuitDemandeConge d = service.dossierPourPdf(id, currentUser());
-        Utilisateur employe = utilisateurs.findById(d.getUtilisateurId()).orElseThrow();
+        Utilisateur employe;
+        if (d.getEmployeId() != null) {
+            Employe e = employes.findById(d.getEmployeId()).filter(Employe::isActif).orElseThrow();
+            employe = new Utilisateur(); employe.setMatricule(e.getMatricule()); employe.setNom(e.getNom());
+            employe.setPrenom(e.getPrenom()); employe.setFonction(e.getFonction());
+        } else {
+            employe = utilisateurs.findById(d.getUtilisateurId()).orElseThrow();
+        }
         Utilisateur directeur = utilisateurs.findById(d.getDirecteurId()).orElseThrow();
         String typeLabel = typesConge.findById(d.getTypeCongeId())
                 .map(t -> t.getLibelle()).orElse("Type #" + d.getTypeCongeId());

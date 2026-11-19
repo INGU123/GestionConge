@@ -8,6 +8,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,6 +32,7 @@ public class Solde_congeService {
     private final EmployeRepository employeRepository;
     private final Historique_mouvementService historiqueMouvementService;
 
+    @Autowired
     public Solde_congeService(Solde_congeRepository soldeCongeRepository, Type_congeRepository typeCongeRepository,
             UtilisateurRepository utilisateurRepository, EmployeRepository employeRepository,
             Historique_mouvementService historiqueMouvementService) {
@@ -39,6 +41,12 @@ public class Solde_congeService {
         this.utilisateurRepository = utilisateurRepository;
         this.employeRepository = employeRepository;
         this.historiqueMouvementService = historiqueMouvementService;
+    }
+
+    // Constructeur conservé pour les tests unitaires historiques.
+    public Solde_congeService(Solde_congeRepository soldeCongeRepository, Type_congeRepository typeCongeRepository,
+            UtilisateurRepository utilisateurRepository, Historique_mouvementService historiqueMouvementService) {
+        this(soldeCongeRepository, typeCongeRepository, utilisateurRepository, null, historiqueMouvementService);
     }
 
     public List<Solde_conge> getSoldesParUtilisateur(Long utilisateurId, Utilisateur currentUser) {

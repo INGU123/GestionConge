@@ -17,6 +17,7 @@ import com.fruvio.GestionConge.jour_ferie.service.JourFerieService;
 import com.fruvio.GestionConge.notifications_conge.service.Notification_congeService;
 import com.fruvio.GestionConge.service_conge.entity.Services;
 import com.fruvio.GestionConge.service_conge.repository.Service_congeRepository;
+import com.fruvio.GestionConge.type_conge.repository.Type_congeRepository;
 import com.fruvio.GestionConge.utilisateur.entity.Role;
 import com.fruvio.GestionConge.utilisateur.entity.Utilisateur;
 import com.fruvio.GestionConge.utilisateur.repository.UtilisateurRepository;
@@ -26,6 +27,7 @@ public class CircuitDemandeCongeService {
     private final CircuitDemandeCongeRepository circuits;
     private final UtilisateurRepository utilisateurs;
     private final EmployeRepository employes;
+    private final Type_congeRepository typesConge;
     private final Service_congeRepository services;
     private final DepartementRepository departements;
     private final JourFerieService joursFeries;
@@ -35,7 +37,7 @@ public class CircuitDemandeCongeService {
     public CircuitDemandeCongeService(CircuitDemandeCongeRepository circuits, UtilisateurRepository utilisateurs, EmployeRepository employes,
             Service_congeRepository services, DepartementRepository departements, JourFerieService joursFeries,
             DemandeCongeService demandesHistoriques, Notification_congeService notifications) {
-        this.circuits = circuits; this.utilisateurs = utilisateurs; this.employes = employes; this.services = services;
+        this.circuits = circuits; this.utilisateurs = utilisateurs; this.employes = employes; this.typesConge = typesConge; this.services = services;
         this.departements = departements; this.joursFeries = joursFeries; this.demandesHistoriques = demandesHistoriques;
         this.notifications = notifications;
     }

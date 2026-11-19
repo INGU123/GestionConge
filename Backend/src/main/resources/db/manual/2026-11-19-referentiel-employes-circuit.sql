@@ -12,6 +12,8 @@ CREATE TABLE IF NOT EXISTS employe (
     telephone VARCHAR(30),
     adresse VARCHAR(500),
     fonction VARCHAR(150),
+    service_id BIGINT NOT NULL REFERENCES service(id) ON DELETE RESTRICT,
+    donnees_fictives BOOLEAN NOT NULL DEFAULT FALSE,
     type_contrat VARCHAR(80),
     email VARCHAR(254),
     date_embauche DATE,
@@ -31,6 +33,36 @@ BEGIN
 END $$;
 
 CREATE INDEX IF NOT EXISTS idx_employe_matricule ON employe(matricule);
+
+-- Compléter la table employe si elle existait déjà avant cette migration.
+ALTER TABLE employe ADD COLUMN IF NOT EXISTS numero_cin VARCHAR(30);
+ALTER TABLE employe ADD COLUMN IF NOT EXISTS date_naissance DATE;
+ALTER TABLE employe ADD COLUMN IF NOT EXISTS telephone VARCHAR(30);
+ALTER TABLE employe ADD COLUMN IF NOT EXISTS adresse VARCHAR(500);
+ALTER TABLE employe ADD COLUMN IF NOT EXISTS type_contrat VARCHAR(80);
+ALTER TABLE employe ADD COLUMN IF NOT EXISTS email VARCHAR(254);
+ALTER TABLE employe ADD COLUMN IF NOT EXISTS date_embauche DATE;
+
+-- Garantir l'unicité du CIN sur les tables existantes et nouvelles.
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1
+        FROM pg_index i
+        JOIN pg_class t ON t.oid = i.indrelid
+        JOIN pg_attribute a ON a.attrelid = t.oid
+        WHERE t.relname = 'employe'
+          AND a.attname = 'numero_cin'
+          AND i.indisunique
+          AND i.indnkeyatts = 1
+          AND i.indkey[0] = a.attnum
+    ) THEN
+        CREATE UNIQUE INDEX uq_employe_numero_cin
+            ON employe(numero_cin)
+            WHERE numero_cin IS NOT NULL;
+    END IF;
+END $$;
+
 
 -- Nouveau circuit : un dossier peut viser un employé sans compte utilisateur.
 ALTER TABLE circuit_demande_conge

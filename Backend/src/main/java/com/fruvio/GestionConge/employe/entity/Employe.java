@@ -60,6 +60,12 @@ public class Employe {
     @Column(nullable = false)
     private boolean actif = true;
 
+    @Column(name = "service_id", nullable = false)
+    private Long serviceId;
+
+    @Column(name = "donnees_fictives", nullable = false)
+    private boolean donneesFictives;
+
     @Column(name = "date_creation", nullable = false, updatable = false)
     private LocalDateTime dateCreation;
 

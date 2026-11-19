@@ -4,6 +4,7 @@ on:
   pull_request:
     branches:
       - feat/circuit-conge-hierarchique
+      - fix/campagne-corrections-spat-20261116
   push:
     branches:
       - fix/professionalisation-globale

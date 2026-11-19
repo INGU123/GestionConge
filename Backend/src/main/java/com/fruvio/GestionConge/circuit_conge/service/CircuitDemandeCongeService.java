@@ -228,7 +228,16 @@ public class CircuitDemandeCongeService {
             DemandeConge saved = demandesHistoriques.creerDemandePourCircuit(legacy);
             DemandeConge decisionResult = demandesHistoriques.traiterDemande(saved.getId(), null, choix, raison, directeur);
             d.setLegacyDemandeId(decisionResult.getId());
-        } d.setMotifRefus("REFUSEE".equals(choix) ? raison : null);
+        } else {
+            DemandeConge employeeHistory = DemandeConge.builder().employeId(d.getEmployeId())
+                    .typeCongeId(d.getTypeCongeId()).dateDebut(d.getDateDebut()).dateFin(d.getDateFin())
+                    .nombreJours(d.getNombreJours()).commentaire(d.getCommentaire()).statut(choix)
+                    .motifRefus("REFUSEE".equals(choix) ? raison : null).valideePar(directeur.getId())
+                    .dateValidation(java.time.LocalDate.now()).dateCreation(java.time.LocalDate.now()).build();
+            DemandeConge saved = demandesHistoriques.creerDemandePourCircuit(employeeHistory);
+            d.setLegacyDemandeId(saved.getId());
+        }
+        d.setMotifRefus("REFUSEE".equals(choix) ? raison : null);
         d.setDateDecision(LocalDateTime.now()); d.setStatut(choix);
         CircuitDemandeConge savedCircuit = circuits.save(d);
         String contenu = "Votre demande de congé (dossier #" + d.getId() + ") a été "

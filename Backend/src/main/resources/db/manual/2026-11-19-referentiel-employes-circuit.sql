@@ -27,3 +27,14 @@ BEGIN
     END IF;
 END $$;
 CREATE INDEX IF NOT EXISTS idx_circuit_demande_employe ON circuit_demande_conge(employe_id);
+
+-- Historique des décisions : l'employé est référencé indépendamment d'un compte utilisateur.
+ALTER TABLE demande_conge ADD COLUMN IF NOT EXISTS employe_id BIGINT;
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_demande_conge_employe') THEN
+        ALTER TABLE demande_conge ADD CONSTRAINT fk_demande_conge_employe
+            FOREIGN KEY (employe_id) REFERENCES employe(id);
+    END IF;
+END $$;
+CREATE INDEX IF NOT EXISTS idx_demande_conge_employe ON demande_conge(employe_id);

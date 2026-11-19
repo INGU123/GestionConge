@@ -68,6 +68,13 @@ public class Historique_mouvementController {
         return ResponseEntity.ok(historiqueService.getMouvementsParUtilisateur(utilisateurId, currentUser));
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN', 'ADMINISTRATION_PERSONNEL', 'ASSISTANT_DIRECTION')")
+    @GetMapping("/employe/{employeId}")
+    public ResponseEntity<List<Historique_mouvement>> getParEmploye(@PathVariable Long employeId) {
+        Utilisateur currentUser = getCurrentAuthenticatedUser();
+        return ResponseEntity.ok(historiqueService.getMouvementsParEmploye(employeId, currentUser));
+    }
+
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'EMPLOYE')")
     @GetMapping(value = "/export/pdf", produces = MediaType.APPLICATION_PDF_VALUE)
     public ResponseEntity<byte[]> exporterPdf(@RequestParam(defaultValue = "all") String scope) {

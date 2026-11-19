@@ -62,7 +62,7 @@ public class Solde_congeService {
     }
 
     public List<Solde_conge> getSoldesParEmploye(Long employeId, Utilisateur currentUser) {
-        exigerRoles(currentUser, Role.ADMIN, Role.ADMINISTRATION_PERSONNEL, Role.ASSISTANT_DIRECTION);
+        exigerRoles(currentUser, Role.ADMIN, Role.ADMINISTRATION_PERSONNEL);
         employeRepository.findById(employeId)
                 .orElseThrow(() -> new IllegalArgumentException("Employé introuvable."));
         return filtrerSoldesAvecTypeExistant(soldeCongeRepository.findByEmployeId(employeId));
@@ -71,7 +71,7 @@ public class Solde_congeService {
     @Transactional
     public Solde_conge enregistrerSoldeEmploye(Long employeId, Long typeCongeId, int periode,
             int joursAcquis, Utilisateur acteur) {
-        exigerRoles(acteur, Role.ADMIN, Role.ADMINISTRATION_PERSONNEL);
+        exigerRoles(acteur, Role.ADMINISTRATION_PERSONNEL);
         if (joursAcquis < 0) throw new IllegalArgumentException("Le nombre de jours acquis ne peut pas être négatif.");
         Employe employe = employeRepository.findById(employeId).filter(Employe::isActif)
                 .orElseThrow(() -> new IllegalArgumentException("Employé actif introuvable."));

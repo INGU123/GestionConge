@@ -22,6 +22,7 @@ public class Employe {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Pattern(regexp = "^[0-9]+$", message = "Le matricule doit contenir uniquement des chiffres.")
     @Column(nullable = false, unique = true, length = 50)
     private String matricule;
 

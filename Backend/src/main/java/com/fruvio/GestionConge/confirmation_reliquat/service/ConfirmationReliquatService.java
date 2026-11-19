@@ -41,7 +41,7 @@ public class ConfirmationReliquatService {
         if (periode == null || periode.isBlank()) throw new IllegalArgumentException("La période de référence est obligatoire.");
         if (reference == null || reference.isBlank()) throw new IllegalArgumentException("La référence de confirmation est obligatoire.");
 
-        CircuitDemandeConge dossier = circuits.findById(dossierId)
+        CircuitDemandeConge dossier = circuits.findByIdForUpdate(dossierId)
                 .orElseThrow(() -> new IllegalArgumentException("Dossier introuvable."));
         if (!"RELIQUAT_EN_ATTENTE".equals(dossier.getStatut()))
             throw new IllegalStateException("Ce dossier n'attend pas une confirmation de reliquat.");

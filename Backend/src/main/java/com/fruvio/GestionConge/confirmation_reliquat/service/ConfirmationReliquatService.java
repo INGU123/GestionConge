@@ -14,6 +14,8 @@ import com.fruvio.GestionConge.confirmation_reliquat.repository.ConfirmationReli
 import com.fruvio.GestionConge.employe.entity.Employe;
 import com.fruvio.GestionConge.employe.repository.EmployeRepository;
 import com.fruvio.GestionConge.notifications_conge.service.Notification_congeService;
+import com.fruvio.GestionConge.solde_conge.entity.Solde_conge;
+import com.fruvio.GestionConge.solde_conge.repository.Solde_congeRepository;
 import com.fruvio.GestionConge.utilisateur.entity.Role;
 import com.fruvio.GestionConge.utilisateur.entity.Utilisateur;
 
@@ -23,14 +25,16 @@ public class ConfirmationReliquatService {
     private final CircuitDemandeCongeRepository circuits;
     private final EmployeRepository employes;
     private final Notification_congeService notifications;
+    private final Solde_congeRepository soldes;
 
     public ConfirmationReliquatService(ConfirmationReliquatRepository confirmations,
             CircuitDemandeCongeRepository circuits, EmployeRepository employes,
-            Notification_congeService notifications) {
+            Notification_congeService notifications, Solde_congeRepository soldes) {
         this.confirmations = confirmations;
         this.circuits = circuits;
         this.employes = employes;
         this.notifications = notifications;
+        this.soldes = soldes;
     }
 
     @Transactional
@@ -51,6 +55,23 @@ public class ConfirmationReliquatService {
                 .orElseThrow(() -> new IllegalStateException("Employé actif introuvable."));
         if (confirmations.existsByReferenceConfirmation(reference.trim()))
             throw new IllegalArgumentException("Cette référence de confirmation existe déjà.");
+
+        int anneeDebut = dossier.getDateDebut().getYear();
+        int anneeFin = dossier.getDateFin().getYear();
+        List<Solde_conge> soldesPeriode = soldes.findByEmployeIdAndTypeCongeId(
+                employe.getId(), dossier.getTypeCongeId()).stream()
+                .filter(s -> s.getPeriode() >= anneeDebut && s.getPeriode() <= anneeFin)
+                .toList();
+        if (soldesPeriode.size() != anneeFin - anneeDebut + 1)
+            throw new IllegalStateException("Les soldes RH de tous les exercices concernés doivent être enregistrés avant la confirmation.");
+        int disponible = soldesPeriode.stream().mapToInt(s -> {
+            if (s.getSoldeRestant() != null) return Math.max(0, s.getSoldeRestant());
+            int acquis = s.getSoldeAquis() == null ? 0 : s.getSoldeAquis();
+            int pris = s.getSoldePris() == null ? 0 : s.getSoldePris();
+            return Math.max(0, acquis - pris);
+        }).sum();
+        if (jours > disponible)
+            throw new IllegalArgumentException("Le reliquat confirmé (" + jours + " j) dépasse le solde RH disponible (" + disponible + " j).");
 
         ConfirmationReliquat confirmation = confirmations.save(ConfirmationReliquat.builder()
                 .circuitDemandeCongeId(dossier.getId())

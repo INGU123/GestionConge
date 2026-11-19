@@ -16,6 +16,34 @@ CREATE TABLE IF NOT EXISTS employe (
     actif BOOLEAN NOT NULL DEFAULT TRUE,
     date_creation TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+DO $
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'ck_employe_matricule_digits') THEN
+        ALTER TABLE employe ADD CONSTRAINT ck_employe_matricule_digits CHECK (matricule ~ '^[0-9]+
+ALTER TABLE circuit_demande_conge ADD COLUMN IF NOT EXISTS employe_id BIGINT;
+ALTER TABLE circuit_demande_conge ALTER COLUMN utilisateur_id DROP NOT NULL;
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_circuit_demande_employe') THEN
+        ALTER TABLE circuit_demande_conge ADD CONSTRAINT fk_circuit_demande_employe
+            FOREIGN KEY (employe_id) REFERENCES employe(id);
+    END IF;
+END $$;
+CREATE INDEX IF NOT EXISTS idx_circuit_demande_employe ON circuit_demande_conge(employe_id);
+
+-- Historique des décisions : l'employé est référencé indépendamment d'un compte utilisateur.
+ALTER TABLE demande_conge ADD COLUMN IF NOT EXISTS employe_id BIGINT;
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_demande_conge_employe') THEN
+        ALTER TABLE demande_conge ADD CONSTRAINT fk_demande_conge_employe
+            FOREIGN KEY (employe_id) REFERENCES employe(id);
+    END IF;
+END $$;
+CREATE INDEX IF NOT EXISTS idx_demande_conge_employe ON demande_conge(employe_id);
+);
+    END IF;
+END $;
 CREATE INDEX IF NOT EXISTS idx_employe_matricule ON employe(matricule);
 ALTER TABLE circuit_demande_conge ADD COLUMN IF NOT EXISTS employe_id BIGINT;
 ALTER TABLE circuit_demande_conge ALTER COLUMN utilisateur_id DROP NOT NULL;

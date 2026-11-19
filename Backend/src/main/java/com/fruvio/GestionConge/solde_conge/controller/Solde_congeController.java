@@ -31,7 +31,7 @@ public class Solde_congeController {
         return ResponseEntity.ok(soldeCongeService.getSoldesParUtilisateur(utilisateurId, getCurrentAuthenticatedUser()));
     }
 
-    @PreAuthorize("hasAnyRole('ADMIN', 'ADMINISTRATION_PERSONNEL', 'ASSISTANT_DIRECTION')")
+    @PreAuthorize("hasRole('ADMINISTRATION_PERSONNEL')")
     @GetMapping("/employe/{employeId}")
     public ResponseEntity<List<Solde_conge>> getSoldesParEmploye(@PathVariable Long employeId) {
         return ResponseEntity.ok(soldeCongeService.getSoldesParEmploye(employeId, getCurrentAuthenticatedUser()));

@@ -71,6 +71,12 @@ public class DemandeCongeService {
             throw new IllegalArgumentException("Les dates de début et de fin sont obligatoires.");
         }
 
+        Utilisateur demandeur = utilisateurRepo.findByIdForUpdate(utilisateurId)
+                .orElseThrow(() -> new IllegalArgumentException("Collaborateur demandeur introuvable."));
+        if (!demandeur.isEnabled()) {
+            throw new IllegalStateException("Un collaborateur inactif ou archivé ne peut pas soumettre une demande.");
+        }
+
         demande.setUtilisateurId(utilisateurId);
         demande.setStatut("EN_ATTENTE");
         demande.setDateCreation(LocalDate.now());
@@ -143,8 +149,7 @@ public class DemandeCongeService {
                                 + demande.getDateFin() + " a été soumise avec succès.",
                         "INFO", "/dashboard/historique");
 
-                Utilisateur demandeur = utilisateurRepo.findById(utilisateurId).orElse(null);
-                Utilisateur manager = demandeur == null || demandeur.getManager_id() == null
+                Utilisateur manager = demandeur.getManager_id() == null
                         ? null : utilisateurRepo.findById(demandeur.getManager_id()).orElse(null);
 
                 if (manager != null && manager.isActif() && manager.getRole() == Role.MANAGER) {
@@ -438,6 +443,29 @@ public class DemandeCongeService {
         return disponible;
     }
 
+    @Transactional
+    public int calculerReliquatDisponiblePourPeriode(Long utilisateurId, Long typeCongeId,
+            LocalDate dateDebut, LocalDate dateFin) {
+        if (utilisateurId == null || typeCongeId == null || dateDebut == null || dateFin == null
+                || dateFin.isBefore(dateDebut)) {
+            throw new IllegalArgumentException("Collaborateur, type et période valides obligatoires.");
+        }
+        Map<Integer, Integer> joursParAnnee = calculerJoursOuvresParAnnee(dateDebut, dateFin);
+        if (joursParAnnee.isEmpty()) {
+            throw new IllegalArgumentException("La période ne contient aucun jour ouvré.");
+        }
+        int disponibleTotal = 0;
+        for (Integer annee : joursParAnnee.keySet()) {
+            Solde_conge solde = soldeRepo.findByUtilisateurIdAndTypeCongeIdAndPeriode(
+                    utilisateurId, typeCongeId, annee)
+                    .orElseThrow(() -> new IllegalStateException("Aucun solde enregistré pour l'année " + annee + "."));
+            int acquis = solde.getSoldeAquis() == null ? 0 : solde.getSoldeAquis();
+            int pris = solde.getSoldePris() == null ? 0 : solde.getSoldePris();
+            disponibleTotal += Math.max(0, acquis - pris);
+        }
+        return disponibleTotal;
+    }
+
     /**
      * Vérifie l'éligibilité d'un dossier préparé par l'assistant en réutilisant
      * les mêmes règles de jours ouvrés, plafonds annuels, chevauchements et soldes
@@ -450,7 +478,7 @@ public class DemandeCongeService {
                 || dateFin.isBefore(dateDebut)) {
             throw new IllegalArgumentException("Collaborateur, type et période valides obligatoires.");
         }
-        Utilisateur utilisateur = utilisateurRepo.findById(utilisateurId)
+        Utilisateur utilisateur = utilisateurRepo.findByIdForUpdate(utilisateurId)
                 .orElseThrow(() -> new IllegalArgumentException("Collaborateur introuvable."));
         if (!utilisateur.isEnabled()) throw new IllegalStateException("Le collaborateur n'est pas actif.");
 

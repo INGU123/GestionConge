@@ -19,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.fruvio.GestionConge.demande_conge.entity.DemandeConge;
 import com.fruvio.GestionConge.demande_conge.repository.DemandeCongeRepository;
+import com.fruvio.GestionConge.employe.repository.EmployeRepository;
 import com.fruvio.GestionConge.historique_mouvement.service.Historique_mouvementService;
 import com.fruvio.GestionConge.jour_ferie.service.JourFerieService;
 import com.fruvio.GestionConge.notifications_conge.service.Notification_congeService;
@@ -41,12 +42,13 @@ public class DemandeCongeService {
     private final Historique_mouvementService historiqueService;
     private final Notification_congeService notificationService;
     private final UtilisateurRepository utilisateurRepo;
+    private final EmployeRepository employeRepo;
     private final JourFerieService jourFerieService;
 
     public DemandeCongeService(DemandeCongeRepository demandeRepo, Solde_congeRepository soldeRepo,
             Type_congeRepository typeCongeRepo, Historique_mouvementService historiqueService,
             Notification_congeService notificationService, UtilisateurRepository utilisateurRepo,
-            JourFerieService jourFerieService) {
+            JourFerieService jourFerieService, EmployeRepository employeRepo) {
         this.demandeRepo = demandeRepo;
         this.soldeRepo = soldeRepo;
         this.typeCongeRepo = typeCongeRepo;
@@ -54,6 +56,7 @@ public class DemandeCongeService {
         this.notificationService = notificationService;
         this.utilisateurRepo = utilisateurRepo;
         this.jourFerieService = jourFerieService;
+        this.employeRepo = employeRepo;
     }
 
     // Créer une demande avec vérification d'identité
@@ -591,11 +594,19 @@ public class DemandeCongeService {
 
     private List<DemandeConge> enrichirDemandeurs(List<DemandeConge> demandes) {
         for (DemandeConge demande : demandes) {
-            utilisateurRepo.findById(demande.getUtilisateurId()).ifPresent(u -> {
-                demande.setUtilisateurNom(u.getNom());
-                demande.setUtilisateurPrenom(u.getPrenom());
-                demande.setUtilisateurMatricule(u.getMatricule());
-            });
+            if (demande.getEmployeId() != null) {
+                employeRepo.findById(demande.getEmployeId()).ifPresent(e -> {
+                    demande.setUtilisateurNom(e.getNom());
+                    demande.setUtilisateurPrenom(e.getPrenom());
+                    demande.setUtilisateurMatricule(e.getMatricule());
+                });
+            } else if (demande.getUtilisateurId() != null) {
+                utilisateurRepo.findById(demande.getUtilisateurId()).ifPresent(u -> {
+                    demande.setUtilisateurNom(u.getNom());
+                    demande.setUtilisateurPrenom(u.getPrenom());
+                    demande.setUtilisateurMatricule(u.getMatricule());
+                });
+            }
         }
         return demandes;
     }

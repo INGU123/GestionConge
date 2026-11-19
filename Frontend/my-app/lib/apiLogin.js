@@ -1,4 +1,6 @@
-const API_URL = "http://localhost:8080/utilisateur";
+import { API_BASE_URL } from "./apiClient";
+
+const API_URL = `${API_BASE_URL}/utilisateur`;
 
 export const loginUser = async (identifier, motDePass) => {
   const idTrimmed = identifier ? identifier.trim() : "";

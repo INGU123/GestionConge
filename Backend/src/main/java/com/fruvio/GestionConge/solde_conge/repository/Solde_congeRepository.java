@@ -6,12 +6,18 @@ import java.util.Optional;
 import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import com.fruvio.GestionConge.solde_conge.entity.Solde_conge;
 
 @Repository
 public interface Solde_congeRepository extends JpaRepository<Solde_conge, Long> {
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select s from Solde_conge s where s.id = :id")
+    Optional<Solde_conge> findByIdForUpdate(@Param("id") Long id);
 
     // Récupérer tous les soldes d’un utilisateur
     List<Solde_conge> findByUtilisateurId(Long utilisateurId);

@@ -25,8 +25,12 @@ public class Solde_conge {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    // Un solde appartient soit à un compte historique, soit à un employé du référentiel.
     @Column(name = "utilisateur_id")
     private Long utilisateurId;
+
+    @Column(name = "employe_id")
+    private Long employeId;
 
     @Column(name = "type_conge_id")
     private Long typeCongeId;

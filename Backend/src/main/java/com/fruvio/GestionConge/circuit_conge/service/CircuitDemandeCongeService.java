@@ -128,6 +128,7 @@ public class CircuitDemandeCongeService {
         verifierAssistantProprietaire(d, assistant);
         if (!"RELIQUAT_RETOURNE".equals(d.getStatut())) throw new IllegalStateException("Le reliquat doit d'abord être retourné.");
         if (d.getEmployeId() != null) verifierChevauchementEmploye(d.getEmployeId(), d.getDateDebut(), d.getDateFin(), d.getId());
+        else if (d.getEmployeId() != null) verifierChevauchementEmploye(d.getEmployeId(), d.getDateDebut(), d.getDateFin(), d.getId());
         else verifierChevauchementCircuit(d.getUtilisateurId(), d.getDateDebut(), d.getDateFin(), d.getId());
         if (d.getReliquatJours() == null || d.getReliquatJours() < d.getNombreJours())
             throw new IllegalStateException("Reliquat insuffisant : " + d.getNombreJours() + " jour(s) demandés, "

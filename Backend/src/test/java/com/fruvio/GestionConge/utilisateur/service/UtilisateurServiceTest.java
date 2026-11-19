@@ -5,6 +5,8 @@ import com.fruvio.GestionConge.utilisateur.config.JwtUtil;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -28,6 +30,7 @@ import com.fruvio.GestionConge.service_conge.repository.Service_congeRepository;
 import com.fruvio.GestionConge.solde_conge.repository.Solde_congeRepository;
 import com.fruvio.GestionConge.solde_conge.service.Solde_congeService;
 import com.fruvio.GestionConge.utilisateur.dto.ForgotPasswordRequest;
+import com.fruvio.GestionConge.utilisateur.dto.EmailPasswordResetRequest;
 import com.fruvio.GestionConge.utilisateur.dto.UtilisateurCreateRequest;
 import com.fruvio.GestionConge.utilisateur.controller.PasswordResetController;
 import com.fruvio.GestionConge.utilisateur.entity.PasswordResetRequestEntity;
@@ -173,6 +176,7 @@ class UtilisateurServiceTest {
                 .nom("Test").prenom("Agent").actif(true).build();
 
         when(utilisateurRepository.findByMatricule("2026301")).thenReturn(Optional.of(employee));
+        when(utilisateurRepository.findByIdForUpdate(10L)).thenReturn(Optional.of(employee));
         when(requestRepository.findByStatutOrderByDateDemandeDesc("EN_ATTENTE")).thenReturn(java.util.List.of());
         when(requestRepository.save(any(PasswordResetRequestEntity.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
@@ -321,6 +325,76 @@ class UtilisateurServiceTest {
                 () -> utilisateurService.archiveUtilisateur(2L, null, currentAdmin));
 
         verify(utilisateurRepository, never()).delete(any(Utilisateur.class));
+    }
+
+    @Test
+    void createManagerDoesNotRequireAnotherManager() {
+        UtilisateurCreateRequest request = UtilisateurCreateRequest.builder()
+                .matricule("2026401").nom("Manager").prenom("Test")
+                .numeroCin("123456789012").dateNaissance(java.time.LocalDate.of(1990, 1, 1))
+                .telephone("0340000000").adresse("Toamasina").fonction("Responsable")
+                .typeContrat("CDI").role(Role.MANAGER).service_id(2L)
+                .manager_id(null).date_embauche(java.time.LocalDate.of(2020, 1, 1))
+                .actif(true).build();
+        Utilisateur admin = Utilisateur.builder().id(1L).role(Role.ADMIN).build();
+
+        when(utilisateurRepository.existsByMatricule("2026401")).thenReturn(false);
+        when(utilisateurRepository.existsByNumeroCinIgnoreCase("123456789012")).thenReturn(false);
+        when(serviceRepository.existsById(2L)).thenReturn(true);
+        when(passwordEncoder.encode(any())).thenReturn("bcrypt-hash");
+        when(utilisateurRepository.save(any(Utilisateur.class))).thenAnswer(invocation -> {
+            Utilisateur saved = invocation.getArgument(0);
+            saved.setId(40L);
+            return saved;
+        });
+
+        Utilisateur created = utilisateurService.createUtilisateur(request, admin);
+
+        assertEquals(Role.MANAGER, created.getRole());
+        assertEquals(null, created.getManager_id());
+        verify(utilisateurRepository, never()).findById(any());
+        verify(soldeCongeService).initialiserSoldesPourUtilisateur(40L, java.time.LocalDate.now().getYear());
+    }
+
+    @Test
+    void emailPasswordRecoveryIsDisabledAndDoesNotLookUpEmail() {
+        PasswordResetRequestRepository requestRepository = org.mockito.Mockito.mock(PasswordResetRequestRepository.class);
+        PasswordResetController controller = new PasswordResetController(
+                utilisateurRepository, requestRepository, emailService, passwordEncoder);
+        EmailPasswordResetRequest body = new EmailPasswordResetRequest();
+        body.setEmail("employee@example.com");
+
+        var response = controller.forgotPasswordByEmail(body);
+
+        assertEquals(410, response.getStatusCode().value());
+        verify(utilisateurRepository, never()).findByEmail("employee@example.com");
+        verify(emailService, never()).sendEmail(any(), any(), any());
+    }
+
+    @Test
+    void approvedPasswordResetSendsSingleUseTokenInsteadOfTemporaryPassword() {
+        PasswordResetRequestRepository requestRepository = org.mockito.Mockito.mock(PasswordResetRequestRepository.class);
+        Utilisateur employee = Utilisateur.builder().id(55L).matricule("2026555")
+                .nom("Agent").prenom("Test").email("employee@example.com")
+                .actif(true).password("existing-bcrypt-hash").build();
+        PasswordResetRequestEntity request = PasswordResetRequestEntity.builder()
+                .id(77L).utilisateur(employee).statut("EN_ATTENTE").dateDemande(LocalDateTime.now()).build();
+        when(requestRepository.findByIdForUpdate(77L)).thenReturn(Optional.of(request));
+        when(utilisateurRepository.findByIdForUpdate(55L)).thenReturn(Optional.of(employee));
+
+        PasswordResetController controller = new PasswordResetController(
+                utilisateurRepository, requestRepository, emailService, passwordEncoder);
+        var response = controller.approveRequest(77L);
+
+        assertEquals(200, response.getStatusCode().value());
+        assertEquals("ACCEPTEE", request.getStatut());
+        assertNotNull(employee.getResetToken());
+        assertTrue(employee.getTokenExpiration().isAfter(LocalDateTime.now()));
+        assertEquals("existing-bcrypt-hash", employee.getPassword());
+        verify(emailService).sendEmail(
+                org.mockito.ArgumentMatchers.eq("employee@example.com"),
+                org.mockito.ArgumentMatchers.eq("Demande acceptée : réinitialisation de mot de passe - SPAT"),
+                org.mockito.ArgumentMatchers.contains("/Components/mdpReset?token="));
     }
 
 }

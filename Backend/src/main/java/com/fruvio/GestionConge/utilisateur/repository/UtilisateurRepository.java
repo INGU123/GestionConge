@@ -4,8 +4,10 @@ import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.repository.query.Param;
+import org.springframework.data.jpa.repository.Query;
+import jakarta.persistence.LockModeType;
 import org.springframework.stereotype.Repository;
 
 import com.fruvio.GestionConge.utilisateur.entity.Utilisateur;
@@ -14,11 +16,19 @@ import com.fruvio.GestionConge.utilisateur.entity.Role;
 @Repository
 public interface UtilisateurRepository extends JpaRepository<Utilisateur, Long> {
 
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select u from Utilisateur u where u.id = :id")
+    Optional<Utilisateur> findByIdForUpdate(@Param("id") Long id);
+
     Optional<Utilisateur> findByMatricule(String matricule);
 
     Optional<Utilisateur> findByEmail(String email);
 
     Optional<Utilisateur> findByResetToken(String resetToken);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select u from Utilisateur u where u.resetToken = :token")
+    Optional<Utilisateur> findByResetTokenForUpdate(@Param("token") String token);
 
     boolean existsByMatricule(String matricule);
 

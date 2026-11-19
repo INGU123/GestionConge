@@ -1,5 +1,7 @@
+import { API_BASE_URL } from "@/lib/apiClient";
+
 export async function loginUser(matricule, password) {
-  const response = await fetch("http://localhost:8080/utilisateur/login", {
+  const response = await fetch(`${API_BASE_URL}/utilisateur/login`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -17,7 +19,7 @@ export async function loginUser(matricule, password) {
 }
 
 export async function postData(endpoint, payload, options = {}) {
-  const response = await fetch(`http://localhost:8080${endpoint}`, {
+  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
     method: options.method || "POST",
     headers: {
       "Content-Type": "application/json",

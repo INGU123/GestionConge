@@ -229,6 +229,13 @@ export default function DashboardLayout({
     },
 
     {
+      href: "/dashboard/employes",
+      label: "Référentiel Employés",
+      icon: <span>▣</span>,
+      show: isAdmin,
+    },
+
+    {
       href: "/dashboard/reinitialisations",
       label: "Réinitialisations",
       icon: (

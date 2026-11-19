@@ -30,7 +30,7 @@ public class Employe {
     @Column(nullable = false, length = 100)
     private String prenom;
 
-    @Column(name = "numero_cin", length = 30)
+    @Column(name = "numero_cin", unique = true, length = 30)
     private String numeroCin;
 
     @Column(name = "date_naissance")

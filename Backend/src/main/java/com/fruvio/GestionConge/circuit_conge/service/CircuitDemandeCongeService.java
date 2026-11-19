@@ -182,6 +182,8 @@ public class CircuitDemandeCongeService {
         exiger(actor, Role.ADMINISTRATION_PERSONNEL);
         if (reliquat == null || reliquat < 0) throw new IllegalArgumentException("Le reliquat doit être positif ou nul.");
         CircuitDemandeConge d = dossierVerrouille(id);
+        if (d.getEmployeId() != null)
+            throw new IllegalStateException("Utilisez la confirmation RH avec période et référence pour un employé du référentiel.");
         if (d.getEmployeId() == null) {
             int disponible = demandesHistoriques.calculerReliquatDisponible(d.getUtilisateurId(), d.getTypeCongeId(), d.getDateDebut(), d.getDateFin());
             if (reliquat > disponible) throw new IllegalArgumentException("Le reliquat saisi (" + reliquat + " j) dépasse le solde disponible enregistré (" + disponible + " j).");

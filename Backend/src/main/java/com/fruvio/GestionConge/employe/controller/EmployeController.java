@@ -7,7 +7,8 @@ import com.fruvio.GestionConge.employe.dto.EmployeLookupResponse;
 import com.fruvio.GestionConge.employe.service.EmployeService;
 
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Size;\nimport jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.Pattern;
 
 @RestController
 @RequestMapping("/employes")

@@ -61,6 +61,14 @@ public class DemandeCongeService {
         this.employeRepo = employeRepo;
     }
 
+    public DemandeCongeService(DemandeCongeRepository demandeRepo, Solde_congeRepository soldeRepo,
+            Type_congeRepository typeCongeRepo, Historique_mouvementService historiqueService,
+            Notification_congeService notificationService, UtilisateurRepository utilisateurRepo,
+            JourFerieService jourFerieService) {
+        this(demandeRepo, soldeRepo, typeCongeRepo, historiqueService, notificationService,
+                utilisateurRepo, jourFerieService, null);
+    }
+
     // Créer une demande avec vérification d'identité
     @Transactional
     public DemandeConge creerDemande(Long utilisateurId, DemandeConge demande, Utilisateur currentUser) {

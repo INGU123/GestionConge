@@ -3,6 +3,7 @@ package com.fruvio.GestionConge.circuit_conge.service;
 import java.time.LocalDateTime;
 import java.util.List;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.fruvio.GestionConge.circuit_conge.entity.CircuitDemandeConge;
@@ -34,6 +35,7 @@ public class CircuitDemandeCongeService {
     private final DemandeCongeService demandesHistoriques;
     private final Notification_congeService notifications;
 
+    @Autowired
     public CircuitDemandeCongeService(CircuitDemandeCongeRepository circuits, UtilisateurRepository utilisateurs, EmployeRepository employes, Type_congeRepository typesConge,
             Service_congeRepository services, DepartementRepository departements, JourFerieService joursFeries,
             DemandeCongeService demandesHistoriques, Notification_congeService notifications) {

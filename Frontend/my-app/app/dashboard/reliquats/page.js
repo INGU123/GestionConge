@@ -110,6 +110,7 @@ export default function ReliquatsPage() {
           balance => String(balance.typeCongeId) === String(dossier.typeCongeId)
         );
         const value = values[dossier.id] || {};
+        const isEmployee = Boolean(dossier.employeId);
 
         return (
           <article key={dossier.id} className="card bg-base-100 border p-5 space-y-3">

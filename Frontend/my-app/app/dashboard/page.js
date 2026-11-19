@@ -13,7 +13,6 @@ const roleLinks = {
     { href: "/dashboard/consultation-demandes", label: "Consultation des demandes", description: "Suivre les demandes et les décisions.", icon: ClipboardList },
     { href: "/dashboard/historique", label: "Mon historique", description: "Retrouver les mouvements liés à vos congés.", icon: History },
     { href: "/dashboard/utilisateurs", label: "Collaborateurs", description: "Gérer les comptes, les rôles et les affectations.", icon: Users },
-    { href: "/dashboard/employes", label: "Référentiel employés", description: "Gérer les dossiers RH des employés, indépendamment des comptes utilisateurs.", icon: Users },
     { href: "/dashboard/reinitialisations", label: "Réinitialisations", description: "Examiner et traiter les demandes de réinitialisation des comptes.", icon: ShieldCheck },
   ],
   MANAGER: [

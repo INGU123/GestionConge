@@ -5,6 +5,7 @@ import java.time.LocalDateTime;
 
 import jakarta.persistence.*;
 import lombok.*;
+import jakarta.validation.constraints.Pattern;
 
 @Entity
 @Table(name = "employe", indexes = {

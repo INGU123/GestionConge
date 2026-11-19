@@ -1,7 +1,11 @@
 package com.fruvio.GestionConge.circuit_conge.service;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
+import java.util.LinkedHashMap;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -15,6 +19,9 @@ import com.fruvio.GestionConge.employe.repository.EmployeRepository;
 import com.fruvio.GestionConge.departement.entity.Departement;
 import com.fruvio.GestionConge.departement.repository.DepartementRepository;
 import com.fruvio.GestionConge.jour_ferie.service.JourFerieService;
+import com.fruvio.GestionConge.solde_conge.entity.Solde_conge;
+import com.fruvio.GestionConge.solde_conge.repository.Solde_congeRepository;
+import com.fruvio.GestionConge.historique_mouvement.service.Historique_mouvementService;
 import com.fruvio.GestionConge.notifications_conge.service.Notification_congeService;
 import com.fruvio.GestionConge.service_conge.entity.Services;
 import com.fruvio.GestionConge.service_conge.repository.Service_congeRepository;
@@ -34,14 +41,28 @@ public class CircuitDemandeCongeService {
     private final JourFerieService joursFeries;
     private final DemandeCongeService demandesHistoriques;
     private final Notification_congeService notifications;
+    private final Solde_congeRepository soldes;
+    private final Historique_mouvementService mouvements;
 
     @Autowired
-    public CircuitDemandeCongeService(CircuitDemandeCongeRepository circuits, UtilisateurRepository utilisateurs, EmployeRepository employes, Type_congeRepository typesConge,
-            Service_congeRepository services, DepartementRepository departements, JourFerieService joursFeries,
+    public CircuitDemandeCongeService(CircuitDemandeCongeRepository circuits, UtilisateurRepository utilisateurs,
+            EmployeRepository employes, Type_congeRepository typesConge, Service_congeRepository services,
+            DepartementRepository departements, JourFerieService joursFeries,
+            DemandeCongeService demandesHistoriques, Notification_congeService notifications,
+            Solde_congeRepository soldes, Historique_mouvementService mouvements) {
+        this.circuits = circuits; this.utilisateurs = utilisateurs; this.employes = employes;
+        this.typesConge = typesConge; this.services = services; this.departements = departements;
+        this.joursFeries = joursFeries; this.demandesHistoriques = demandesHistoriques;
+        this.notifications = notifications; this.soldes = soldes; this.mouvements = mouvements;
+    }
+
+    // Constructeur de compatibilité pour les tests unitaires historiques.
+    public CircuitDemandeCongeService(CircuitDemandeCongeRepository circuits, UtilisateurRepository utilisateurs,
+            EmployeRepository employes, Type_congeRepository typesConge, Service_congeRepository services,
+            DepartementRepository departements, JourFerieService joursFeries,
             DemandeCongeService demandesHistoriques, Notification_congeService notifications) {
-        this.circuits = circuits; this.utilisateurs = utilisateurs; this.employes = employes; this.typesConge = typesConge; this.services = services;
-        this.departements = departements; this.joursFeries = joursFeries; this.demandesHistoriques = demandesHistoriques;
-        this.notifications = notifications;
+        this(circuits, utilisateurs, employes, typesConge, services, departements, joursFeries,
+                demandesHistoriques, notifications, null, null);
     }
 
     public CircuitDemandeCongeService(CircuitDemandeCongeRepository circuits, UtilisateurRepository utilisateurs,
@@ -50,6 +71,7 @@ public class CircuitDemandeCongeService {
         this.circuits = circuits; this.utilisateurs = utilisateurs; this.employes = null; this.typesConge = null;
         this.services = services; this.departements = departements; this.joursFeries = joursFeries;
         this.demandesHistoriques = demandesHistoriques; this.notifications = notifications;
+        this.soldes = null; this.mouvements = null;
     }
 
     @Transactional
@@ -239,6 +261,7 @@ public class CircuitDemandeCongeService {
             DemandeConge decisionResult = demandesHistoriques.traiterDemande(saved.getId(), null, choix, raison, directeur);
             d.setLegacyDemandeId(decisionResult.getId());
         } else {
+            if ("VALIDEE".equals(choix)) debiterSoldesEmploye(d, directeur);
             DemandeConge employeeHistory = DemandeConge.builder().employeId(d.getEmployeId())
                     .typeCongeId(d.getTypeCongeId()).dateDebut(d.getDateDebut()).dateFin(d.getDateFin())
                     .nombreJours(d.getNombreJours()).commentaire(d.getCommentaire()).statut(choix)
@@ -256,6 +279,58 @@ public class CircuitDemandeCongeService {
         notifications.creerNotification(d.getEmployeId() == null ? d.getUtilisateurId() : d.getAssistantId(), contenu,
                 "DECISION_CONGE", "/circuit-conge/" + d.getId() + "/pdf");
         return savedCircuit;
+    }
+
+    /**
+     * Débite uniquement après la décision finale du directeur.
+     * Les soldes doivent avoir été saisis explicitement par l'administration ; aucun quota SPAT n'est inventé.
+     */
+    private void debiterSoldesEmploye(CircuitDemandeConge dossier, Utilisateur directeur) {
+        if (soldes == null || mouvements == null)
+            throw new IllegalStateException("Le service de soldes employés n'est pas configuré.");
+
+        Map<Integer, Integer> joursParAnnee = new TreeMap<>();
+        LocalDate cursor = dossier.getDateDebut();
+        while (!cursor.isAfter(dossier.getDateFin())) {
+            int annee = cursor.getYear();
+            LocalDate finAnnee = LocalDate.of(annee, 12, 31);
+            LocalDate finSegment = dossier.getDateFin().isBefore(finAnnee) ? dossier.getDateFin() : finAnnee;
+            int jours = joursFeries.compterJoursOuvres(cursor, finSegment);
+            if (jours > 0) joursParAnnee.put(annee, jours);
+            cursor = finSegment.plusDays(1);
+        }
+        int total = joursParAnnee.values().stream().mapToInt(Integer::intValue).sum();
+        if (total != dossier.getNombreJours())
+            throw new IllegalStateException("Le nombre de jours ouvrés ne correspond plus au dossier.");
+
+        Map<Integer, Solde_conge> soldesVerifies = new LinkedHashMap<>();
+        for (Map.Entry<Integer, Integer> entry : joursParAnnee.entrySet()) {
+            Solde_conge solde = soldes.findByEmployeIdAndTypeCongeIdAndPeriode(
+                    dossier.getEmployeId(), dossier.getTypeCongeId(), entry.getKey())
+                    .orElseThrow(() -> new IllegalStateException("Aucun solde employé saisi pour l'exercice "
+                            + entry.getKey() + ". L'administration doit enregistrer le solde avant validation."));
+            int acquis = solde.getSoldeAquis() == null ? 0 : solde.getSoldeAquis();
+            int pris = solde.getSoldePris() == null ? 0 : solde.getSoldePris();
+            int disponible = Math.max(0, acquis - pris);
+            if (disponible < entry.getValue())
+                throw new IllegalStateException("Solde insuffisant pour l'exercice " + entry.getKey()
+                        + " : " + entry.getValue() + " jour(s) requis, " + disponible + " disponible(s).");
+            soldesVerifies.put(entry.getKey(), solde);
+        }
+
+        for (Map.Entry<Integer, Integer> entry : joursParAnnee.entrySet()) {
+            Solde_conge solde = soldesVerifies.get(entry.getKey());
+            int pris = solde.getSoldePris() == null ? 0 : solde.getSoldePris();
+            int acquis = solde.getSoldeAquis() == null ? 0 : solde.getSoldeAquis();
+            solde.setSoldePris(pris + entry.getValue());
+            solde.setSoldeRestant(Math.max(0, acquis - solde.getSoldePris()));
+            solde.setDate_maj(new java.sql.Timestamp(System.currentTimeMillis()));
+            soldes.save(solde);
+            mouvements.enregistrerMouvementPourEmploye(dossier.getEmployeId(), "DEBIT_CONGE",
+                    entry.getValue(), dossier.getTypeCongeId(), dossier.getLegacyDemandeId(),
+                    "Congé validé par le directeur #" + directeur.getId()
+                            + " (exercice " + entry.getKey() + ")", directeur.getId());
+        }
     }
 
     public CircuitDemandeConge dossierPourPdf(Long id, Utilisateur user) {

@@ -82,7 +82,7 @@ public class Historique_mouvementService {
     public List<Historique_mouvement> getMouvementsParEmploye(Long employeId, Utilisateur currentUser) {
         if (currentUser == null || (currentUser.getRole() != Role.ADMIN
                 && currentUser.getRole() != Role.ADMINISTRATION_PERSONNEL
-                && currentUser.getRole() != Role.ASSISTANT_DIRECTION))
+                ))
             throw new AccessDeniedException("Accès non autorisé.");
         return historique_mouvementRepository.findByEmployeId(employeId);
     }

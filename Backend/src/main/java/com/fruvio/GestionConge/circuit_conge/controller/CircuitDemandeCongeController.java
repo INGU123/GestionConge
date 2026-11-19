@@ -2,6 +2,7 @@ package com.fruvio.GestionConge.circuit_conge.controller;
 
 import java.util.List;
 import java.util.Map;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -31,9 +32,15 @@ public class CircuitDemandeCongeController {
     private final Type_congeRepository typesConge;
     private final EmployeRepository employes;
 
+    @Autowired
     public CircuitDemandeCongeController(CircuitDemandeCongeService service, PdfExportService pdf,
             UtilisateurRepository utilisateurs, Type_congeRepository typesConge, EmployeRepository employes) {
         this.service = service; this.pdf = pdf; this.utilisateurs = utilisateurs; this.typesConge = typesConge; this.employes = employes;
+    }
+
+    public CircuitDemandeCongeController(CircuitDemandeCongeService service, PdfExportService pdf,
+            UtilisateurRepository utilisateurs, Type_congeRepository typesConge) {
+        this(service, pdf, utilisateurs, typesConge, null);
     }
 
     public record CreationRequest(@NotNull Long employeId, @NotNull Long typeCongeId,

@@ -30,6 +30,9 @@ public class DemandeConge {
     @Column(name = "utilisateur_id")
     private Long utilisateurId;
 
+    @Column(name = "employe_id")
+    private Long employeId;
+
     @Column(name = "type_de_conge_id")
     private Long typeCongeId;
 

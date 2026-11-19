@@ -7,7 +7,7 @@ import com.fruvio.GestionConge.employe.dto.EmployeLookupResponse;
 import com.fruvio.GestionConge.employe.service.EmployeService;
 
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.Size;\nimport jakarta.validation.constraints.Pattern;
 
 @RestController
 @RequestMapping("/employes")
@@ -22,7 +22,7 @@ public class EmployeController {
     @GetMapping("/recherche-matricule")
     @PreAuthorize("hasRole('ASSISTANT_DIRECTION')")
     public EmployeLookupResponse rechercherParMatricule(
-            @RequestParam @NotBlank @Size(max = 50) String matricule) {
+            @RequestParam @NotBlank @Size(max = 50) @Pattern(regexp = "^[0-9]+$") String matricule) {
         return employeService.rechercherPourAssistant(matricule);
     }
 }

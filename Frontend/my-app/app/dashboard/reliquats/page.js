@@ -10,6 +10,7 @@ export default function ReliquatsPage() {
   const [rows, setRows] = useState([]);
   const [balances, setBalances] = useState({});
   const [values, setValues] = useState({});
+  const [balanceValues, setBalanceValues] = useState({});
   const [busy, setBusy] = useState(null);
   const toast = useToast();
 
@@ -38,6 +39,35 @@ export default function ReliquatsPage() {
       ...previous,
       [id]: { ...previous[id], [key]: value }
     }));
+  };
+
+  const saveBalance = async (dossier, year) => {
+    const key = dossier.id + "_" + year;
+    const days = balanceValues[key];
+    if (days == null || days === "" || Number(days) < 0) {
+      toast("Saisissez le nombre de jours acquis validé par les RH.", "warning");
+      return;
+    }
+    setBusy(key);
+    try {
+      const query = new URLSearchParams({
+        typeCongeId: String(dossier.typeCongeId),
+        periode: String(year),
+        joursAcquis: String(Number(days))
+      });
+      const response = await authFetch(
+        API + "/solde/employe/" + dossier.employeId + "/initialiser?" + query.toString(),
+        { method: "POST" }
+      );
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || "Enregistrement du solde impossible");
+      toast("Solde RH enregistré pour " + year + ".", "success");
+      await load();
+    } catch (error) {
+      toast(error.message, "error");
+    } finally {
+      setBusy(null);
+    }
   };
 
   const confirm = async id => {
@@ -94,7 +124,7 @@ export default function ReliquatsPage() {
               </span>
             </div>
 
-            <div className="rounded-lg bg-slate-50 border p-3 text-sm">
+            <div className="rounded-lg bg-slate-50 border p-3 text-sm space-y-2">
               <b>Soldes enregistrés pour ce type de congé :</b>
               {relevantBalances.length ? relevantBalances.map(balance => (
                 <p key={balance.id}>
@@ -102,10 +132,29 @@ export default function ReliquatsPage() {
                   · pris {balance.soldePris ?? 0} j · restant {balance.soldeRestant ?? 0} j
                 </p>
               )) : (
-                <p className="text-amber-700">
-                  Aucun solde correspondant trouvé. La confirmation doit s'appuyer sur les justificatifs RH.
-                </p>
+                <p className="text-amber-700">Aucun solde correspondant trouvé pour cet employé.</p>
               )}
+              {isEmployee && Array.from(
+                { length: Math.max(1, new Date(dossier.dateFin).getFullYear() - new Date(dossier.dateDebut).getFullYear() + 1) },
+                (_, index) => new Date(dossier.dateDebut).getFullYear() + index
+              ).filter(year => !relevantBalances.some(balance => Number(balance.periode) === year)).map(year => {
+                const key = dossier.id + "_" + year;
+                return (
+                  <div key={year} className="flex flex-wrap items-end gap-2 border-t pt-2">
+                    <label className="form-control">
+                      <span className="label-text">Jours acquis validés — exercice {year}</span>
+                      <input type="number" min="0" className="input input-bordered input-sm"
+                        value={balanceValues[key] ?? ""}
+                        onChange={event => setBalanceValues(previous => ({ ...previous, [key]: event.target.value }))} />
+                    </label>
+                    <button type="button" className="btn btn-sm btn-outline"
+                      disabled={busy === key || balanceValues[key] == null || balanceValues[key] === ""}
+                      onClick={() => saveBalance(dossier, year)}>
+                      {busy === key ? "Enregistrement…" : "Enregistrer le solde RH"}
+                    </button>
+                  </div>
+                );
+              })}
             </div>
 
             <div className="grid md:grid-cols-2 gap-3">

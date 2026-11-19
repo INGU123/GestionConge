@@ -10,8 +10,7 @@ export default function CircuitCongePage() {
   const selectedService=services.find(x=>String(x.id)===String(form.serviceId));
   const selectedDepartment=departements.find(x=>String(x.id)===String(selectedService?.departementId));
   const [busy,setBusy]=useState(false); const toast=useToast();
-  const load=async()=>{const [a,t,d,s,dep]=await Promise.all([
-    authFetch(API+"/utilisateur/agents-actifs").then(r=>r.ok?r.json():[]),
+  const load=async()=>{const [t,d,s,dep]=await Promise.all([
     authFetch(API+"/type-conge/all").then(r=>r.ok?r.json():[]),
     authFetch(API+"/circuit-conge/assistant/mes-dossiers").then(r=>r.ok?r.json():[]),
     authFetch(API+"/services").then(r=>r.ok?r.json():[]),

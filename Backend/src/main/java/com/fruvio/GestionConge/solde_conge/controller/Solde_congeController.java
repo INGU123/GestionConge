@@ -2,18 +2,11 @@ package com.fruvio.GestionConge.solde_conge.controller;
 
 import java.util.List;
 import org.springframework.security.access.AccessDeniedException;
-
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import com.fruvio.GestionConge.solde_conge.entity.Solde_conge;
 import com.fruvio.GestionConge.solde_conge.service.Solde_congeService;
@@ -23,32 +16,27 @@ import com.fruvio.GestionConge.utilisateur.entity.Utilisateur;
 @RestController
 @RequestMapping("/solde")
 public class Solde_congeController {
-
     private final Solde_congeService soldeCongeService;
+    public Solde_congeController(Solde_congeService service) { this.soldeCongeService = service; }
 
-    public Solde_congeController(Solde_congeService soldeCongeService) {
-        this.soldeCongeService = soldeCongeService;
-    }
-
-    // Récupérer tous les soldes selon périmètre (Admin : tous, Manager : équipe)
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
-    @GetMapping({ "", "/all" })
+    @GetMapping({"", "/all"})
     public ResponseEntity<List<Solde_conge>> getAllSoldes() {
-        Utilisateur currentUser = getCurrentAuthenticatedUser();
-        return ResponseEntity.ok(soldeCongeService.getAllSoldes(currentUser));
+        return ResponseEntity.ok(soldeCongeService.getAllSoldes(getCurrentAuthenticatedUser()));
     }
 
-    // Récupérer tous les soldes d'un utilisateur (Employé : soi-même, Manager :
-    // équipe, Admin : tous)
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'EMPLOYE', 'ADMINISTRATION_PERSONNEL')")
     @GetMapping("/utilisateur/{utilisateurId}")
     public ResponseEntity<List<Solde_conge>> getSoldesParUtilisateur(@PathVariable Long utilisateurId) {
-        Utilisateur currentUser = getCurrentAuthenticatedUser();
-        return ResponseEntity.ok(soldeCongeService.getSoldesParUtilisateur(utilisateurId, currentUser));
+        return ResponseEntity.ok(soldeCongeService.getSoldesParUtilisateur(utilisateurId, getCurrentAuthenticatedUser()));
     }
 
-    // Initialiser le solde d'un utilisateur pour une année (Strictement réservé à
-    // l'Admin)
+    @PreAuthorize("hasAnyRole('ADMIN', 'ADMINISTRATION_PERSONNEL', 'ASSISTANT_DIRECTION')")
+    @GetMapping("/employe/{employeId}")
+    public ResponseEntity<List<Solde_conge>> getSoldesParEmploye(@PathVariable Long employeId) {
+        return ResponseEntity.ok(soldeCongeService.getSoldesParEmploye(employeId, getCurrentAuthenticatedUser()));
+    }
+
     @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/initialiser/{utilisateurId}")
     public ResponseEntity<Void> initialiserSoldesAnnuels(@PathVariable Long utilisateurId, @RequestParam int annee) {
@@ -56,36 +44,31 @@ public class Solde_congeController {
         return ResponseEntity.ok().build();
     }
 
-    // Ajuster manuellement le solde (Strictement réservé à l'Admin)
+    // Saisie explicite d'un solde employé : aucun quota SPAT n'est calculé automatiquement.
+    @PreAuthorize("hasAnyRole('ADMIN', 'ADMINISTRATION_PERSONNEL')")
+    @PostMapping("/employe/{employeId}/initialiser")
+    public ResponseEntity<Solde_conge> enregistrerSoldeEmploye(@PathVariable Long employeId,
+            @RequestParam Long typeCongeId, @RequestParam int periode, @RequestParam int joursAcquis) {
+        return ResponseEntity.status(201).body(soldeCongeService.enregistrerSoldeEmploye(
+                employeId, typeCongeId, periode, joursAcquis, getCurrentAuthenticatedUser()));
+    }
+
     @PreAuthorize("hasRole('ADMIN')")
     @PutMapping("/ajuster/{soldeId}")
     public ResponseEntity<Solde_conge> ajusterSolde(@PathVariable Long soldeId,
             @RequestParam int nouveauNombreJoursRestants, @RequestParam String motif) {
-
         Utilisateur currentUser = getCurrentAuthenticatedUser();
-        if (currentUser == null) {
-            throw new AccessDeniedException("Authentification requise pour ajuster le solde.");
-        }
-
-        Solde_conge soldeAjuste = soldeCongeService.ajusterSolde(soldeId, nouveauNombreJoursRestants,
-                currentUser.getId(), motif);
-        return ResponseEntity.ok(soldeAjuste);
+        if (currentUser == null) throw new AccessDeniedException("Authentification requise pour ajuster le solde.");
+        return ResponseEntity.ok(soldeCongeService.ajusterSolde(
+                soldeId, nouveauNombreJoursRestants, currentUser.getId(), motif));
     }
 
     private Utilisateur getCurrentAuthenticatedUser() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth == null || !auth.isAuthenticated()) {
-            return null;
-        }
-
+        if (auth == null || !auth.isAuthenticated()) return null;
         Object principal = auth.getPrincipal();
-        if (principal instanceof CustomUserDetails customUserDetails) {
-            return customUserDetails.getUtilisateur();
-        }
-        if (principal instanceof Utilisateur utilisateur) {
-            return utilisateur;
-        }
-
+        if (principal instanceof CustomUserDetails details) return details.getUtilisateur();
+        if (principal instanceof Utilisateur utilisateur) return utilisateur;
         return null;
     }
 }

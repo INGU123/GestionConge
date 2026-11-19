@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { authFetch, getCurrentUser } from "@/lib/apiClient";
 import {
   CalendarDays,
@@ -14,6 +14,14 @@ import {
 
 const API = "http://localhost:8080";
 const PAGE_SIZES = [10, 20, 50];
+
+function getRoleSnapshot() {
+  return String(getCurrentUser()?.role || "").trim().toUpperCase().replace(/^ROLE_/, "");
+}
+
+function subscribeToRole() {
+  return () => {};
+}
 
 function parseLocalDate(value) {
   if (!value) return null;
@@ -131,18 +139,13 @@ function StatCard({ label, value, icon: Icon, active, onClick, hint }) {
 export default function ConsultationDemandesPage() {
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [role, setRole] = useState("");
+  const role = useSyncExternalStore(subscribeToRole, getRoleSnapshot, () => "");
   const [period, setPeriod] = useState("week");
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [pageSize, setPageSize] = useState(10);
   const [page, setPage] = useState(1);
   const [loadError, setLoadError] = useState("");
-
-  useEffect(() => {
-    const currentRole = String(getCurrentUser()?.role || "").trim().toUpperCase().replace(/^ROLE_/, "");
-    setRole(currentRole);
-  }, []);
 
   useEffect(() => {
     if (!role) return;
@@ -254,7 +257,6 @@ export default function ConsultationDemandesPage() {
     });
   }, [rows, period, search, statusFilter]);
 
-  useEffect(() => setPage(1), [period, search, statusFilter, pageSize]);
 
   const pageCount = Math.max(1, Math.ceil(filteredRows.length / pageSize));
   const visibleRows = filteredRows.slice((page - 1) * pageSize, page * pageSize);
@@ -315,10 +317,10 @@ export default function ConsultationDemandesPage() {
       </header>
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard label="Cette semaine" value={stats.week} icon={CalendarDays} active={period === "week"} onClick={() => setPeriod("week")} hint="Demandes enregistrées depuis lundi" />
-        <StatCard label="6 derniers mois" value={stats.sixMonths} icon={Clock3} active={period === "sixMonths"} onClick={() => setPeriod("sixMonths")} hint="Période glissante de six mois" />
-        <StatCard label="Cette année" value={stats.year} icon={CalendarDays} active={period === "year"} onClick={() => setPeriod("year")} hint="Depuis le 1er janvier" />
-        <StatCard label="Tout le registre" value={stats.all} icon={FileText} active={period === "all"} onClick={() => setPeriod("all")} hint="Depuis le début de l'application" />
+        <StatCard label="Cette semaine" value={stats.week} icon={CalendarDays} active={period === "week"} onClick={() => { setPeriod("week"); setPage(1); }} hint="Demandes enregistrées depuis lundi" />
+        <StatCard label="6 derniers mois" value={stats.sixMonths} icon={Clock3} active={period === "sixMonths"} onClick={() => { setPeriod("sixMonths"); setPage(1); }} hint="Période glissante de six mois" />
+        <StatCard label="Cette année" value={stats.year} icon={CalendarDays} active={period === "year"} onClick={() => { setPeriod("year"); setPage(1); }} hint="Depuis le 1er janvier" />
+        <StatCard label="Tout le registre" value={stats.all} icon={FileText} active={period === "all"} onClick={() => { setPeriod("all"); setPage(1); }} hint="Depuis le début de l'application" />
       </div>
 
       <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
@@ -333,14 +335,14 @@ export default function ConsultationDemandesPage() {
               <input
                 type="search"
                 value={search}
-                onChange={(event) => setSearch(event.target.value)}
+                onChange={(event) => { setSearch(event.target.value); setPage(1); }}
                 placeholder="Nom, matricule, type, dossier…"
                 className="input input-bordered h-10 w-full pl-9 text-sm"
               />
             </label>
             <label className="flex h-10 items-center gap-2 rounded-lg border border-slate-300 px-3">
               <SlidersHorizontal className="h-4 w-4 text-slate-400" />
-              <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} className="max-w-44 bg-transparent text-sm outline-none">
+              <select value={statusFilter} onChange={(event) => { setStatusFilter(event.target.value); setPage(1); }} className="max-w-44 bg-transparent text-sm outline-none">
                 <option value="ALL">Tous les statuts</option>
                 {availableStatuses.map((status) => <option key={status} value={status}>{getStatusLabel(status)}</option>)}
               </select>
@@ -398,7 +400,7 @@ export default function ConsultationDemandesPage() {
         <footer className="flex flex-col gap-3 border-t border-slate-200 bg-slate-50/70 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-2 text-xs text-slate-500">
             <span>Afficher</span>
-            <select value={pageSize} onChange={(event) => setPageSize(Number(event.target.value))} className="select select-bordered select-xs bg-white">
+            <select value={pageSize} onChange={(event) => { setPageSize(Number(event.target.value)); setPage(1); }} className="select select-bordered select-xs bg-white">
               {PAGE_SIZES.map((size) => <option key={size} value={size}>{size}</option>)}
             </select>
             <span>par page · {filteredRows.length === 0 ? 0 : (page - 1) * pageSize + 1}–{Math.min(page * pageSize, filteredRows.length)} sur {filteredRows.length}</span>

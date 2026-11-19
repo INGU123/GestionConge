@@ -70,19 +70,27 @@ export default function ReliquatsPage() {
     }
   };
 
-  const confirm = async id => {
+  const confirm = async dossier => {
+    const id = dossier.id;
     setBusy(id);
     try {
       const value = values[id] || {};
-      const response = await authFetch(API + "/reliquats/dossier/" + id + "/confirmer", {
+      const isEmployee = Boolean(dossier.employeId);
+      const endpoint = isEmployee
+        ? API + "/reliquats/dossier/" + id + "/confirmer"
+        : API + "/circuit-conge/" + id + "/reliquat";
+      const body = isEmployee
+        ? {
+            nombreJoursConfirme: Number(value.days),
+            periodeReference: value.period?.trim(),
+            referenceConfirmation: value.reference?.trim(),
+            justificatif: value.justificatif?.trim() || "",
+            observation: value.observation?.trim() || ""
+          }
+        : { reliquatJours: Number(value.days), commentaire: value.observation?.trim() || "" };
+      const response = await authFetch(endpoint, {
         method: "POST",
-        body: JSON.stringify({
-          nombreJoursConfirme: Number(value.days),
-          periodeReference: value.period?.trim(),
-          referenceConfirmation: value.reference?.trim(),
-          justificatif: value.justificatif?.trim() || "",
-          observation: value.observation?.trim() || ""
-        })
+        body: JSON.stringify(body)
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.message || "Confirmation impossible");
@@ -111,6 +119,13 @@ export default function ReliquatsPage() {
         );
         const value = values[dossier.id] || {};
         const isEmployee = Boolean(dossier.employeId);
+        const requestYears = isEmployee ? Array.from(
+          { length: Math.max(1, new Date(dossier.dateFin).getFullYear() - new Date(dossier.dateDebut).getFullYear() + 1) },
+          (_, index) => new Date(dossier.dateDebut).getFullYear() + index
+        ) : [];
+        const missingBalanceYears = requestYears.filter(
+          year => !relevantBalances.some(balance => Number(balance.periode) === year)
+        );
 
         return (
           <article key={dossier.id} className="card bg-base-100 border p-5 space-y-3">
@@ -135,10 +150,7 @@ export default function ReliquatsPage() {
               )) : (
                 <p className="text-amber-700">Aucun solde correspondant trouvé pour cet employé.</p>
               )}
-              {isEmployee && Array.from(
-                { length: Math.max(1, new Date(dossier.dateFin).getFullYear() - new Date(dossier.dateDebut).getFullYear() + 1) },
-                (_, index) => new Date(dossier.dateDebut).getFullYear() + index
-              ).filter(year => !relevantBalances.some(balance => Number(balance.periode) === year)).map(year => {
+              {isEmployee && missingBalanceYears.map(year => {
                 const key = dossier.id + "_" + year;
                 return (
                   <div key={year} className="flex flex-wrap items-end gap-2 border-t pt-2">
@@ -165,24 +177,26 @@ export default function ReliquatsPage() {
                   value={value.days ?? ""}
                   onChange={event => update(dossier.id, "days", event.target.value)} />
               </label>
-              <label className="form-control">
-                <span className="label-text">Période de référence</span>
-                <input className="input input-bordered" placeholder="Ex. 2025-2026"
-                  value={value.period ?? ""}
-                  onChange={event => update(dossier.id, "period", event.target.value)} />
-              </label>
-              <label className="form-control">
-                <span className="label-text">Référence de confirmation RH</span>
-                <input className="input input-bordered" placeholder="Référence du document RH"
-                  value={value.reference ?? ""}
-                  onChange={event => update(dossier.id, "reference", event.target.value)} />
-              </label>
-              <label className="form-control">
-                <span className="label-text">Justificatif (référence ou chemin)</span>
-                <input className="input input-bordered"
-                  value={value.justificatif ?? ""}
-                  onChange={event => update(dossier.id, "justificatif", event.target.value)} />
-              </label>
+              {isEmployee && <>
+                <label className="form-control">
+                  <span className="label-text">Période de référence</span>
+                  <input className="input input-bordered" placeholder="Ex. 2025-2026"
+                    value={value.period ?? ""}
+                    onChange={event => update(dossier.id, "period", event.target.value)} />
+                </label>
+                <label className="form-control">
+                  <span className="label-text">Référence de confirmation RH</span>
+                  <input className="input input-bordered" placeholder="Référence du document RH"
+                    value={value.reference ?? ""}
+                    onChange={event => update(dossier.id, "reference", event.target.value)} />
+                </label>
+                <label className="form-control">
+                  <span className="label-text">Justificatif (référence ou chemin)</span>
+                  <input className="input input-bordered"
+                    value={value.justificatif ?? ""}
+                    onChange={event => update(dossier.id, "justificatif", event.target.value)} />
+                </label>
+              </>}
               <label className="form-control md:col-span-2">
                 <span className="label-text">Observation</span>
                 <textarea className="textarea textarea-bordered"
@@ -194,8 +208,8 @@ export default function ReliquatsPage() {
             <button
               className="btn btn-primary w-fit"
               disabled={busy === dossier.id || value.days === "" || value.days == null
-                || !value.period?.trim() || !value.reference?.trim()}
-              onClick={() => confirm(dossier.id)}
+                || (isEmployee && (missingBalanceYears.length > 0 || !value.period?.trim() || !value.reference?.trim()))}
+              onClick={() => confirm(dossier)}
             >
               {busy === dossier.id ? "Enregistrement…" : "Confirmer le reliquat"}
             </button>

@@ -13,24 +13,24 @@ import com.fruvio.GestionConge.solde_conge.entity.Solde_conge;
 @Repository
 public interface Solde_congeRepository extends JpaRepository<Solde_conge, Long> {
 
-    // Récupérer tous les soldes d’un utilisateur
+    // Compatibilité des soldes historiques liés à un compte utilisateur.
     List<Solde_conge> findByUtilisateurId(Long utilisateurId);
-
     boolean existsByUtilisateurId(Long utilisateurId);
-
-    // Récupérer tous les soldes d'une liste d'utilisateurs
     List<Solde_conge> findByUtilisateurIdIn(List<Long> utilisateurIds);
-
-    // Récupérer tous les soldes d’un utilisateur pour un type de congé
     List<Solde_conge> findByUtilisateurIdAndTypeCongeId(Long utilisateurId, Long typeCongeId);
 
-    // Récupérer un solde précis pour un utilisateur, un type de congé et une période
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     Optional<Solde_conge> findByUtilisateurIdAndTypeCongeIdAndPeriode(Long utilisateurId, Long typeCongeId, int periode);
 
-    // Récupérer tous les soldes d’un utilisateur pour une année/période
     List<Solde_conge> findByUtilisateurIdAndPeriode(Long utilisateurId, int periode);
-
-    // Vérifier si un solde existe déjà pour un utilisateur, un type de congé et une période
     boolean existsByUtilisateurIdAndTypeCongeIdAndPeriode(Long utilisateurId, Long typeCongeId, int periode);
+
+    // Nouveau référentiel : soldes rattachés directement à un employé sans compte de connexion.
+    List<Solde_conge> findByEmployeId(Long employeId);
+    List<Solde_conge> findByEmployeIdAndPeriode(Long employeId, int periode);
+    List<Solde_conge> findByEmployeIdAndTypeCongeId(Long employeId, Long typeCongeId);
+    boolean existsByEmployeIdAndTypeCongeIdAndPeriode(Long employeId, Long typeCongeId, int periode);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    Optional<Solde_conge> findByEmployeIdAndTypeCongeIdAndPeriode(Long employeId, Long typeCongeId, int periode);
 }

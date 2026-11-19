@@ -28,7 +28,7 @@ public class EmployeService {
         if (value == null || value.isBlank()) {
             throw new IllegalArgumentException("Le matricule est obligatoire.");
         }
-        return value.trim();
+        String matricule = value.trim();\n        if (!matricule.matches("[0-9]+")) throw new IllegalArgumentException("Le matricule doit contenir uniquement des chiffres.");\n        return matricule;
     }
 
     private String texteOuNull(String value) {

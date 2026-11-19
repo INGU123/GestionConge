@@ -68,7 +68,7 @@ public class Historique_mouvementController {
         return ResponseEntity.ok(historiqueService.getMouvementsParUtilisateur(utilisateurId, currentUser));
     }
 
-    @PreAuthorize("hasAnyRole('ADMIN', 'ADMINISTRATION_PERSONNEL', 'ASSISTANT_DIRECTION')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'ADMINISTRATION_PERSONNEL')")
     @GetMapping("/employe/{employeId}")
     public ResponseEntity<List<Historique_mouvement>> getParEmploye(@PathVariable Long employeId) {
         Utilisateur currentUser = getCurrentAuthenticatedUser();

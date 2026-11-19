@@ -15,6 +15,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.fruvio.GestionConge.demande_conge.entity.DemandeConge;
@@ -45,6 +46,7 @@ public class DemandeCongeService {
     private final EmployeRepository employeRepo;
     private final JourFerieService jourFerieService;
 
+    @Autowired
     public DemandeCongeService(DemandeCongeRepository demandeRepo, Solde_congeRepository soldeRepo,
             Type_congeRepository typeCongeRepo, Historique_mouvementService historiqueService,
             Notification_congeService notificationService, UtilisateurRepository utilisateurRepo,

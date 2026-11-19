@@ -9,6 +9,8 @@ import com.fruvio.GestionConge.circuit_conge.entity.CircuitDemandeConge;
 import com.fruvio.GestionConge.circuit_conge.repository.CircuitDemandeCongeRepository;
 import com.fruvio.GestionConge.demande_conge.entity.DemandeConge;
 import com.fruvio.GestionConge.demande_conge.service.DemandeCongeService;
+import com.fruvio.GestionConge.employe.entity.Employe;
+import com.fruvio.GestionConge.employe.repository.EmployeRepository;
 import com.fruvio.GestionConge.departement.entity.Departement;
 import com.fruvio.GestionConge.departement.repository.DepartementRepository;
 import com.fruvio.GestionConge.jour_ferie.service.JourFerieService;
@@ -23,16 +25,17 @@ import com.fruvio.GestionConge.utilisateur.repository.UtilisateurRepository;
 public class CircuitDemandeCongeService {
     private final CircuitDemandeCongeRepository circuits;
     private final UtilisateurRepository utilisateurs;
+    private final EmployeRepository employes;
     private final Service_congeRepository services;
     private final DepartementRepository departements;
     private final JourFerieService joursFeries;
     private final DemandeCongeService demandesHistoriques;
     private final Notification_congeService notifications;
 
-    public CircuitDemandeCongeService(CircuitDemandeCongeRepository circuits, UtilisateurRepository utilisateurs,
+    public CircuitDemandeCongeService(CircuitDemandeCongeRepository circuits, UtilisateurRepository utilisateurs, EmployeRepository employes,
             Service_congeRepository services, DepartementRepository departements, JourFerieService joursFeries,
             DemandeCongeService demandesHistoriques, Notification_congeService notifications) {
-        this.circuits = circuits; this.utilisateurs = utilisateurs; this.services = services;
+        this.circuits = circuits; this.utilisateurs = utilisateurs; this.employes = employes; this.services = services;
         this.departements = departements; this.joursFeries = joursFeries; this.demandesHistoriques = demandesHistoriques;
         this.notifications = notifications;
     }
@@ -122,13 +125,16 @@ public class CircuitDemandeCongeService {
         CircuitDemandeConge d = dossierVerrouille(id);
         verifierAssistantProprietaire(d, assistant);
         if (!"RELIQUAT_RETOURNE".equals(d.getStatut())) throw new IllegalStateException("Le reliquat doit d'abord être retourné.");
-        verifierChevauchementCircuit(d.getUtilisateurId(), d.getDateDebut(), d.getDateFin(), d.getId());
+        if (d.getEmployeId() != null) verifierChevauchementEmploye(d.getEmployeId(), d.getDateDebut(), d.getDateFin(), d.getId());
+        else verifierChevauchementCircuit(d.getUtilisateurId(), d.getDateDebut(), d.getDateFin(), d.getId());
         if (d.getReliquatJours() == null || d.getReliquatJours() < d.getNombreJours())
             throw new IllegalStateException("Reliquat insuffisant : " + d.getNombreJours() + " jour(s) demandés, "
                     + (d.getReliquatJours() == null ? 0 : d.getReliquatJours()) + " jour(s) retournés par l'administration.");
-        int joursVerifies = demandesHistoriques.verifierEligibiliteWorkflow(d.getUtilisateurId(), d.getTypeCongeId(), d.getDateDebut(), d.getDateFin());
+        int joursVerifies = d.getEmployeId() != null
+                ? joursFeries.compterJoursOuvres(d.getDateDebut(), d.getDateFin())
+                : demandesHistoriques.verifierEligibiliteWorkflow(d.getUtilisateurId(), d.getTypeCongeId(), d.getDateDebut(), d.getDateFin());
         if (joursVerifies != d.getNombreJours()) throw new IllegalStateException("Le nombre de jours ouvrés a changé. Recréez le dossier après vérification.");
-        utilisateurActif(d.getUtilisateurId());
+        if (d.getEmployeId() == null) utilisateurActif(d.getUtilisateurId());\n        else employes.findById(d.getEmployeId()).filter(Employe::isActif).orElseThrow(() -> new IllegalStateException("Employé inactif ou introuvable."));
         if (d.getDepartementId() == null)
             throw new IllegalStateException("Le département associé au dossier est introuvable.");
         Departement dep = departements.findById(d.getDepartementId())
@@ -168,21 +174,22 @@ public class CircuitDemandeCongeService {
         String raison = motif == null ? "" : motif.trim();
         if ("REFUSEE".equals(choix) && raison.isBlank()) throw new IllegalArgumentException("Le motif de refus est obligatoire.");
 
-        if ("VALIDEE".equals(choix)) {
-            demandesHistoriques.verifierEligibiliteWorkflow(d.getUtilisateurId(), d.getTypeCongeId(), d.getDateDebut(), d.getDateFin());
-        }
-        DemandeConge legacy = DemandeConge.builder().utilisateurId(d.getUtilisateurId()).typeCongeId(d.getTypeCongeId())
-                .dateDebut(d.getDateDebut()).dateFin(d.getDateFin()).nombreJours(d.getNombreJours())
-                .commentaire(d.getCommentaire()).statut("EN_ATTENTE").dateCreation(java.time.LocalDate.now()).build();
-        DemandeConge saved = demandesHistoriques.creerDemandePourCircuit(legacy);
-        DemandeConge decisionResult = demandesHistoriques.traiterDemande(saved.getId(), null, choix, raison, directeur);
-        d.setLegacyDemandeId(decisionResult.getId()); d.setMotifRefus("REFUSEE".equals(choix) ? raison : null);
+        if (d.getEmployeId() == null) {
+            if ("VALIDEE".equals(choix))
+                demandesHistoriques.verifierEligibiliteWorkflow(d.getUtilisateurId(), d.getTypeCongeId(), d.getDateDebut(), d.getDateFin());
+            DemandeConge legacy = DemandeConge.builder().utilisateurId(d.getUtilisateurId()).typeCongeId(d.getTypeCongeId())
+                    .dateDebut(d.getDateDebut()).dateFin(d.getDateFin()).nombreJours(d.getNombreJours())
+                    .commentaire(d.getCommentaire()).statut("EN_ATTENTE").dateCreation(java.time.LocalDate.now()).build();
+            DemandeConge saved = demandesHistoriques.creerDemandePourCircuit(legacy);
+            DemandeConge decisionResult = demandesHistoriques.traiterDemande(saved.getId(), null, choix, raison, directeur);
+            d.setLegacyDemandeId(decisionResult.getId());
+        } d.setMotifRefus("REFUSEE".equals(choix) ? raison : null);
         d.setDateDecision(LocalDateTime.now()); d.setStatut(choix);
         CircuitDemandeConge savedCircuit = circuits.save(d);
         String contenu = "Votre demande de congé (dossier #" + d.getId() + ") a été "
                 + ("VALIDEE".equals(choix) ? "VALIDÉE." : "REFUSÉE.");
         if ("REFUSEE".equals(choix)) contenu += " Motif du refus : " + raison;
-        notifications.creerNotification(d.getUtilisateurId(), contenu,
+        notifications.creerNotification(d.getEmployeId() == null ? d.getUtilisateurId() : d.getAssistantId(), contenu,
                 "DECISION_CONGE", "/circuit-conge/" + d.getId() + "/pdf");
         return savedCircuit;
     }

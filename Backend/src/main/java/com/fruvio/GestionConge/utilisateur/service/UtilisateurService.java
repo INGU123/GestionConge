@@ -248,23 +248,22 @@ public class UtilisateurService {
                                 || request.getAdresse() == null || request.getAdresse().isBlank()
                                 || request.getFonction() == null || request.getFonction().isBlank()
                                 || request.getTypeContrat() == null || request.getTypeContrat().isBlank()
-                                || request.getService_id() == null || request.getManager_id() == null
+                                
                                 || request.getDate_embauche() == null || request.getRole() == null) {
                         throw new IllegalArgumentException("Compléter toutes les informations de l'utilisateur");
                 }
 
-                if (!serviceRepository.existsById(request.getService_id())) {
-                        throw new IllegalArgumentException("Le service sélectionné n'existe pas.");
-                }
-
-                Utilisateur manager = utilisateurRepository.findById(request.getManager_id())
-                                .orElseThrow(() -> new IllegalArgumentException("Le responsable hiérarchique sélectionné n'existe pas."));
-                if (manager.getRole() != Role.MANAGER || !manager.isActif()) {
-                        throw new IllegalArgumentException(
-                                        "Le responsable hiérarchique doit être un compte MANAGER actif.");
-                }
+                
 
                 Role assignedRole = request.getRole();
+
+                if (assignedRole != Role.ASSISTANT_DIRECTION
+                                && assignedRole != Role.ADMINISTRATION_PERSONNEL
+                                && assignedRole != Role.CHEF_DEPARTEMENT
+                                && assignedRole != Role.DIRECTEUR) {
+                        throw new IllegalArgumentException(
+                                        "Seuls les rôles Demandeur, Administration du personnel, Chef de département et Directeur sont autorisés.");
+                }
 
                 if (assignedRole == Role.ADMIN) {
 

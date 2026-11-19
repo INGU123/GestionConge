@@ -140,7 +140,15 @@ public class UtilisateurController {
         Utilisateur currentUser = getCurrentAuthenticatedUser();
         List<Utilisateur> list = utilisateurService.getAllUtilisateurs(currentUser);
 
-        List<UtilisateurResponse> responseList = list.stream().map(UtilisateurResponse::fromEntity).toList();
+        List<UtilisateurResponse> responseList = list.stream()
+                .filter(u -> !u.isArchived())
+                .filter(u -> u.getRole() == Role.ADMIN
+                        || u.getRole() == Role.ASSISTANT_DIRECTION
+                        || u.getRole() == Role.ADMINISTRATION_PERSONNEL
+                        || u.getRole() == Role.CHEF_DEPARTEMENT
+                        || u.getRole() == Role.DIRECTEUR)
+                .map(UtilisateurResponse::fromEntity)
+                .toList();
 
         return ResponseEntity.ok(responseList);
     }

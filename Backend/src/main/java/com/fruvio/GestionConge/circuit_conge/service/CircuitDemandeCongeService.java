@@ -38,20 +38,29 @@ public class CircuitDemandeCongeService {
     }
 
     @Transactional
-    public CircuitDemandeConge creer(Long employeId, Long typeId, java.time.LocalDate debut,
-            java.time.LocalDate fin, String commentaire, Utilisateur assistant) {
+    public CircuitDemandeConge creer(Long employeId, Long typeId, Long serviceId,
+            java.time.LocalDate debut, java.time.LocalDate fin, String commentaire, Utilisateur assistant) {
         exiger(assistant, Role.ASSISTANT_DIRECTION);
-        Utilisateur employe = utilisateurActif(employeId);
-        if (employe.getService_id() == null) throw new IllegalStateException("Le collaborateur n'est affecté à aucun service.");
-        Services serviceEmploye = services.findById(employe.getService_id()).orElseThrow(() -> new IllegalStateException("Service du collaborateur introuvable."));
-        if (serviceEmploye.getDepartementId() == null) throw new IllegalStateException("Le service du collaborateur doit être rattaché à un département avant la création du dossier.");
+        utilisateurActif(employeId);
+        if (serviceId == null) throw new IllegalArgumentException("Le service est obligatoire.");
+        Services serviceChoisi = services.findById(serviceId)
+                .orElseThrow(() -> new IllegalArgumentException("Service sélectionné introuvable."));
+        if (serviceChoisi.getDepartementId() == null)
+            throw new IllegalStateException("Le service choisi n'est rattaché à aucun département.");
+        Departement departementChoisi = departements.findById(serviceChoisi.getDepartementId())
+                .orElseThrow(() -> new IllegalStateException("Département du service introuvable."));
+        if (!Boolean.TRUE.equals(departementChoisi.getActif()))
+            throw new IllegalStateException("Le département du service est inactif.");
+        if (departementChoisi.getChefId() == null || departementChoisi.getDirecteurId() == null)
+            throw new IllegalStateException("Le département doit avoir un chef et un directeur actifs.");
         if (debut == null || fin == null || fin.isBefore(debut)) throw new IllegalArgumentException("Période de congé invalide.");
         if (typeId == null) throw new IllegalArgumentException("Le type de congé est obligatoire.");
         int nombre = joursFeries.compterJoursOuvres(debut, fin);
         if (nombre <= 0) throw new IllegalArgumentException("La période ne contient aucun jour ouvré.");
         verifierChevauchementCircuit(employeId, debut, fin, null);
         CircuitDemandeConge saved = circuits.save(CircuitDemandeConge.builder().utilisateurId(employeId).typeCongeId(typeId)
-                .assistantId(assistant.getId()).dateDebut(debut).dateFin(fin).nombreJours(nombre)
+                .assistantId(assistant.getId()).departementId(departementChoisi.getId())
+                .dateDebut(debut).dateFin(fin).nombreJours(nombre)
                 .commentaire(commentaire).statut("RELIQUAT_EN_ATTENTE").dateCreation(LocalDateTime.now()).build());
         for (Utilisateur agent : utilisateurs.findByRoleAndActifTrue(Role.ADMINISTRATION_PERSONNEL)) {
             notifications.creerNotification(agent.getId(), "Nouvelle demande de reliquat (dossier #" + saved.getId() + ").", "CIRCUIT_CONGE", "/dashboard/reliquats");
@@ -119,13 +128,17 @@ public class CircuitDemandeCongeService {
                     + (d.getReliquatJours() == null ? 0 : d.getReliquatJours()) + " jour(s) retournés par l'administration.");
         int joursVerifies = demandesHistoriques.verifierEligibiliteWorkflow(d.getUtilisateurId(), d.getTypeCongeId(), d.getDateDebut(), d.getDateFin());
         if (joursVerifies != d.getNombreJours()) throw new IllegalStateException("Le nombre de jours ouvrés a changé. Recréez le dossier après vérification.");
-        Utilisateur employe = utilisateurActif(d.getUtilisateurId());
-        if (employe.getService_id() == null) throw new IllegalStateException("Le collaborateur n'est affecté à aucun service.");
-        Services service = services.findById(employe.getService_id()).orElseThrow(() -> new IllegalStateException("Service du collaborateur introuvable."));
-        if (service.getDepartementId() == null) throw new IllegalStateException("Le service du collaborateur n'est rattaché à aucun département.");
-        Departement dep = departements.findById(service.getDepartementId()).orElseThrow(() -> new IllegalStateException("Département introuvable."));
-        if (!Boolean.TRUE.equals(dep.getActif())) throw new IllegalStateException("Département inactif.");
-        d.setDepartementId(dep.getId()); d.setChefId(dep.getChefId()); d.setDirecteurId(dep.getDirecteurId());
+        utilisateurActif(d.getUtilisateurId());
+        if (d.getDepartementId() == null)
+            throw new IllegalStateException("Le département associé au dossier est introuvable.");
+        Departement dep = departements.findById(d.getDepartementId())
+                .orElseThrow(() -> new IllegalStateException("Département introuvable."));
+        if (!Boolean.TRUE.equals(dep.getActif()))
+            throw new IllegalStateException("Département inactif.");
+        if (dep.getChefId() == null || dep.getDirecteurId() == null)
+            throw new IllegalStateException("Le département doit avoir un chef et un directeur.");
+        d.setChefId(dep.getChefId());
+        d.setDirecteurId(dep.getDirecteurId());
         d.setDateSoumissionChef(LocalDateTime.now()); d.setStatut("CHEF_EN_ATTENTE");
         CircuitDemandeConge saved = circuits.save(d);
         notifications.creerNotification(d.getChefId(), "Un dossier de congé (#" + d.getId() + ") attend votre examen.", "CIRCUIT_CONGE", "/dashboard/chef-departement");

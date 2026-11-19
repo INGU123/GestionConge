@@ -9,13 +9,11 @@ import {
   Search,
   CheckCircle2,
   ShieldAlert,
-  BadgeCheck,
   UserX,
   Calendar,
   Mail,
   ShieldCheck,
   X,
-  User
 } from "lucide-react";
 import { 
   FiMoreVertical, 
@@ -62,7 +60,7 @@ export default function UtilisateursPage() {
     type_contrat: "",
     email: "",
     mot_de_pass: "",
-    role: "EMPLOYE",
+    role: "ASSISTANT_DIRECTION",
     service_id: "",
     manager_id: "",
     date_embauche: new Date().toISOString().split("T")[0],
@@ -146,7 +144,6 @@ export default function UtilisateursPage() {
         newUser.matricule, newUser.nom, newUser.prenom, newUser.numero_cin,
         newUser.date_naissance, newUser.telephone, newUser.adresse,
         newUser.role, newUser.date_embauche, newUser.fonction, newUser.type_contrat,
-        newUser.service_id, newUser.manager_id,
       ];
       if (requiredValues.some((value) => value == null || String(value).trim() === "")) {
         showToast("Compléter toutes les informations de l'utilisateur", "warning");
@@ -194,7 +191,7 @@ export default function UtilisateursPage() {
         setNewUser({
           matricule: "", nom: "", prenom: "", numero_cin: "", date_naissance: "",
           telephone: "", adresse: "", fonction: "", type_contrat: "", email: "",
-          mot_de_pass: "", role: "EMPLOYE", service_id: "", manager_id: "",
+          mot_de_pass: "", role: "ASSISTANT_DIRECTION", service_id: "", manager_id: "",
           date_embauche: new Date().toISOString().split("T")[0], actif: true,
         });
 
@@ -337,7 +334,7 @@ export default function UtilisateursPage() {
     setNewUser({
       matricule: "", nom: "", prenom: "", numero_cin: "", date_naissance: "",
       telephone: "", adresse: "", fonction: "", type_contrat: "", email: "", mot_de_pass: "",
-      role: "EMPLOYE", service_id: "", manager_id: "",
+      role: "ASSISTANT_DIRECTION", service_id: "", manager_id: "",
       date_embauche: new Date().toISOString().split("T")[0], actif: true,
     });
     setShowModal(true);
@@ -404,21 +401,16 @@ export default function UtilisateursPage() {
             ADMINISTRATEUR
           </span>
         );
-      case "MANAGER":
-        return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-xs font-bold bg-purple-50 text-purple-700 border border-purple-200">
-            <BadgeCheck className="w-3.5 h-3.5" />
-            MANAGER
-          </span>
-        );
-      case "EMPLOYE":
+      case "ASSISTANT_DIRECTION":
+        return <span className="badge badge-info">DEMANDEUR</span>;
+      case "ADMINISTRATION_PERSONNEL":
+        return <span className="badge badge-secondary">ADMINISTRATION DU PERSONNEL</span>;
+      case "CHEF_DEPARTEMENT":
+        return <span className="badge badge-secondary">CHEF DE DÉPARTEMENT</span>;
+      case "DIRECTEUR":
+        return <span className="badge badge-secondary">DIRECTEUR</span>;
       default:
-        return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-xs font-bold bg-slate-100 text-slate-700 border border-slate-200">
-            <User className="w-3.5 h-3.5" />
-            EMPLOYÉ
-          </span>
-        );
+        return null;
     }
   };
 
@@ -446,13 +438,7 @@ export default function UtilisateursPage() {
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
-          <button
-            type="button"
-            onClick={toggleArchivedView}
-            className="btn btn-outline btn-sm border-slate-500 !text-white hover:bg-slate-700 hover:!text-white"
-          >
-            {showArchived ? "Retour aux collaborateurs" : "Collaborateurs archivés"}
-          </button>
+
           {!showArchived && (
             <button
               onClick={startCreate}
@@ -578,14 +564,15 @@ export default function UtilisateursPage() {
                         ) : (
                         <div className="inline-block text-left" ref={isMenuOpen ? menuRef : null}>
                           <button
-                            type="button"
-                            onClick={() => setActiveMenuId(isMenuOpen ? null : u.id)}
-                            className="btn btn-ghost btn-sm btn-circle text-slate-600 hover:bg-slate-100 focus:outline-hidden"
-                            title="Actions"
-                            aria-label={`Actions pour ${u.prenom} ${u.nom}`}
-                          >
-                            <FiMoreVertical className="w-4 h-4" />
-                          </button>
+  type="button"
+  onClick={() => setActiveMenuId(isMenuOpen ? null : u.id)}
+  className="inline-flex items-center justify-center w-10 h-10 rounded-lg hover:bg-slate-100 transition-colors"
+  style={{ color: "#334155", minWidth: "40px" }}
+  title="Actions"
+  aria-label={`Actions pour ${u.prenom} ${u.nom}`}
+>
+  <FiMoreVertical size={24} color="#334155" />
+</button>
 
                           {isMenuOpen && (
                             <div className="absolute right-0 mt-1 w-44 bg-white rounded-xl shadow-lg border border-slate-200 py-1.5 z-30 text-xs text-slate-700 font-medium">
@@ -889,10 +876,8 @@ export default function UtilisateursPage() {
                     onChange={(e) => setNewUser({ ...newUser, role: e.target.value })}
                     className="select select-bordered select-sm w-full bg-white text-slate-800 focus:outline-hidden"
                   >
-                    <option value="EMPLOYE">Employé</option>
-                    <option value="MANAGER">Manager</option>
                     {editingUser?.role === "ADMIN" && <option value="ADMIN">Administrateur</option>}
-                    <option value="ASSISTANT_DIRECTION">Assistant de direction</option>
+                    <option value="ASSISTANT_DIRECTION">Demandeur</option>
                     <option value="ADMINISTRATION_PERSONNEL">Administration du personnel</option>
                     <option value="CHEF_DEPARTEMENT">Chef de département</option>
                     <option value="DIRECTEUR">Directeur</option>
@@ -944,37 +929,7 @@ export default function UtilisateursPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-bold uppercase text-slate-600 mb-1">Service</label>
-                  <select
-                    required={!editingUser}
-                    value={newUser.service_id == null ? "" : String(newUser.service_id)}
-                    onChange={(e) => setNewUser({ ...newUser, service_id: e.target.value })}
-                    disabled={servicesLoading}
-                    className="select select-bordered select-sm w-full bg-white text-slate-800 focus:outline-hidden"
-                  >
-                    <option value="">{servicesLoading ? "Chargement des services..." : "Aucun service"}</option>
-                    {services.map((service) => (
-                      <option key={service.id} value={service.id}>{service.nom}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-bold uppercase text-slate-600 mb-1">Responsable hiérarchique</label>
-                  <select
-                    required={!editingUser}
-                    value={newUser.manager_id == null ? "" : String(newUser.manager_id)}
-                    onChange={(e) => setNewUser({ ...newUser, manager_id: e.target.value })}
-                    className="select select-bordered select-sm w-full bg-white text-slate-800 focus:outline-hidden"
-                  >
-                    <option value="">Aucun responsable</option>
-                    {users.filter((user) => user.role?.toUpperCase() === "MANAGER" && user.id !== editingUser?.id).map((manager) => (
-                      <option key={manager.id} value={manager.id}>{manager.prenom} {manager.nom} — {manager.matricule}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
+              
 
               {editingUser && (
                 <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
@@ -1009,11 +964,11 @@ export default function UtilisateursPage() {
         <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/60 p-4">
           <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
             <h2 className="text-lg font-bold text-slate-900">Mot de passe généré</h2>
-            <p className="mt-2 text-sm text-slate-600">Aucune adresse e-mail n'a été renseignée. Copiez ce mot de passe et transmettez-le au collaborateur de manière sécurisée. Il ne sera plus affiché après fermeture de cette fenêtre.</p>
+            <p className="mt-2 text-sm text-slate-600">Aucune adresse e-mail n&apos;a été renseignée. Copiez ce mot de passe et transmettez-le au collaborateur de manière sécurisée. Il ne sera plus affiché après fermeture de cette fenêtre.</p>
             <div className="mt-4 rounded-lg border bg-slate-50 p-4 text-center font-mono text-lg font-bold tracking-wider text-slate-900">{generatedPassword}</div>
             <div className="mt-5 flex justify-end gap-2">
               <button type="button" className="btn btn-outline btn-sm" onClick={async () => { try { await navigator.clipboard.writeText(generatedPassword); showToast("Mot de passe copié.", "success"); } catch { showToast("Copie impossible : sélectionnez le mot de passe manuellement.", "warning"); } }}>Copier</button>
-              <button type="button" className="btn btn-primary btn-sm text-white" onClick={() => setGeneratedPassword("")}>J'ai noté le mot de passe</button>
+              <button type="button" className="btn btn-primary btn-sm text-white" onClick={() => setGeneratedPassword("")}>J&apos;ai noté le mot de passe</button>
             </div>
           </div>
         </div>

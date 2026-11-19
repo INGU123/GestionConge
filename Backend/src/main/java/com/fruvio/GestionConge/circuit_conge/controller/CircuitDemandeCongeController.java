@@ -34,7 +34,7 @@ public class CircuitDemandeCongeController {
     }
 
     public record CreationRequest(@NotNull Long utilisateurId, @NotNull Long typeCongeId,
-            @NotNull java.time.LocalDate dateDebut, @NotNull java.time.LocalDate dateFin,
+            @NotNull Long serviceId, @NotNull java.time.LocalDate dateDebut, @NotNull java.time.LocalDate dateFin,
             @Size(max=1500) String commentaire) {}
     public record ReliquatRequest(@NotNull @Min(0) Integer reliquatJours, @Size(max=1500) String commentaire) {}
     public record DecisionRequest(@NotBlank String decision, String motif) {}
@@ -42,7 +42,7 @@ public class CircuitDemandeCongeController {
     @PostMapping
     @PreAuthorize("hasRole('ASSISTANT_DIRECTION')")
     public ResponseEntity<CircuitDemandeConge> creer(@Valid @RequestBody CreationRequest body) {
-        return ResponseEntity.status(201).body(service.creer(body.utilisateurId(), body.typeCongeId(),
+        return ResponseEntity.status(201).body(service.creer(body.utilisateurId(), body.typeCongeId(), body.serviceId(),
                 body.dateDebut(), body.dateFin(), body.commentaire(), currentUser()));
     }
 

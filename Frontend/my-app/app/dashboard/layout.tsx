@@ -131,7 +131,7 @@ export default function DashboardLayout({
   const isPersonnel = userRoleClean === "ADMINISTRATION_PERSONNEL";
   const isChef = userRoleClean === "CHEF_DEPARTEMENT";
   const isDirecteur = userRoleClean === "DIRECTEUR";
-  const isEmploye = userRoleClean === "EMPLOYE" || isAdmin;
+  const isEmploye = userRoleClean === "EMPLOYE" || userRoleClean === "ROLE_EMPLOYE";
 
   const isNight = theme === "night";
 
@@ -182,7 +182,7 @@ export default function DashboardLayout({
           />
         </svg>
       ),
-      show: isAdmin || isEmploye,
+      show: isEmploye
     },
 
     {
@@ -206,33 +206,6 @@ export default function DashboardLayout({
       show: false,
     },
 
-    {
-      href: "/dashboard/typeConge",
-      label: "Types de congés",
-      icon: (
-        <svg
-          className="w-4 h-4"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth="2"
-            d="M7 7h.01M7 3h5a1 1 0 01.707.293l7 7a1 1 0 010 1.414l-7 7a1 1 0 01-1.414 0l-7-7A2 2 0 013 12V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414A1 1 1 0 0121 7.586V19a2 2 0 01-2 2H7a2 2 0 01-2-2V5"
-          />
-        </svg>
-      ),
-      show: isAdmin,
-    },
-
-    {
-      href: "/dashboard/services",
-      label: "Services",
-      icon: <span>⚙</span>,
-      show: isAdmin,
-    },
 
     {
       href: "/dashboard/utilisateurs",
@@ -284,14 +257,14 @@ export default function DashboardLayout({
           />
         </svg>
       ),
-      show: isAdmin || isEmploye,
+      show: isEmploye
     },
 
     {
       href: "/dashboard/demande",
       label: "Mes demandes",
       icon: <span>▤</span>,
-      show: isAdmin || isEmploye,
+      show: isEmploye
     },
   ];
 
@@ -301,7 +274,6 @@ export default function DashboardLayout({
     { href: "/dashboard/reliquats", label: "Vérification des reliquats", icon: <span>✓</span>, show: isPersonnel },
     { href: "/dashboard/chef-departement", label: "Examen du chef", icon: <span>▣</span>, show: isChef },
     { href: "/dashboard/directeur", label: "Décisions du directeur", icon: <span>⚖</span>, show: isDirecteur },
-    { href: "/dashboard/departements", label: "Départements", icon: <span>⌂</span>, show: isAdmin }
   );
 
   const visibleNavItems = navItems.filter((item) => item.show);

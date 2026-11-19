@@ -78,10 +78,8 @@ public class UtilisateurCreateRequest {
     @NotNull(message = "Le rôle est obligatoire.")
     private Role role;
 
-    @NotNull(message = "Le service est obligatoire.")
+    // Affectations facultatives.
     private Long service_id;
-
-    @NotNull(message = "Le responsable hiérarchique est obligatoire.")
     private Long manager_id;
 
     @NotNull(message = "La date d'embauche est obligatoire.")

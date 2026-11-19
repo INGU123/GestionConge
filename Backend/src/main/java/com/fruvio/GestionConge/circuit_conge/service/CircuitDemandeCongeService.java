@@ -261,7 +261,6 @@ public class CircuitDemandeCongeService {
             DemandeConge decisionResult = demandesHistoriques.traiterDemande(saved.getId(), null, choix, raison, directeur);
             d.setLegacyDemandeId(decisionResult.getId());
         } else {
-            if ("VALIDEE".equals(choix)) debiterSoldesEmploye(d, directeur);
             DemandeConge employeeHistory = DemandeConge.builder().employeId(d.getEmployeId())
                     .typeCongeId(d.getTypeCongeId()).dateDebut(d.getDateDebut()).dateFin(d.getDateFin())
                     .nombreJours(d.getNombreJours()).commentaire(d.getCommentaire()).statut(choix)
@@ -269,6 +268,7 @@ public class CircuitDemandeCongeService {
                     .dateValidation(java.time.LocalDate.now()).dateCreation(java.time.LocalDate.now()).build();
             DemandeConge saved = demandesHistoriques.creerDemandePourCircuit(employeeHistory);
             d.setLegacyDemandeId(saved.getId());
+            if ("VALIDEE".equals(choix)) debiterSoldesEmploye(d, directeur, saved.getId());
         }
         d.setMotifRefus("REFUSEE".equals(choix) ? raison : null);
         d.setDateDecision(LocalDateTime.now()); d.setStatut(choix);
@@ -285,7 +285,7 @@ public class CircuitDemandeCongeService {
      * Débite uniquement après la décision finale du directeur.
      * Les soldes doivent avoir été saisis explicitement par l'administration ; aucun quota SPAT n'est inventé.
      */
-    private void debiterSoldesEmploye(CircuitDemandeConge dossier, Utilisateur directeur) {
+    private void debiterSoldesEmploye(CircuitDemandeConge dossier, Utilisateur directeur, Long demandeId) {
         if (soldes == null || mouvements == null)
             throw new IllegalStateException("Le service de soldes employés n'est pas configuré.");
 
@@ -327,7 +327,7 @@ public class CircuitDemandeCongeService {
             solde.setDate_maj(new java.sql.Timestamp(System.currentTimeMillis()));
             soldes.save(solde);
             mouvements.enregistrerMouvementPourEmploye(dossier.getEmployeId(), "DEBIT_CONGE",
-                    entry.getValue(), dossier.getTypeCongeId(), dossier.getLegacyDemandeId(),
+                    entry.getValue(), dossier.getTypeCongeId(), demandeId,
                     "Congé validé par le directeur #" + directeur.getId()
                             + " (exercice " + entry.getKey() + ")", directeur.getId());
         }

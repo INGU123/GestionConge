@@ -400,8 +400,8 @@ public class DemandeCongeService {
                 || demande.getDateDebut() == null || demande.getDateFin() == null) {
             throw new IllegalArgumentException("Dossier de congé incomplet.");
         }
-        demande.setStatut("EN_ATTENTE");
-        demande.setDateCreation(LocalDate.now());
+        if (demande.getStatut() == null) demande.setStatut("EN_ATTENTE");
+        if (demande.getDateCreation() == null) demande.setDateCreation(LocalDate.now());
         return demandeRepo.save(demande);
     }
 

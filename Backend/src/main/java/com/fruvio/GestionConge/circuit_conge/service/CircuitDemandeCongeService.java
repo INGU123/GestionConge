@@ -42,6 +42,14 @@ public class CircuitDemandeCongeService {
         this.notifications = notifications;
     }
 
+    public CircuitDemandeCongeService(CircuitDemandeCongeRepository circuits, UtilisateurRepository utilisateurs,
+            Service_congeRepository services, DepartementRepository departements, JourFerieService joursFeries,
+            DemandeCongeService demandesHistoriques, Notification_congeService notifications) {
+        this.circuits = circuits; this.utilisateurs = utilisateurs; this.employes = null; this.typesConge = null;
+        this.services = services; this.departements = departements; this.joursFeries = joursFeries;
+        this.demandesHistoriques = demandesHistoriques; this.notifications = notifications;
+    }
+
     @Transactional
     public CircuitDemandeConge creerPourEmploye(Long employeId, Long typeId, Long serviceId,
             java.time.LocalDate debut, java.time.LocalDate fin, String commentaire, Utilisateur assistant) {

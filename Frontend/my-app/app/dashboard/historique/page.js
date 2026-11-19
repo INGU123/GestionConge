@@ -361,7 +361,7 @@ export default function HistoriquePage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="spat-workspace spat-workspace--historique space-y-6">
       {/* Banner Institutionnelle SPAT */}
       <div className="bg-slate-900 text-white rounded-2xl p-6 shadow-md border-l-4 border-blue-600 flex justify-between items-center flex-wrap gap-4">
         <div>

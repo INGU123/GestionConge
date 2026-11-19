@@ -215,7 +215,7 @@ const sections = [
   {
     id: "notifications",
     title: "Notifications",
-    forRoles: ["EMPLOYE", "MANAGER", "ADMIN"],
+    forRoles: ["EMPLOYE", "MANAGER", "ADMIN", "ASSISTANT_DIRECTION", "ADMINISTRATION_PERSONNEL", "CHEF_DEPARTEMENT", "DIRECTEUR"],
     detail: "Ouvrez la cloche pour lire les événements, puis utilisez les filtres proposés. Une notification affichée dans l’application n’est pas nécessairement un e-mail envoyé.",
     description: "Lire les alertes affichées dans la barre supérieure.",
     icon: Bell,
@@ -235,7 +235,7 @@ const sections = [
   {
     id: "mot-de-passe",
     title: "Mot de passe oublié",
-    forRoles: ["EMPLOYE", "MANAGER", "ADMIN"],
+    forRoles: ["EMPLOYE", "MANAGER", "ADMIN", "ASSISTANT_DIRECTION", "ADMINISTRATION_PERSONNEL", "CHEF_DEPARTEMENT", "DIRECTEUR"],
     detail: "Démarrez depuis l’écran de connexion et suivez exactement le formulaire actuellement affiché. Si la demande doit être traitée par l’administrateur, surveillez son retour. Ne transmettez jamais votre mot de passe existant.",
     description: "Demander la récupération de votre accès.",
     icon: KeyRound,

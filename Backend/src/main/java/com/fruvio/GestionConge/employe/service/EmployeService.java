@@ -1,7 +1,5 @@
 package com.fruvio.GestionConge.employe.service;
 
-import java.util.Locale;
-
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,20 +22,6 @@ public class EmployeService {
                 .filter(Employe::isActif)
                 .orElseThrow(() -> new IllegalArgumentException("Aucun employé actif trouvé pour ce matricule."));
         return EmployeLookupResponse.depuis(employe);
-    }
-
-    private void appliquer(Employe employe, EmployeRequest request, String matricule) {
-        employe.setMatricule(matricule);
-        employe.setNom(request.nom().trim());
-        employe.setPrenom(request.prenom().trim());
-        employe.setNumeroCin(texteOuNull(request.numeroCin()));
-        employe.setDateNaissance(request.dateNaissance());
-        employe.setTelephone(texteOuNull(request.telephone()));
-        employe.setAdresse(texteOuNull(request.adresse()));
-        employe.setFonction(texteOuNull(request.fonction()));
-        employe.setTypeContrat(texteOuNull(request.typeContrat()));
-        employe.setEmail(texteOuNull(request.email()) == null ? null : request.email().trim().toLowerCase(Locale.ROOT));
-        employe.setDateEmbauche(request.dateEmbauche());
     }
 
     private String normaliserMatricule(String value) {

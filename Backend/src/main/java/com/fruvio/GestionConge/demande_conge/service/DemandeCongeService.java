@@ -396,7 +396,7 @@ public class DemandeCongeService {
      */
     @Transactional
     public DemandeConge creerDemandePourCircuit(DemandeConge demande) {
-        if (demande == null || demande.getUtilisateurId() == null || demande.getTypeCongeId() == null
+        if (demande == null || (demande.getUtilisateurId() == null && demande.getEmployeId() == null) || demande.getTypeCongeId() == null
                 || demande.getDateDebut() == null || demande.getDateFin() == null) {
             throw new IllegalArgumentException("Dossier de congé incomplet.");
         }

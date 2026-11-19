@@ -11,7 +11,8 @@ import lombok.*;
 public class CircuitDemandeConge {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    @Column(name="utilisateur_id", nullable=false) private Long utilisateurId;
+    @Column(name="utilisateur_id") private Long utilisateurId;
+    @Column(name="employe_id") private Long employeId;
     @Column(name="type_conge_id", nullable=false) private Long typeCongeId;
     @Column(name="departement_id") private Long departementId;
     @Column(name="assistant_id", nullable=false) private Long assistantId;
@@ -36,4 +37,5 @@ public class CircuitDemandeConge {
     @Transient private String utilisateurNom;
     @Transient private String utilisateurPrenom;
     @Transient private String utilisateurMatricule;
+    @Transient private String utilisateurFonction;
 }

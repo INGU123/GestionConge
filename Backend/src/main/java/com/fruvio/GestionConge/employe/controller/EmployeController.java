@@ -5,6 +5,7 @@ import java.util.List;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.validation.annotation.Validated;
 
 import com.fruvio.GestionConge.employe.dto.EmployeLookupResponse;
 import com.fruvio.GestionConge.employe.dto.EmployeRequest;
@@ -15,6 +16,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
+@Validated
 @RestController
 @RequestMapping("/employes")
 public class EmployeController {

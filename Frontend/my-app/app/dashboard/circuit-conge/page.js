@@ -17,7 +17,8 @@ export default function CircuitCongePage() {
     authFetch(API+"/departements").then(r=>r.ok?r.json():[])
   ]);setTypes(t);setDossiers(d);setServices(s);setDepartements(dep);};
   useEffect(()=>{let actif=true;Promise.resolve().then(()=>load()).catch(()=>{if(actif)toast("Impossible de charger les données.","error");});return()=>{actif=false;};},[toast]);
-  const rechercherEmploye=async()=>{const code=matricule.trim();if(!code)return;setLookupBusy(true);setEmploye(null);setForm({...form,employeId:""});try{const r=await authFetch(API+"/employes/recherche-matricule?matricule="+encodeURIComponent(code));const d=await r.json();if(!r.ok)throw new Error(d.message||"Matricule introuvable");setEmploye(d);setForm(v=>({...v,employeId:String(d.id)}));}catch(e){toast(e.message,"error");}finally{setLookupBusy(false);}};\n  const create=async e=>{e.preventDefault();setBusy(true);try{
+  const rechercherEmploye=async()=>{const code=matricule.trim();if(!code)return;setLookupBusy(true);setEmploye(null);setForm({...form,employeId:""});try{const r=await authFetch(API+"/employes/recherche-matricule?matricule="+encodeURIComponent(code));const d=await r.json();if(!r.ok)throw new Error(d.message||"Matricule introuvable");setEmploye(d);setForm(v=>({...v,employeId:String(d.id)}));}catch(e){toast(e.message,"error");}finally{setLookupBusy(false);}};
+  const create=async e=>{e.preventDefault();setBusy(true);try{
     const r=await authFetch(API+"/circuit-conge",{method:"POST",body:JSON.stringify({...form,employeId:Number(form.employeId),typeCongeId:Number(form.typeCongeId),serviceId:Number(form.serviceId)})});
     const data=await r.json();if(!r.ok)throw new Error(data.message||"Création impossible");
     toast("Demande de reliquat créée.","success");setEmploye(null);setMatricule("");setForm({employeId:"",typeCongeId:"",serviceId:"",dateDebut:"",dateFin:"",commentaire:""});await load();

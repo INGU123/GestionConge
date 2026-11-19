@@ -34,12 +34,52 @@ public class CircuitDemandeCongeService {
     private final DemandeCongeService demandesHistoriques;
     private final Notification_congeService notifications;
 
-    public CircuitDemandeCongeService(CircuitDemandeCongeRepository circuits, UtilisateurRepository utilisateurs, EmployeRepository employes,
+    public CircuitDemandeCongeService(CircuitDemandeCongeRepository circuits, UtilisateurRepository utilisateurs, EmployeRepository employes, Type_congeRepository typesConge,
             Service_congeRepository services, DepartementRepository departements, JourFerieService joursFeries,
             DemandeCongeService demandesHistoriques, Notification_congeService notifications) {
         this.circuits = circuits; this.utilisateurs = utilisateurs; this.employes = employes; this.typesConge = typesConge; this.services = services;
         this.departements = departements; this.joursFeries = joursFeries; this.demandesHistoriques = demandesHistoriques;
         this.notifications = notifications;
+    }
+
+    @Transactional
+    public CircuitDemandeConge creerPourEmploye(Long employeId, Long typeId, Long serviceId,
+            java.time.LocalDate debut, java.time.LocalDate fin, String commentaire, Utilisateur assistant) {
+        exiger(assistant, Role.ASSISTANT_DIRECTION);
+        Employe employe = employes.findById(employeId).filter(Employe::isActif)
+                .orElseThrow(() -> new IllegalArgumentException("Employé actif introuvable. Recherchez son matricule exact."));
+        if (serviceId == null) throw new IllegalArgumentException("Le service est obligatoire.");
+        Services serviceChoisi = services.findById(serviceId)
+                .orElseThrow(() -> new IllegalArgumentException("Service sélectionné introuvable."));
+        if (serviceChoisi.getDepartementId() == null) throw new IllegalStateException("Service sans département.");
+        Departement dep = departements.findById(serviceChoisi.getDepartementId())
+                .orElseThrow(() -> new IllegalStateException("Département introuvable."));
+        if (!Boolean.TRUE.equals(dep.getActif()) || dep.getChefId() == null || dep.getDirecteurId() == null)
+            throw new IllegalStateException("Le département doit être actif et avoir un chef et un directeur.");
+        if (debut == null || fin == null || fin.isBefore(debut)) throw new IllegalArgumentException("Période invalide.");
+        if (typeId == null || !typesConge.findById(typeId).map(t -> Boolean.TRUE.equals(t.getActif())).orElse(false))
+            throw new IllegalArgumentException("Type de congé indisponible.");
+        int nombre = joursFeries.compterJoursOuvres(debut, fin);
+        if (nombre <= 0) throw new IllegalArgumentException("La période ne contient aucun jour ouvré.");
+        verifierChevauchementEmploye(employeId, debut, fin, null);
+        CircuitDemandeConge saved = circuits.save(CircuitDemandeConge.builder()
+                .employeId(employe.getId()).typeCongeId(typeId).assistantId(assistant.getId())
+                .departementId(dep.getId()).dateDebut(debut).dateFin(fin).nombreJours(nombre)
+                .commentaire(commentaire).statut("RELIQUAT_EN_ATTENTE").dateCreation(LocalDateTime.now()).build());
+        for (Utilisateur agent : utilisateurs.findByRoleAndActifTrue(Role.ADMINISTRATION_PERSONNEL))
+            notifications.creerNotification(agent.getId(), "Nouvelle demande de reliquat (dossier #" + saved.getId() + ").",
+                    "CIRCUIT_CONGE", "/dashboard/reliquats");
+        return enrichir(saved);
+    }
+
+    private void verifierChevauchementEmploye(Long employeId, java.time.LocalDate debut,
+            java.time.LocalDate fin, Long dossierIgnore) {
+        for (CircuitDemandeConge autre : circuits.findByEmployeId(employeId)) {
+            if (dossierIgnore != null && dossierIgnore.equals(autre.getId())) continue;
+            if ("REFUSEE".equals(autre.getStatut())) continue;
+            if (!(fin.isBefore(autre.getDateDebut()) || debut.isAfter(autre.getDateFin())))
+                throw new IllegalStateException("Cette période chevauche un autre dossier de congé déjà enregistré.");
+        }
     }
 
     @Transactional
@@ -110,8 +150,10 @@ public class CircuitDemandeCongeService {
         exiger(actor, Role.ADMINISTRATION_PERSONNEL);
         if (reliquat == null || reliquat < 0) throw new IllegalArgumentException("Le reliquat doit être positif ou nul.");
         CircuitDemandeConge d = dossierVerrouille(id);
-        int disponible = demandesHistoriques.calculerReliquatDisponible(d.getUtilisateurId(), d.getTypeCongeId(), d.getDateDebut(), d.getDateFin());
-        if (reliquat > disponible) throw new IllegalArgumentException("Le reliquat saisi (" + reliquat + " j) dépasse le solde disponible enregistré (" + disponible + " j).");
+        if (d.getEmployeId() == null) {
+            int disponible = demandesHistoriques.calculerReliquatDisponible(d.getUtilisateurId(), d.getTypeCongeId(), d.getDateDebut(), d.getDateFin());
+            if (reliquat > disponible) throw new IllegalArgumentException("Le reliquat saisi (" + reliquat + " j) dépasse le solde disponible enregistré (" + disponible + " j).");
+        }
         if (!"RELIQUAT_EN_ATTENTE".equals(d.getStatut())) throw new IllegalStateException("Ce dossier n'attend pas le reliquat.");
         d.setReliquatJours(reliquat); d.setReliquatCommentaire(commentaire);
         d.setAdministrationPersonnelId(actor.getId()); d.setDateReliquat(LocalDateTime.now());
@@ -128,7 +170,6 @@ public class CircuitDemandeCongeService {
         verifierAssistantProprietaire(d, assistant);
         if (!"RELIQUAT_RETOURNE".equals(d.getStatut())) throw new IllegalStateException("Le reliquat doit d'abord être retourné.");
         if (d.getEmployeId() != null) verifierChevauchementEmploye(d.getEmployeId(), d.getDateDebut(), d.getDateFin(), d.getId());
-        else if (d.getEmployeId() != null) verifierChevauchementEmploye(d.getEmployeId(), d.getDateDebut(), d.getDateFin(), d.getId());
         else verifierChevauchementCircuit(d.getUtilisateurId(), d.getDateDebut(), d.getDateFin(), d.getId());
         if (d.getReliquatJours() == null || d.getReliquatJours() < d.getNombreJours())
             throw new IllegalStateException("Reliquat insuffisant : " + d.getNombreJours() + " jour(s) demandés, "
@@ -137,7 +178,8 @@ public class CircuitDemandeCongeService {
                 ? joursFeries.compterJoursOuvres(d.getDateDebut(), d.getDateFin())
                 : demandesHistoriques.verifierEligibiliteWorkflow(d.getUtilisateurId(), d.getTypeCongeId(), d.getDateDebut(), d.getDateFin());
         if (joursVerifies != d.getNombreJours()) throw new IllegalStateException("Le nombre de jours ouvrés a changé. Recréez le dossier après vérification.");
-        if (d.getEmployeId() == null) utilisateurActif(d.getUtilisateurId());\n        else employes.findById(d.getEmployeId()).filter(Employe::isActif).orElseThrow(() -> new IllegalStateException("Employé inactif ou introuvable."));
+        if (d.getEmployeId() == null) utilisateurActif(d.getUtilisateurId());
+        else employes.findById(d.getEmployeId()).filter(Employe::isActif).orElseThrow(() -> new IllegalStateException("Employé inactif ou introuvable."));
         if (d.getDepartementId() == null)
             throw new IllegalStateException("Le département associé au dossier est introuvable.");
         Departement dep = departements.findById(d.getDepartementId())
@@ -205,7 +247,7 @@ public class CircuitDemandeCongeService {
         CircuitDemandeConge dossier = circuits.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Dossier introuvable."));
 
-        boolean demandeur = user.getRole() != Role.DIRECTEUR
+        boolean demandeur = dossier.getUtilisateurId() != null && user.getRole() != Role.DIRECTEUR
                 && user.getId().equals(dossier.getUtilisateurId());
         boolean assistantCreateur = user.getRole() == Role.ASSISTANT_DIRECTION
                 && user.getId().equals(dossier.getAssistantId());
@@ -220,11 +262,17 @@ public class CircuitDemandeCongeService {
     }
 
     private CircuitDemandeConge enrichir(CircuitDemandeConge dossier) {
-        utilisateurs.findById(dossier.getUtilisateurId()).ifPresent(u -> {
-            dossier.setUtilisateurNom(u.getNom());
-            dossier.setUtilisateurPrenom(u.getPrenom());
-            dossier.setUtilisateurMatricule(u.getMatricule());
-        });
+        if (dossier.getEmployeId() != null) {
+            employes.findById(dossier.getEmployeId()).ifPresent(e -> {
+                dossier.setUtilisateurNom(e.getNom()); dossier.setUtilisateurPrenom(e.getPrenom());
+                dossier.setUtilisateurMatricule(e.getMatricule()); dossier.setUtilisateurFonction(e.getFonction());
+            });
+        } else if (dossier.getUtilisateurId() != null) {
+            utilisateurs.findById(dossier.getUtilisateurId()).ifPresent(u -> {
+                dossier.setUtilisateurNom(u.getNom()); dossier.setUtilisateurPrenom(u.getPrenom());
+                dossier.setUtilisateurMatricule(u.getMatricule());
+            });
+        }
         return dossier;
     }
 

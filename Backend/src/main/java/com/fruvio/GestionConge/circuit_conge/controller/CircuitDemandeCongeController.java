@@ -99,7 +99,7 @@ public class CircuitDemandeCongeController {
         CircuitDemandeConge d = service.dossierPourPdf(id, currentUser());
         Utilisateur employe;
         if (d.getEmployeId() != null) {
-            Employe e = employes.findById(d.getEmployeId()).filter(Employe::isActif).orElseThrow();
+            Employe e = employes.findById(d.getEmployeId()).orElseThrow(() -> new IllegalStateException("Employé historique introuvable."));
             employe = new Utilisateur(); employe.setMatricule(e.getMatricule()); employe.setNom(e.getNom());
             employe.setPrenom(e.getPrenom()); employe.setFonction(e.getFonction());
         } else {

@@ -3,11 +3,13 @@
 import { useCallback, useEffect, useState } from "react";
 import { authFetch } from "@/lib/apiClient";
 import { useToast } from "../../Components/ToastProvider";
+import { getAllTypeConge } from "../../api/typeConge/typeConge";
 
 const API = "http://localhost:8080";
 
 export default function ReliquatsPage() {
   const [rows, setRows] = useState([]);
+  const [typesConge, setTypesConge] = useState([]);
   const [balances, setBalances] = useState({});
   const [values, setValues] = useState({});
   const [balanceValues, setBalanceValues] = useState({});
@@ -19,6 +21,7 @@ export default function ReliquatsPage() {
     if (!response.ok) throw new Error("Chargement impossible");
     const data = await response.json();
     setRows(data);
+    setTypesConge(await getAllTypeConge());
 
     const pairs = await Promise.all(data.map(async dossier => {
       const endpoint = dossier.employeId
@@ -43,6 +46,12 @@ export default function ReliquatsPage() {
     }, 0);
     return () => clearTimeout(timer);
   }, [load, toast]);
+
+  const getTypeLabel = dossier => {
+    const typeId = dossier.typeCongeId ?? dossier.typeConge?.id;
+    const type = typesConge.find(item => String(item.id) === String(typeId));
+    return type?.libelle || dossier.typeConge?.libelle || type?.code || "Type de congé";
+  };
 
   const downloadScan = async id => {
     try {
@@ -169,7 +178,7 @@ export default function ReliquatsPage() {
                 ({dossier.utilisateurMatricule})
               </b>
               <span>
-                Type #{dossier.typeCongeId} · {dossier.dateDebut} → {dossier.dateFin}
+                {getTypeLabel(dossier)} · {dossier.dateDebut} → {dossier.dateFin}
                 · {dossier.nombreJours} jour(s) demandés
               </span>
               <button type="button" className="btn btn-sm btn-outline"

@@ -105,8 +105,18 @@ public class CircuitDemandeCongeService {
         if (!Boolean.TRUE.equals(dep.getActif()) || dep.getChefId() == null || dep.getDirecteurId() == null)
             throw new IllegalStateException("Le département doit être actif et avoir un chef et un directeur.");
         if (debut == null || fin == null || fin.isBefore(debut)) throw new IllegalArgumentException("Période invalide.");
-        if (typeId == null || !typesConge.findById(typeId).map(t -> Boolean.TRUE.equals(t.getActif())).orElse(false))
-            throw new IllegalArgumentException("Type de congé indisponible.");
+        var typeConge = typeId == null ? null : typesConge.findById(typeId)
+                .filter(t -> Boolean.TRUE.equals(t.getActif()))
+                .orElseThrow(() -> new IllegalArgumentException("Type de congé indisponible."));
+        if (typeConge == null) throw new IllegalArgumentException("Type de congé indisponible.");
+        String codeType = typeConge.getCode() == null ? "" : typeConge.getCode().toUpperCase();
+        String libelleType = typeConge.getLibelle() == null ? "" : typeConge.getLibelle().toUpperCase();
+        if (codeType.contains("ANNUEL") || libelleType.contains("ANNUEL")) {
+            if (employe.getDateEmbauche() == null)
+                throw new IllegalStateException("La date d'embauche doit être renseignée avant toute demande de congé annuel.");
+            if (employe.getDateEmbauche().plusMonths(12).isAfter(debut))
+                throw new IllegalStateException("Le droit de jouissance du congé annuel s'ouvre après 12 mois de service effectif.");
+        }
         int nombre = joursFeries.compterJoursCalendaires(debut, fin);
         if (nombre <= 0) throw new IllegalArgumentException("La période ne contient aucun jour ouvré.");
         verifierChevauchementEmploye(employeId, debut, fin, null);

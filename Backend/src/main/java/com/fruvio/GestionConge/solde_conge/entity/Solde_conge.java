@@ -1,6 +1,9 @@
 package com.fruvio.GestionConge.solde_conge.entity;
 
 import java.sql.Timestamp;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import jakarta.persistence.Transient;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -50,6 +53,26 @@ public class Solde_conge {
     private int periode;
 
     private Timestamp date_maj;
+
+    // Pour les soldes du référentiel employé, les colonnes entières stockent des demi-journées.
+    // Les soldes historiques liés aux comptes utilisateurs restent exprimés en jours entiers.
+    @Transient
+    private BigDecimal soldeAquisJours;
+
+    @Transient
+    private BigDecimal soldePrisJours;
+
+    @Transient
+    private BigDecimal soldeRestantJours;
+
+    public void exposerSoldesEmployeEnJours() {
+        this.soldeAquisJours = BigDecimal.valueOf(soldeAquis == null ? 0 : soldeAquis)
+                .divide(BigDecimal.valueOf(2), 1, RoundingMode.UNNECESSARY);
+        this.soldePrisJours = BigDecimal.valueOf(soldePris == null ? 0 : soldePris)
+                .divide(BigDecimal.valueOf(2), 1, RoundingMode.UNNECESSARY);
+        this.soldeRestantJours = BigDecimal.valueOf(soldeRestant == null ? 0 : soldeRestant)
+                .divide(BigDecimal.valueOf(2), 1, RoundingMode.UNNECESSARY);
+    }
 
     // Alias pour compatibilité
     public Integer getSoldeAcquis() {

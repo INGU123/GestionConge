@@ -38,4 +38,9 @@ public class CircuitDemandeConge {
     @Transient private String utilisateurPrenom;
     @Transient private String utilisateurMatricule;
     @Transient private String utilisateurFonction;
+    @Transient private String reliquatPeriodeReference;
+    @Transient private String reliquatReferenceConfirmation;
+    @Transient private String reliquatJustificatif;
+    @Transient private String reliquatObservation;
+    @Transient private LocalDateTime reliquatDateConfirmation;
 }

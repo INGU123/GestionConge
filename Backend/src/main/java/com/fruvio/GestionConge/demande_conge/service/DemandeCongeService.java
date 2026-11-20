@@ -93,12 +93,12 @@ public class DemandeCongeService {
                 throw new IllegalArgumentException("La date de fin ne peut pas être antérieure à la date de début.");
             }
 
-            Map<Integer, Integer> joursParAnnee = calculerJoursCalendairesParAnnee(
+            Map<Integer, Integer> joursParAnnee = calculerJoursOuvresParAnnee(
                     demande.getDateDebut(), demande.getDateFin());
             int joursOuvres = joursParAnnee.values().stream().mapToInt(Integer::intValue).sum();
             if (joursOuvres <= 0) {
                 throw new IllegalArgumentException(
-                        "Cette période ne contient aucune journée calendaire. La demande de congé doit inclure au moins un jour ouvré.");
+                        "Cette période ne contient aucune journée ouvrée. La demande de congé doit inclure au moins un jour ouvré.");
             }
             demande.setNombreJours(joursOuvres);
 
@@ -249,12 +249,12 @@ public class DemandeCongeService {
                 || "APPROVED".equalsIgnoreCase(statutNormalise);
 
         if (estValidee && demande.getDateDebut() != null && demande.getDateFin() != null) {
-            Map<Integer, Integer> joursParAnnee = calculerJoursCalendairesParAnnee(
+            Map<Integer, Integer> joursParAnnee = calculerJoursOuvresParAnnee(
                     demande.getDateDebut(), demande.getDateFin());
             int jours = joursParAnnee.values().stream().mapToInt(Integer::intValue).sum();
             if (jours <= 0) {
                 throw new IllegalStateException(
-                        "La période demandée ne contient aucune journée calendaire. Aucune validation ne peut être effectuée.");
+                        "La période demandée ne contient aucune journée ouvrée. Aucune validation ne peut être effectuée.");
             }
             demande.setNombreJours(jours);
 
@@ -347,7 +347,7 @@ public class DemandeCongeService {
                 throw new IllegalStateException("Annulation impossible : les informations de la demande sont incomplètes.");
             }
 
-            Map<Integer, Integer> joursParAnnee = calculerJoursCalendairesParAnnee(
+            Map<Integer, Integer> joursParAnnee = calculerJoursOuvresParAnnee(
                     demande.getDateDebut(), demande.getDateFin());
             Map<Integer, Solde_conge> soldesParAnnee = new LinkedHashMap<>();
 
@@ -453,7 +453,7 @@ public class DemandeCongeService {
 
     /**
      * Vérifie l'éligibilité d'un dossier préparé par l'assistant en réutilisant
-     * les mêmes règles de jours calendaires, plafonds annuels, chevauchements et soldes
+     * les mêmes règles de jours ouvrés, plafonds annuels, chevauchements et soldes
      * que le circuit historique. Aucun solde n'est débité à cette étape.
      */
     @Transactional
@@ -471,7 +471,7 @@ public class DemandeCongeService {
                 .orElseThrow(() -> new IllegalArgumentException("Type de congé introuvable."));
         if (Boolean.FALSE.equals(type.getActif())) throw new IllegalStateException("Ce type de congé est désactivé.");
 
-        Map<Integer, Integer> joursParAnnee = calculerJoursCalendairesParAnnee(dateDebut, dateFin);
+        Map<Integer, Integer> joursParAnnee = calculerJoursOuvresParAnnee(dateDebut, dateFin);
         int total = joursParAnnee.values().stream().mapToInt(Integer::intValue).sum();
         if (total <= 0) throw new IllegalArgumentException("La période ne contient aucun jour ouvré.");
 
@@ -507,10 +507,10 @@ public class DemandeCongeService {
     }
 
     private int calculerJoursOuvres(LocalDate dateDebut, LocalDate dateFin) {
-        return jourFerieService.compterJoursCalendaires(dateDebut, dateFin);
+        return jourFerieService.compterJoursOuvres(dateDebut, dateFin);
     }
 
-    private Map<Integer, Integer> calculerJoursCalendairesParAnnee(LocalDate dateDebut, LocalDate dateFin) {
+    private Map<Integer, Integer> calculerJoursOuvresParAnnee(LocalDate dateDebut, LocalDate dateFin) {
         Map<Integer, Integer> result = new LinkedHashMap<>();
         for (int annee = dateDebut.getYear(); annee <= dateFin.getYear(); annee++) {
             LocalDate debutAnnee = LocalDate.of(annee, 1, 1);

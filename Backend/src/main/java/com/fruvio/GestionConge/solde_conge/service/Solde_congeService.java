@@ -198,10 +198,15 @@ public class Solde_congeService {
         if (Objects.equals(solde.getUtilisateurId(), acteurId))
             throw new AccessDeniedException("Vous ne pouvez pas ajuster votre propre solde.");
         int facteur = solde.getEmployeId() != null ? 2 : 1;
+        int ancienRestantStocke = solde.getEmployeId() != null
+                ? solde.getSoldeRestantEnDemiJournees()
+                : (solde.getSoldeRestant() == null ? 0 : solde.getSoldeRestant());
+        int joursDejaPris = solde.getEmployeId() != null
+                ? solde.getSoldePrisEnDemiJournees()
+                : (solde.getSoldePris() == null ? 0 : solde.getSoldePris());
+        int ancienRestant = ancienRestantStocke / facteur;
         if (solde.getEmployeId() != null) solde.setEnDemiJournees(true);
         int nouveauRestantStocke = Math.multiplyExact(nouveauNombreJoursRestants, facteur);
-        int ancienRestantStocke = solde.getSoldeRestant() != null ? solde.getSoldeRestant() : 0;
-        int joursDejaPris = solde.getSoldePris() != null ? solde.getSoldePris() : 0;
         solde.setSoldeAquis(joursDejaPris + nouveauRestantStocke);
         solde.setSoldeRestant(nouveauRestantStocke);
         solde.setDate_maj(new Timestamp(System.currentTimeMillis()));

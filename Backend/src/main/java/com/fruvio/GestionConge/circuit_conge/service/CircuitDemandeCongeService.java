@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.fruvio.GestionConge.circuit_conge.entity.CircuitDemandeConge;
 import com.fruvio.GestionConge.circuit_conge.repository.CircuitDemandeCongeRepository;
+import com.fruvio.GestionConge.confirmation_reliquat.entity.ConfirmationReliquat;
 import com.fruvio.GestionConge.confirmation_reliquat.repository.ConfirmationReliquatRepository;
 import com.fruvio.GestionConge.demande_conge.entity.DemandeConge;
 import com.fruvio.GestionConge.demande_conge.service.DemandeCongeService;

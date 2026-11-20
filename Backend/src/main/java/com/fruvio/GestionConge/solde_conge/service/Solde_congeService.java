@@ -1,6 +1,7 @@
 package com.fruvio.GestionConge.solde_conge.service;
 
 import java.sql.Timestamp;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -65,7 +66,8 @@ public class Solde_congeService {
         exigerRoles(currentUser, Role.ADMIN, Role.ADMINISTRATION_PERSONNEL);
         employeRepository.findById(employeId)
                 .orElseThrow(() -> new IllegalArgumentException("Employé introuvable."));
-        return filtrerSoldesAvecTypeExistant(soldeCongeRepository.findByEmployeId(employeId));
+        return filtrerSoldesAvecTypeExistant(soldeCongeRepository.findByEmployeId(employeId)).stream()
+                .peek(Solde_conge::exposerSoldesEmployeEnJours).toList();
     }
 
     @Transactional
@@ -88,6 +90,56 @@ public class Solde_congeService {
         solde.setSoldeRestant(joursAcquis);
         solde.setDate_maj(new Timestamp(System.currentTimeMillis()));
         return soldeCongeRepository.save(solde);
+    }
+
+    /**
+     * Calcule automatiquement le droit annuel légal : 2,5 jours par mois complet de service effectif.
+     * Les colonnes entières des soldes employés sont stockées en demi-journées (5 unités par mois).
+     * Les périodes déjà enregistrées ne sont jamais écrasées.
+     */
+    @Transactional
+    public Solde_conge calculerSoldeAnnuelEmploye(Long employeId, Long typeCongeId, int periode, Utilisateur acteur) {
+        exigerRoles(acteur, Role.ADMIN, Role.ADMINISTRATION_PERSONNEL);
+        Employe employe = employeRepository.findById(employeId).filter(Employe::isActif)
+                .orElseThrow(() -> new IllegalArgumentException("Employé actif introuvable."));
+        if (employe.getDateEmbauche() == null)
+            throw new IllegalStateException("La date d'embauche doit être renseignée pour calculer les droits.");
+        Type_conge type = typeCongeRepository.findById(typeCongeId).filter(t -> Boolean.TRUE.equals(t.getActif()))
+                .orElseThrow(() -> new IllegalArgumentException("Type de congé actif introuvable."));
+        String code = type.getCode() == null ? "" : type.getCode().toUpperCase();
+        String libelle = type.getLibelle() == null ? "" : type.getLibelle().toUpperCase();
+        if (!code.contains("ANNUEL") && !libelle.contains("ANNUEL"))
+            throw new IllegalArgumentException("Le calcul légal automatique s'applique uniquement au congé annuel.");
+        var existing = soldeCongeRepository.findByEmployeIdAndTypeCongeIdAndPeriode(employeId, typeCongeId, periode);
+        if (existing.isPresent()) {
+            Solde_conge saved = existing.get();
+            saved.exposerSoldesEmployeEnJours();
+            return saved;
+        }
+        LocalDate debutExercice = LocalDate.of(periode, 1, 1);
+        LocalDate finExercice = LocalDate.of(periode, 12, 31);
+        LocalDate limite = LocalDate.now().isBefore(finExercice) ? LocalDate.now() : finExercice;
+        LocalDate prochaineEcheance = employe.getDateEmbauche().isAfter(debutExercice)
+                ? employe.getDateEmbauche().plusMonths(1)
+                : debutExercice.plusMonths(1);
+        if (employe.getDateEmbauche().isAfter(limite)) prochaineEcheance = limite.plusDays(1);
+        int moisComplets = 0;
+        while (!prochaineEcheance.isAfter(limite)) {
+            if (!prochaineEcheance.isBefore(debutExercice)) moisComplets++;
+            prochaineEcheance = prochaineEcheance.plusMonths(1);
+        }
+        int acquisDemiJournees = moisComplets * 5;
+        Solde_conge solde = new Solde_conge();
+        solde.setEmployeId(employeId);
+        solde.setTypeCongeId(typeCongeId);
+        solde.setPeriode(periode);
+        solde.setSoldeAquis(acquisDemiJournees);
+        solde.setSoldePris(0);
+        solde.setSoldeRestant(acquisDemiJournees);
+        solde.setDate_maj(new Timestamp(System.currentTimeMillis()));
+        Solde_conge saved = soldeCongeRepository.save(solde);
+        saved.exposerSoldesEmployeEnJours();
+        return saved;
     }
 
     public List<Solde_conge> getAllSoldes(Utilisateur currentUser) {

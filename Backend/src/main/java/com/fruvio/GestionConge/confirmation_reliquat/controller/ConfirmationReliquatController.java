@@ -36,6 +36,17 @@ public class ConfirmationReliquatController {
             @Size(max = 500) String justificatif,
             @Size(max = 1500) String observation) {}
 
+    @PostMapping("/dossier/{dossierId}/confirmer-automatiquement")
+    @ResponseStatus(HttpStatus.CREATED)
+    @PreAuthorize("hasAnyRole('ADMIN', 'ADMINISTRATION_PERSONNEL')")
+    public ConfirmationReliquat confirmerAutomatiquement(@PathVariable Long dossierId,
+            @RequestBody(required = false) ObservationRequest body) {
+        return service.confirmerAutomatiquement(dossierId,
+                body == null ? null : body.observation(), currentUser());
+    }
+
+    public record ObservationRequest(@Size(max = 1500) String observation) {}
+
     @PostMapping("/dossier/{dossierId}/confirmer")
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("hasAnyRole('ADMIN', 'ADMINISTRATION_PERSONNEL')")

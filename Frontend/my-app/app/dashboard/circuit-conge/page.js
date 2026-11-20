@@ -13,35 +13,29 @@ export default function CircuitCongePage() {
     authFetch(API+"/circuit-conge/assistant/mes-dossiers").then(r=>r.ok?r.json():[])
   ]);setTypes(t);setDossiers(d);};
   useEffect(()=>{let actif=true;Promise.resolve().then(()=>load()).catch(()=>{if(actif)toast("Impossible de charger les données.","error");});return()=>{actif=false;};},[toast]);
-  useEffect(()=>{
+  const lookupEmploye=async()=>{
     const code=matricule.trim();
     if(!code || !/^[0-9]+$/.test(code)){
       setEmploye(null);
       setForm(v=>({...v,employeId:""}));
-      setLookupBusy(false);
+      toast("Saisissez un matricule composé uniquement de chiffres.","warning");
       return;
     }
-    let cancelled=false;
-    const timer=setTimeout(async()=>{
-      setLookupBusy(true);
-      setEmploye(null);
-      setForm(v=>({...v,employeId:""}));
-      try{
-        const r=await authFetch(API+"/employes/recherche-matricule?matricule="+encodeURIComponent(code));
-        const d=await r.json();
-        if(!r.ok)throw new Error(d.message||"Matricule introuvable");
-        if(!cancelled){
-          setEmploye(d);
-          setForm(v=>({...v,employeId:String(d.id)}));
-        }
-      }catch(error){
-        if(!cancelled)toast(error.message,"error");
-      }finally{
-        if(!cancelled)setLookupBusy(false);
-      }
-    },450);
-    return()=>{cancelled=true;clearTimeout(timer);};
-  },[matricule,toast]);
+    setLookupBusy(true);
+    setEmploye(null);
+    setForm(v=>({...v,employeId:""}));
+    try{
+      const r=await authFetch(API+"/employes/recherche-matricule?matricule="+encodeURIComponent(code));
+      const d=await r.json();
+      if(!r.ok)throw new Error(d.message||"Matricule introuvable");
+      setEmploye(d);
+      setForm(v=>({...v,employeId:String(d.id)}));
+    }catch(error){
+      toast(error.message,"error");
+    }finally{
+      setLookupBusy(false);
+    }
+  };
   const uploadScan=async(id,file)=>{
     const body=new FormData();
     body.append("fichier",file);
@@ -116,11 +110,16 @@ export default function CircuitCongePage() {
             <h3 className="font-semibold">Identification du collaborateur</h3>
           </div>
           <div className="grid gap-4 rounded-xl border border-base-300 p-4 md:grid-cols-3">
-            <label className="form-control">
-              <span className="mb-2 text-sm font-medium">Matricule exact <span className="text-error">*</span></span>
-              <input className="input input-bordered w-full font-mono tracking-wide" value={matricule} onChange={e=>{setMatricule(e.target.value.replace(/[^0-9]/g,""));setEmploye(null);setForm(v=>({...v,employeId:""}));}} placeholder="Ex. 2026100" inputMode="numeric" pattern="[0-9]+" required autoComplete="off"/>
-              <span className="mt-1.5 text-xs text-base-content/55">{lookupBusy?"Recherche du collaborateur…":"La recherche démarre automatiquement après la saisie du matricule."}</span>
-            </label>
+            <div className="flex items-end gap-2">
+              <label className="form-control min-w-0 flex-1">
+                <span className="mb-2 text-sm font-medium">Matricule exact <span className="text-error">*</span></span>
+                <input className="input input-bordered w-full font-mono tracking-wide" value={matricule} onChange={e=>{setMatricule(e.target.value.replace(/[^0-9]/g,""));setEmploye(null);setForm(v=>({...v,employeId:""}));}} placeholder="Ex. 2026100" inputMode="numeric" pattern="[0-9]+" required autoComplete="off"/>
+                <span className="mt-1.5 text-xs text-base-content/55">Saisissez le matricule puis cliquez sur Vérifier.</span>
+              </label>
+              <button type="button" className="btn btn-primary" onClick={lookupEmploye} disabled={lookupBusy||!matricule.trim()}>
+                {lookupBusy?"...":"Vérifier"}
+              </button>
+            </div>
             <div className="rounded-lg bg-base-200/70 p-3 md:col-span-2">
               {employe ? <>
                 <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-success"><span className="h-2 w-2 rounded-full bg-success"></span>Collaborateur identifié</div>

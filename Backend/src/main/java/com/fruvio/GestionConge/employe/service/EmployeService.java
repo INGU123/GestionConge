@@ -6,13 +6,22 @@ import org.springframework.transaction.annotation.Transactional;
 import com.fruvio.GestionConge.employe.dto.EmployeLookupResponse;
 import com.fruvio.GestionConge.employe.entity.Employe;
 import com.fruvio.GestionConge.employe.repository.EmployeRepository;
+import com.fruvio.GestionConge.service_conge.entity.Services;
+import com.fruvio.GestionConge.service_conge.repository.Service_congeRepository;
+import com.fruvio.GestionConge.departement.entity.Departement;
+import com.fruvio.GestionConge.departement.repository.DepartementRepository;
 
 @Service
 public class EmployeService {
     private final EmployeRepository employes;
+    private final Service_congeRepository services;
+    private final DepartementRepository departements;
 
-    public EmployeService(EmployeRepository employes) {
+    public EmployeService(EmployeRepository employes, Service_congeRepository services,
+            DepartementRepository departements) {
         this.employes = employes;
+        this.services = services;
+        this.departements = departements;
     }
 
     @Transactional(readOnly = true)
@@ -21,7 +30,13 @@ public class EmployeService {
         Employe employe = employes.findByMatricule(matricule)
                 .filter(Employe::isActif)
                 .orElseThrow(() -> new IllegalArgumentException("Aucun employé actif trouvé pour ce matricule."));
-        return EmployeLookupResponse.depuis(employe);
+        Services service = services.findById(employe.getServiceId())
+                .orElseThrow(() -> new IllegalStateException("Le service associé à cet employé est introuvable."));
+        if (service.getDepartementId() == null)
+            throw new IllegalStateException("Le service de cet employé n'est associé à aucun département.");
+        Departement departement = departements.findById(service.getDepartementId())
+                .orElseThrow(() -> new IllegalStateException("Le département associé à cet employé est introuvable."));
+        return EmployeLookupResponse.depuis(employe, service.getNom(), departement.getId(), departement.getNom());
     }
 
     private String normaliserMatricule(String value) {

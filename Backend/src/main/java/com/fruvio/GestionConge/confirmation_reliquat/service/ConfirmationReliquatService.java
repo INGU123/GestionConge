@@ -148,7 +148,14 @@ public class ConfirmationReliquatService {
         Solde_conge soldeReference = soldes.findByEmployeIdAndTypeCongeIdAndPeriode(
                 employe.getId(), dossier.getTypeCongeId(), anneeReference)
                 .orElseThrow(() -> new IllegalStateException("Le solde de référence n'a pas pu être calculé."));
-        int jours = disponible(soldeReference);
+        int dejaReserve = confirmations.findByEmployeIdOrderByDateConfirmationDesc(employe.getId()).stream()
+                .filter(c -> !c.getCircuitDemandeCongeId().equals(dossier.getId()))
+                .filter(c -> extraireAnneeReference(c.getPeriodeReference()) == anneeReference)
+                .filter(c -> circuits.findById(c.getCircuitDemandeCongeId())
+                        .map(x -> List.of("RELIQUAT_RETOURNE", "CHEF_EN_ATTENTE", "DIRECTEUR_EN_ATTENTE").contains(x.getStatut()))
+                        .orElse(false))
+                .mapToInt(ConfirmationReliquat::getNombreJoursConfirme).sum();
+        int jours = Math.max(0, disponible(soldeReference) - dejaReserve);
         String periode = "Exercice " + anneeReference;
         String reference = "AUTO-RH-" + dossierId + "-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
 

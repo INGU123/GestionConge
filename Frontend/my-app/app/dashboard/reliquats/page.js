@@ -110,12 +110,23 @@ export default function ReliquatsPage() {
     try {
       const value = values[id] || {};
       const isEmployee = Boolean(dossier.employeId);
-      const endpoint = isEmployee
+      const automaticAnnual = isEmployee && isAnnualType(dossier);
+      const endpoint = automaticAnnual
         ? API + "/reliquats/dossier/" + id + "/confirmer-automatiquement"
-        : API + "/circuit-conge/" + id + "/reliquat";
-      const body = isEmployee
+        : isEmployee
+          ? API + "/reliquats/dossier/" + id + "/confirmer"
+          : API + "/circuit-conge/" + id + "/reliquat";
+      const body = automaticAnnual
         ? { observation: value.observation?.trim() || "" }
-        : { reliquatJours: Number(value.days), commentaire: value.observation?.trim() || "" };
+        : isEmployee
+          ? {
+              nombreJoursConfirme: Number(value.days),
+              periodeReference: value.period?.trim(),
+              referenceConfirmation: value.reference?.trim(),
+              justificatif: value.justificatif?.trim() || "",
+              observation: value.observation?.trim() || ""
+            }
+          : { reliquatJours: Number(value.days), commentaire: value.observation?.trim() || "" };
       const response = await authFetch(endpoint, {
         method: "POST",
         body: JSON.stringify(body)
@@ -136,14 +147,14 @@ export default function ReliquatsPage() {
       <header>
         <h1 className="text-2xl font-bold">Administration du personnel — Vérification des reliquats</h1>
         <p className="text-sm text-slate-500">
-          Vérifiez les droits, puis enregistrez une confirmation traçable du reliquat.
+          Les droits annuels et le reliquat sont calculés automatiquement. Les autres types conservent leur validation spécifique.
         </p>
       </header>
 
       {rows.map(dossier => {
         const value = values[dossier.id] || {};
         const isEmployee = Boolean(dossier.employeId);
-
+        const automaticAnnual = isEmployee && isAnnualType(dossier);
 
         return (
           <article key={dossier.id} className="card bg-base-100 border p-5 space-y-3">
@@ -168,6 +179,37 @@ export default function ReliquatsPage() {
                 : <span className="text-slate-700">Vérifiez le reliquat historique associé à ce dossier.</span>}
             </div>
 
+            {!automaticAnnual && (
+              <div className="grid md:grid-cols-2 gap-3">
+                <label className="form-control">
+                  <span className="label-text">Reliquat confirmé (jours)</span>
+                  <input type="number" min="0" className="input input-bordered"
+                    value={value.days ?? ""}
+                    onChange={event => update(dossier.id, "days", event.target.value)} />
+                </label>
+                {isEmployee && <>
+                  <label className="form-control">
+                    <span className="label-text">Période de référence</span>
+                    <input className="input input-bordered" placeholder="Ex. 2025"
+                      value={value.period ?? ""}
+                      onChange={event => update(dossier.id, "period", event.target.value)} />
+                  </label>
+                  <label className="form-control">
+                    <span className="label-text">Référence de confirmation RH</span>
+                    <input className="input input-bordered"
+                      value={value.reference ?? ""}
+                      onChange={event => update(dossier.id, "reference", event.target.value)} />
+                  </label>
+                  <label className="form-control">
+                    <span className="label-text">Justificatif (facultatif)</span>
+                    <input className="input input-bordered"
+                      value={value.justificatif ?? ""}
+                      onChange={event => update(dossier.id, "justificatif", event.target.value)} />
+                  </label>
+                </>}
+              </div>
+            )}
+
             <div className="grid md:grid-cols-2 gap-3">
               <label className="form-control md:col-span-2">
                 <span className="label-text">Observation</span>
@@ -179,7 +221,7 @@ export default function ReliquatsPage() {
 
             <button
               className="btn btn-primary w-fit"
-              disabled={busy === dossier.id}
+              disabled={busy === dossier.id || (!automaticAnnual && (value.days == null || value.days === "" || (isEmployee && (!value.period?.trim() || !value.reference?.trim()))))}
               onClick={() => confirm(dossier)}
             >
               {busy === dossier.id ? "Enregistrement…" : "Valider et transmettre"}

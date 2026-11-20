@@ -53,6 +53,13 @@ export default function ReliquatsPage() {
     return type?.libelle || dossier.typeConge?.libelle || type?.code || "Type de congé";
   };
 
+  const isAnnualType = dossier => {
+    const typeId = dossier.typeCongeId ?? dossier.typeConge?.id;
+    const type = typesConge.find(item => String(item.id) === String(typeId));
+    return `${type?.code || ""} ${type?.libelle || dossier.typeConge?.libelle || ""}`
+      .toLowerCase().includes("annuel");
+  };
+
   const downloadScan = async id => {
     try {
       const response = await authFetch(API + "/circuit-conge/" + id + "/piece-jointe");
@@ -86,7 +93,7 @@ export default function ReliquatsPage() {
 
   const saveBalance = async (dossier, year) => {
     const key = dossier.id + "_" + year;
-    const isAnnual = getTypeLabel(dossier).toLowerCase().includes("annuel");
+    const isAnnual = isAnnualType(dossier);
     const days = balanceValues[key];
     if (!isAnnual && (days == null || days === "" || Number(days) < 0)) {
       toast("Saisissez le nombre de jours acquis validé par les RH.", "warning");
@@ -211,7 +218,7 @@ export default function ReliquatsPage() {
                 const key = dossier.id + "_" + year;
                 return (
                   <div key={year} className="flex flex-wrap items-end gap-2 border-t pt-2">
-                    {getTypeLabel(dossier).toLowerCase().includes("annuel") ? (
+                    {isAnnualType(dossier) ? (
                       <p className="text-sm text-slate-600">
                         Droit annuel calculé automatiquement depuis la date d'embauche pour l'exercice {year}.
                       </p>
@@ -224,10 +231,10 @@ export default function ReliquatsPage() {
                       </label>
                     )}
                     <button type="button" className="btn btn-sm btn-outline"
-                      disabled={busy === key || (!getTypeLabel(dossier).toLowerCase().includes("annuel")
+                      disabled={busy === key || (!isAnnualType(dossier)
                         && (balanceValues[key] == null || balanceValues[key] === ""))}
                       onClick={() => saveBalance(dossier, year)}>
-                      {busy === key ? "Calcul…" : getTypeLabel(dossier).toLowerCase().includes("annuel")
+                      {busy === key ? "Calcul…" : isAnnualType(dossier)
                         ? "Calculer le solde automatiquement" : "Enregistrer le solde RH"}
                     </button>
                   </div>

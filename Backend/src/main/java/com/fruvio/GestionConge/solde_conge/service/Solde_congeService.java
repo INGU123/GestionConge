@@ -127,6 +127,12 @@ public class Solde_congeService {
             throw new IllegalArgumentException("Le calcul légal automatique s'applique uniquement au congé annuel.");
         LocalDate debutExercice = LocalDate.of(periode, 1, 1);
         LocalDate finExercice = LocalDate.of(periode, 12, 31);
+        var existing = soldeCongeRepository.findByEmployeIdAndTypeCongeIdAndPeriode(employeId, typeCongeId, periode);
+        if (existing.isPresent()) {
+            Solde_conge saved = existing.get();
+            saved.exposerSoldesEmployeEnJours();
+            return saved;
+        }
         if (demandeCongeRepository == null)
             throw new IllegalStateException("L'historique des congés est indisponible : calcul automatique refusé.");
         boolean historiqueValideSansSolde = demandeCongeRepository
@@ -137,12 +143,6 @@ public class Solde_congeService {
                         && !d.getDateDebut().isAfter(finExercice));
         if (historiqueValideSansSolde)
             throw new IllegalStateException("Des congés validés existent sur cet exercice sans solde RH correspondant. Vérification manuelle nécessaire pour éviter un reliquat erroné.");
-        var existing = soldeCongeRepository.findByEmployeIdAndTypeCongeIdAndPeriode(employeId, typeCongeId, periode);
-        if (existing.isPresent()) {
-            Solde_conge saved = existing.get();
-            saved.exposerSoldesEmployeEnJours();
-            return saved;
-        }
         LocalDate limite = LocalDate.now().isBefore(finExercice) ? LocalDate.now() : finExercice;
         int moisComplets = 0;
         int indexMois = 1;

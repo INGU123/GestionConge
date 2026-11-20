@@ -122,11 +122,35 @@ export default function DashboardLayout({
   const userRoleClean = user?.role
     ? user.role.toString().trim().toUpperCase()
     : "";
+  const userRoleKey = userRoleClean.replace(/^ROLE_/, "");
 
-  const userRoleDisplay =
-    userRoleClean.replace(/^ROLE_/, "") === "ASSISTANT_DIRECTION"
-      ? "Demandeur"
-      : user?.role || "";
+  const roleLabels: Record<string, string> = {
+    ADMIN: "Administrateur",
+    MANAGER: "Manager",
+    ASSISTANT_DIRECTION: "Demandeur",
+    ADMINISTRATION_PERSONNEL: "Administration du personnel",
+    CHEF_DEPARTEMENT: "Chef de département",
+    DIRECTEUR: "Directeur",
+    EMPLOYE: "Collaborateur",
+  };
+  const roleStyles: Record<string, string> = {
+    ADMIN: "border-blue-200 bg-blue-50 text-blue-700",
+    MANAGER: "border-violet-200 bg-violet-50 text-violet-700",
+    ASSISTANT_DIRECTION: "border-cyan-200 bg-cyan-50 text-cyan-700",
+    ADMINISTRATION_PERSONNEL: "border-emerald-200 bg-emerald-50 text-emerald-700",
+    CHEF_DEPARTEMENT: "border-amber-200 bg-amber-50 text-amber-800",
+    DIRECTEUR: "border-indigo-200 bg-indigo-50 text-indigo-700",
+    EMPLOYE: "border-slate-200 bg-slate-100 text-slate-700",
+  };
+  const userRoleDisplay = roleLabels[userRoleKey] || user?.role || "Utilisateur";
+  const userRoleStyle = roleStyles[userRoleKey] || "border-slate-200 bg-slate-100 text-slate-700";
+  const userInitials = [user?.prenom?.trim()?.[0], user?.nom?.trim()?.[0]]
+    .filter(Boolean)
+    .join("")
+    .toUpperCase() || "U";
+  const userDisplayName = user
+    ? [user.prenom, user.nom].filter(Boolean).join(" ").trim() || user.email || "Utilisateur"
+    : "Invité";
 
   const isAdmin =
     userRoleClean === "ADMIN" || userRoleClean === "ROLE_ADMIN";
@@ -355,32 +379,44 @@ export default function DashboardLayout({
             {/* NOTIFICATIONS */}
             {!isManager && <NotificationHeaderMenu />}
 
-            {/* UTILISATEUR */}
-            <div className="text-right">
-              <p
-                className="text-sm font-semibold"
-                style={{ color: "var(--header-text)" }}
+            {/* PROFIL UTILISATEUR — présentation homogène pour tous les rôles */}
+            <div
+              className="flex min-w-0 items-center gap-3 rounded-xl border px-3 py-2 transition-colors"
+              style={{
+                borderColor: "var(--primary-border)",
+                background: isNight ? "rgba(255,255,255,0.045)" : "rgba(248,250,252,0.9)",
+              }}
+            >
+              <div
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-bold tracking-wide"
+                style={{
+                  background: isNight ? "rgba(56,189,248,0.16)" : "#e0f2fe",
+                  color: isNight ? "#7dd3fc" : "#0369a1",
+                  boxShadow: "inset 0 0 0 1px rgba(14,165,233,0.16)",
+                }}
+                aria-hidden="true"
               >
-                {user
-                  ? user.prenom
-                    ? `${user.prenom} ${user.nom || ""}`
-                    : user.email
-                  : "Invité"}
-              </p>
+                {userInitials}
+              </div>
 
-              {user?.role && (
-                <span
-                  className={`badge badge-sm uppercase font-bold text-xs ${
-                    isAdmin
-                      ? "badge-primary text-white"
-                      : isManager
-                      ? "badge-secondary text-white"
-                      : "badge-ghost"
-                  }`}
+              <div className="flex min-w-0 flex-col items-start gap-1">
+                <p
+                  className="max-w-[190px] truncate text-sm font-semibold leading-5"
+                  style={{ color: "var(--header-text)" }}
+                  title={userDisplayName}
                 >
-                  {userRoleDisplay}
-                </span>
-              )}
+                  {userDisplayName}
+                </p>
+                {user?.role && (
+                  <span
+                    className={`inline-flex max-w-[210px] items-center gap-1.5 truncate rounded-full border px-2.5 py-0.5 text-[10px] font-bold tracking-wide ${userRoleStyle}`}
+                    title={userRoleDisplay}
+                  >
+                    <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-current opacity-80" />
+                    <span className="truncate">{userRoleDisplay}</span>
+                  </span>
+                )}
+              </div>
             </div>
 
             {/* DECONNEXION */}

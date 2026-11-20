@@ -409,7 +409,7 @@ export default function UtilisateursPage() {
         return (
           <span className="inline-flex items-center gap-1.5 rounded-md border border-cyan-200 bg-cyan-50 px-2.5 py-1 text-xs font-bold text-cyan-800 shadow-sm">
             <Send className="h-3.5 w-3.5" />
-            DEMANDEUR
+            Demandeur
           </span>
         );
       case "ADMINISTRATION_PERSONNEL":

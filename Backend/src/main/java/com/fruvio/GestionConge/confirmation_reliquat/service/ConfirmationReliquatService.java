@@ -44,6 +44,12 @@ public class ConfirmationReliquatService {
         this.soldeService = soldeService;
     }
 
+    public ConfirmationReliquatService(ConfirmationReliquatRepository confirmations,
+            CircuitDemandeCongeRepository circuits, EmployeRepository employes,
+            Notification_congeService notifications, Solde_congeRepository soldes) {
+        this(confirmations, circuits, employes, notifications, soldes, null);
+    }
+
     @Transactional
     public ConfirmationReliquat confirmer(Long dossierId, Integer jours, String periode,
             String reference, String justificatif, String observation, Utilisateur acteur) {
@@ -133,6 +139,9 @@ public class ConfirmationReliquatService {
                 .orElseThrow(() -> new IllegalArgumentException("Dossier introuvable."));
         if (dossier.getEmployeId() == null)
             throw new IllegalStateException("Ce dossier historique doit suivre son circuit habituel.");
+        if (!"RELIQUAT_EN_ATTENTE".equals(dossier.getStatut()))
+            throw new IllegalStateException("Ce dossier n'attend pas une confirmation de reliquat.");
+        if (soldeService == null) throw new IllegalStateException("Le calcul automatique des soldes n'est pas configuré.");
         Employe employe = employes.findById(dossier.getEmployeId()).filter(Employe::isActif)
                 .orElseThrow(() -> new IllegalStateException("Employé actif introuvable."));
 

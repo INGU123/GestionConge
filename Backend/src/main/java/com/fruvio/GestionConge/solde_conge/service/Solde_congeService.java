@@ -87,6 +87,7 @@ public class Solde_congeService {
         solde.setPeriode(periode);
         // Pour un employé du référentiel, 1 jour = 2 unités de demi-journée.
         int acquisDemiJournees = Math.multiplyExact(joursAcquis, 2);
+        solde.setEnDemiJournees(true);
         solde.setSoldeAquis(acquisDemiJournees);
         solde.setSoldePris(0);
         solde.setSoldeRestant(acquisDemiJournees);
@@ -134,6 +135,7 @@ public class Solde_congeService {
         solde.setEmployeId(employeId);
         solde.setTypeCongeId(typeCongeId);
         solde.setPeriode(periode);
+        solde.setEnDemiJournees(true);
         solde.setSoldeAquis(acquisDemiJournees);
         solde.setSoldePris(0);
         solde.setSoldeRestant(acquisDemiJournees);
@@ -196,6 +198,7 @@ public class Solde_congeService {
         if (Objects.equals(solde.getUtilisateurId(), acteurId))
             throw new AccessDeniedException("Vous ne pouvez pas ajuster votre propre solde.");
         int facteur = solde.getEmployeId() != null ? 2 : 1;
+        if (solde.getEmployeId() != null) solde.setEnDemiJournees(true);
         int nouveauRestantStocke = Math.multiplyExact(nouveauNombreJoursRestants, facteur);
         int ancienRestantStocke = solde.getSoldeRestant() != null ? solde.getSoldeRestant() : 0;
         int joursDejaPris = solde.getSoldePris() != null ? solde.getSoldePris() : 0;

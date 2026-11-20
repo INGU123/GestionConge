@@ -43,6 +43,20 @@ public class JourFerieService {
         return jourFerieRepository.findByAnneeAndActifTrueOrderByDateAsc(annee);
     }
 
+    /** Compte les jours calendaires inclusifs, en excluant les jours fériés légaux enregistrés. */
+    public int compterJoursCalendaires(LocalDate dateDebut, LocalDate dateFin) {
+        if (dateDebut == null || dateFin == null || dateFin.isBefore(dateDebut)) return 0;
+        List<JourFerie> joursFeries = jourFerieRepository.findByActifTrueAndDateBetweenOrderByDateAsc(dateDebut, dateFin);
+        Set<LocalDate> datesFeriees = joursFeries.stream().map(JourFerie::getDate).collect(Collectors.toSet());
+        int count = 0;
+        LocalDate current = dateDebut;
+        while (!current.isAfter(dateFin)) {
+            if (!datesFeriees.contains(current)) count++;
+            current = current.plusDays(1);
+        }
+        return count;
+    }
+
     public int compterJoursOuvres(LocalDate dateDebut, LocalDate dateFin) {
         if (dateDebut == null || dateFin == null || dateFin.isBefore(dateDebut)) {
             return 0;

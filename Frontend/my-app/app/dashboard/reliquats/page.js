@@ -13,6 +13,7 @@ export default function ReliquatsPage() {
   const [balances, setBalances] = useState({});
   const [values, setValues] = useState({});
   const [balanceValues, setBalanceValues] = useState({});
+  const [manualReviewYears, setManualReviewYears] = useState({});
   const [busy, setBusy] = useState(null);
   const toast = useToast();
 
@@ -21,9 +22,10 @@ export default function ReliquatsPage() {
     if (!response.ok) throw new Error("Chargement impossible");
     const data = await response.json();
     setRows(data);
-    setTypesConge(await getAllTypeConge());
+    const loadedTypes = await getAllTypeConge();
+    setTypesConge(loadedTypes);
 
-    const pairs = await Promise.all(data.map(async dossier => {
+    const fetchBalances = async () => Promise.all(data.map(async dossier => {
       const endpoint = dossier.employeId
         ? "/solde/employe/" + dossier.employeId
         : "/solde/utilisateur/" + dossier.utilisateurId;
@@ -37,6 +39,45 @@ export default function ReliquatsPage() {
       }
       return [dossier.id, await result.json()];
     }));
+
+    let pairs = await fetchBalances();
+    const existing = new Set(pairs.flatMap(([id, items]) =>
+      items.map(item => `${item.employeId}:${item.typeCongeId}:${item.periode}`)
+    ));
+    const targets = new Map();
+    for (const dossier of data) {
+      if (!dossier.employeId) continue;
+      const typeId = dossier.typeCongeId ?? dossier.typeConge?.id;
+      const type = loadedTypes.find(item => String(item.id) === String(typeId));
+      const annual = `${type?.code || ""} ${type?.libelle || dossier.typeConge?.libelle || ""}`
+        .toLowerCase().includes("annuel");
+      if (!annual) continue;
+      const firstYear = new Date(dossier.dateDebut).getFullYear() - 1;
+      const lastYear = new Date(dossier.dateFin).getFullYear();
+      for (let year = firstYear; year <= lastYear; year++) {
+        const key = `${dossier.employeId}:${typeId}:${year}`;
+        if (!existing.has(key)) targets.set(key, { employeId: dossier.employeId, typeId, year });
+      }
+    }
+    for (const target of targets.values()) {
+      const query = new URLSearchParams({
+        typeCongeId: String(target.typeId),
+        periode: String(target.year)
+      });
+      const result = await authFetch(
+        API + "/solde/employe/" + target.employeId + "/calculer-annuel?" + query.toString(),
+        { method: "POST" }
+      );
+      if (!result.ok) {
+        const detail = await result.text();
+        setManualReviewYears(previous => ({
+          ...previous,
+          [`${target.employeId}_${target.year}`]: true
+        }));
+        toast(detail || `Calcul automatique impossible pour l'exercice ${target.year}.`, "warning");
+      }
+    }
+    if (targets.size) pairs = await fetchBalances();
     setBalances(Object.fromEntries(pairs));
   }, []);
 
@@ -51,6 +92,13 @@ export default function ReliquatsPage() {
     const typeId = dossier.typeCongeId ?? dossier.typeConge?.id;
     const type = typesConge.find(item => String(item.id) === String(typeId));
     return type?.libelle || dossier.typeConge?.libelle || type?.code || "Type de congé";
+  };
+
+  const isAnnualType = dossier => {
+    const typeId = dossier.typeCongeId ?? dossier.typeConge?.id;
+    const type = typesConge.find(item => String(item.id) === String(typeId));
+    return `${type?.code || ""} ${type?.libelle || dossier.typeConge?.libelle || ""}`
+      .toLowerCase().includes("annuel");
   };
 
   const downloadScan = async id => {
@@ -86,8 +134,9 @@ export default function ReliquatsPage() {
 
   const saveBalance = async (dossier, year) => {
     const key = dossier.id + "_" + year;
+    const isAnnual = isAnnualType(dossier);
     const days = balanceValues[key];
-    if (days == null || days === "" || Number(days) < 0) {
+    if (!isAnnual && (days == null || days === "" || Number(days) < 0)) {
       toast("Saisissez le nombre de jours acquis validé par les RH.", "warning");
       return;
     }
@@ -95,11 +144,12 @@ export default function ReliquatsPage() {
     try {
       const query = new URLSearchParams({
         typeCongeId: String(dossier.typeCongeId),
-        periode: String(year),
-        joursAcquis: String(Number(days))
+        periode: String(year)
       });
+      const endpoint = isAnnual ? "calculer-annuel" : "initialiser";
+      if (!isAnnual) query.set("joursAcquis", String(Number(days)));
       const response = await authFetch(
-        API + "/solde/employe/" + dossier.employeId + "/initialiser?" + query.toString(),
+        API + "/solde/employe/" + dossier.employeId + "/" + endpoint + "?" + query.toString(),
         { method: "POST" }
       );
       const data = await response.json();
@@ -122,9 +172,16 @@ export default function ReliquatsPage() {
       const endpoint = isEmployee
         ? API + "/reliquats/dossier/" + id + "/confirmer"
         : API + "/circuit-conge/" + id + "/reliquat";
+      const employeeBalances = balances[id] || [];
+      const previousYear = new Date(dossier.dateDebut).getFullYear() - 1;
+      const previousBalance = employeeBalances.find(balance =>
+        String(balance.typeCongeId) === String(dossier.typeCongeId) &&
+        Number(balance.periode) === previousYear
+      );
+      const autoCarryover = Math.floor(Number(previousBalance?.soldeRestantJours ?? 0));
       const body = isEmployee
         ? {
-            nombreJoursConfirme: Number(value.days),
+            nombreJoursConfirme: Number(value.days ?? autoCarryover),
             periodeReference: value.period?.trim(),
             referenceConfirmation: value.reference?.trim(),
             justificatif: value.justificatif?.trim() || "",
@@ -163,8 +220,8 @@ export default function ReliquatsPage() {
         const value = values[dossier.id] || {};
         const isEmployee = Boolean(dossier.employeId);
         const requestYears = isEmployee ? Array.from(
-          { length: Math.max(1, new Date(dossier.dateFin).getFullYear() - new Date(dossier.dateDebut).getFullYear() + 1) },
-          (_, index) => new Date(dossier.dateDebut).getFullYear() + index
+          { length: Math.max(1, new Date(dossier.dateFin).getFullYear() - new Date(dossier.dateDebut).getFullYear() + 2) },
+          (_, index) => new Date(dossier.dateDebut).getFullYear() - 1 + index
         ) : [];
         const missingBalanceYears = requestYears.filter(
           year => !relevantBalances.some(balance => Number(balance.periode) === year)
@@ -191,8 +248,9 @@ export default function ReliquatsPage() {
               <b>Soldes enregistrés pour ce type de congé :</b>
               {relevantBalances.length ? relevantBalances.map(balance => (
                 <p key={balance.id}>
-                  Exercice {balance.periode} : acquis {balance.soldeAquis ?? 0} j
-                  · pris {balance.soldePris ?? 0} j · restant {balance.soldeRestant ?? 0} j
+                  Exercice {balance.periode} : acquis {balance.soldeAquisJours ?? balance.soldeAquis ?? 0} j
+                  · pris {balance.soldePrisJours ?? balance.soldePris ?? 0} j
+                  · restant {balance.soldeRestantJours ?? balance.soldeRestant ?? 0} j
                 </p>
               )) : (
                 <p className="text-amber-700">Aucun solde correspondant trouvé pour cet employé.</p>
@@ -201,16 +259,26 @@ export default function ReliquatsPage() {
                 const key = dossier.id + "_" + year;
                 return (
                   <div key={year} className="flex flex-wrap items-end gap-2 border-t pt-2">
-                    <label className="form-control">
-                      <span className="label-text">Jours acquis validés — exercice {year}</span>
-                      <input type="number" min="0" className="input input-bordered input-sm"
-                        value={balanceValues[key] ?? ""}
-                        onChange={event => setBalanceValues(previous => ({ ...previous, [key]: event.target.value }))} />
-                    </label>
+                    {isAnnualType(dossier) && !manualReviewYears[`${dossier.employeId}_${year}`] ? (
+                      <p className="text-sm text-slate-600">
+                        Droit annuel calculé automatiquement depuis la date d'embauche pour l'exercice {year}.
+                      </p>
+                    ) : (
+                      <label className="form-control">
+                        <span className="label-text">Jours acquis validés — exercice {year}</span>
+                        <input type="number" min="0" className="input input-bordered input-sm"
+                          value={balanceValues[key] ?? ""}
+                          onChange={event => setBalanceValues(previous => ({ ...previous, [key]: event.target.value }))} />
+                      </label>
+                    )}
                     <button type="button" className="btn btn-sm btn-outline"
-                      disabled={busy === key || balanceValues[key] == null || balanceValues[key] === ""}
+                      disabled={busy === key || (( !isAnnualType(dossier)
+                        || manualReviewYears[`${dossier.employeId}_${year}`])
+                        && (balanceValues[key] == null || balanceValues[key] === ""))}
                       onClick={() => saveBalance(dossier, year)}>
-                      {busy === key ? "Enregistrement…" : "Enregistrer le solde RH"}
+                      {busy === key ? "Calcul…" : isAnnualType(dossier)
+                        && !manualReviewYears[`${dossier.employeId}_${year}`]
+                        ? "Calculer le solde automatiquement" : "Enregistrer le solde RH"}
                     </button>
                   </div>
                 );
@@ -221,7 +289,10 @@ export default function ReliquatsPage() {
               <label className="form-control">
                 <span className="label-text">Reliquat confirmé (jours)</span>
                 <input type="number" min="0" className="input input-bordered"
-                  value={value.days ?? ""}
+                  value={value.days ?? (isEmployee ? String(Math.floor(Number(
+                    relevantBalances.find(balance => Number(balance.periode) === new Date(dossier.dateDebut).getFullYear() - 1)
+                      ?.soldeRestantJours ?? 0
+                  ))) : "")}
                   onChange={event => update(dossier.id, "days", event.target.value)} />
               </label>
               {isEmployee && <>

@@ -118,9 +118,8 @@ public class ConfirmationReliquatService {
     }
 
     private int disponible(Solde_conge solde) {
-        int acquis = solde.getSoldeAquis() == null ? 0 : solde.getSoldeAquis();
-        int pris = solde.getSoldePris() == null ? 0 : solde.getSoldePris();
-        return Math.max(0, acquis - pris);
+        return Math.max(0, solde.getSoldeAquisEnDemiJournees()
+                - solde.getSoldePrisEnDemiJournees()) / 2;
     }
 
     private int extraireAnneeReference(String periode) {

@@ -1,6 +1,9 @@
 package com.fruvio.GestionConge.solde_conge.entity;
 
 import java.sql.Timestamp;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import jakarta.persistence.Transient;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -47,9 +50,50 @@ public class Solde_conge {
     @Column(name = "solde_restant")
     private Integer soldeRestant = 0;
 
+    // False pour les anciennes lignes (stockées en jours), true pour les lignes normalisées en demi-journées.
+    @Builder.Default
+    @Column(name = "en_demi_journees", nullable = false, columnDefinition = "boolean default false")
+    private boolean enDemiJournees = false;
+
     private int periode;
 
     private Timestamp date_maj;
+
+    // Pour les soldes du référentiel employé, les colonnes entières stockent des demi-journées.
+    // Les soldes historiques liés aux comptes utilisateurs restent exprimés en jours entiers.
+    @Transient
+    private BigDecimal soldeAquisJours;
+
+    @Transient
+    private BigDecimal soldePrisJours;
+
+    @Transient
+    private BigDecimal soldeRestantJours;
+
+    public void exposerSoldesEmployeEnJours() {
+        int facteur = enDemiJournees ? 2 : 1;
+        this.soldeAquisJours = BigDecimal.valueOf(soldeAquis == null ? 0 : soldeAquis)
+                .divide(BigDecimal.valueOf(facteur), 1, RoundingMode.UNNECESSARY);
+        this.soldePrisJours = BigDecimal.valueOf(soldePris == null ? 0 : soldePris)
+                .divide(BigDecimal.valueOf(facteur), 1, RoundingMode.UNNECESSARY);
+        this.soldeRestantJours = BigDecimal.valueOf(soldeRestant == null ? 0 : soldeRestant)
+                .divide(BigDecimal.valueOf(facteur), 1, RoundingMode.UNNECESSARY);
+    }
+
+    public int getSoldeAquisEnDemiJournees() {
+        int valeur = soldeAquis == null ? 0 : soldeAquis;
+        return enDemiJournees ? valeur : Math.multiplyExact(valeur, 2);
+    }
+
+    public int getSoldePrisEnDemiJournees() {
+        int valeur = soldePris == null ? 0 : soldePris;
+        return enDemiJournees ? valeur : Math.multiplyExact(valeur, 2);
+    }
+
+    public int getSoldeRestantEnDemiJournees() {
+        int valeur = soldeRestant == null ? 0 : soldeRestant;
+        return enDemiJournees ? valeur : Math.multiplyExact(valeur, 2);
+    }
 
     // Alias pour compatibilité
     public Integer getSoldeAcquis() {

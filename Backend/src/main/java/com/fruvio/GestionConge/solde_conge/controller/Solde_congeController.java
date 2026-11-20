@@ -44,7 +44,16 @@ public class Solde_congeController {
         return ResponseEntity.ok().build();
     }
 
-    // Saisie explicite d'un solde employé : aucun quota SPAT n'est calculé automatiquement.
+    // Calcul automatique du droit annuel légal à partir de la date d'embauche.
+    @PreAuthorize("hasAnyRole('ADMIN', 'ADMINISTRATION_PERSONNEL')")
+    @PostMapping("/employe/{employeId}/calculer-annuel")
+    public ResponseEntity<Solde_conge> calculerSoldeAnnuelEmploye(@PathVariable Long employeId,
+            @RequestParam Long typeCongeId, @RequestParam int periode) {
+        return ResponseEntity.ok(soldeCongeService.calculerSoldeAnnuelEmploye(
+                employeId, typeCongeId, periode, getCurrentAuthenticatedUser()));
+    }
+
+    // Saisie manuelle conservée pour les types de congé non annuels et les corrections RH.
     @PreAuthorize("hasAnyRole('ADMIN', 'ADMINISTRATION_PERSONNEL')")
     @PostMapping("/employe/{employeId}/initialiser")
     public ResponseEntity<Solde_conge> enregistrerSoldeEmploye(@PathVariable Long employeId,

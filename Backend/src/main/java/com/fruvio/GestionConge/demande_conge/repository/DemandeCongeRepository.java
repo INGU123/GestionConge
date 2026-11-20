@@ -20,6 +20,8 @@ public interface DemandeCongeRepository extends JpaRepository<DemandeConge, Long
     java.util.Optional<DemandeConge> findByIdForUpdate(@Param("id") Long id);
     List<DemandeConge> findByUtilisateurId(Long utilisateurId);
 
+    List<DemandeConge> findByEmployeIdAndTypeCongeId(Long employeId, Long typeCongeId);
+
     boolean existsByUtilisateurId(Long utilisateurId);
 
     boolean existsByValideePar(Long valideePar);

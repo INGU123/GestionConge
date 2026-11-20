@@ -1,5 +1,7 @@
 package com.fruvio.GestionConge.employe.dto;
 
+import java.time.LocalDate;
+
 import com.fruvio.GestionConge.employe.entity.Employe;
 
 public record EmployeLookupResponse(
@@ -11,10 +13,11 @@ public record EmployeLookupResponse(
         Long serviceId,
         String serviceNom,
         Long departementId,
-        String departementNom
+        String departementNom,
+        LocalDate dateEmbauche
 ) {
     public static EmployeLookupResponse depuis(Employe e, String serviceNom, Long departementId, String departementNom) {
         return new EmployeLookupResponse(e.getId(), e.getMatricule(), e.getNom(),
-                e.getPrenom(), e.getFonction(), e.getServiceId(), serviceNom, departementId, departementNom);
+                e.getPrenom(), e.getFonction(), e.getServiceId(), serviceNom, departementId, departementNom, e.getDateEmbauche());
     }
 }

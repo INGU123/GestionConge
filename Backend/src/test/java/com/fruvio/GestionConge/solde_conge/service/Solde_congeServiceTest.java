@@ -4,6 +4,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.*;
 
 import java.util.List;
+import java.time.LocalDate;
+import java.util.Optional;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -12,6 +14,9 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.fruvio.GestionConge.solde_conge.entity.Solde_conge;
+import com.fruvio.GestionConge.employe.entity.Employe;
+import com.fruvio.GestionConge.employe.repository.EmployeRepository;
+import com.fruvio.GestionConge.demande_conge.repository.DemandeCongeRepository;
 import com.fruvio.GestionConge.solde_conge.repository.Solde_congeRepository;
 import com.fruvio.GestionConge.type_conge.entity.Type_conge;
 import com.fruvio.GestionConge.type_conge.repository.Type_congeRepository;
@@ -26,6 +31,8 @@ class Solde_congeServiceTest {
     @Mock Solde_congeRepository soldeCongeRepository;
     @Mock Type_congeRepository typeCongeRepository;
     @Mock UtilisateurRepository utilisateurRepository;
+    @Mock EmployeRepository employeRepository;
+    @Mock DemandeCongeRepository demandeCongeRepository;
     @Mock Historique_mouvementService historiqueMouvementService;
 
     @InjectMocks Solde_congeService service;

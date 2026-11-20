@@ -107,7 +107,7 @@ public class CircuitDemandeCongeService {
         if (debut == null || fin == null || fin.isBefore(debut)) throw new IllegalArgumentException("Période invalide.");
         if (typeId == null || !typesConge.findById(typeId).map(t -> Boolean.TRUE.equals(t.getActif())).orElse(false))
             throw new IllegalArgumentException("Type de congé indisponible.");
-        int nombre = joursFeries.compterJoursOuvres(debut, fin);
+        int nombre = joursFeries.compterJoursCalendaires(debut, fin);
         if (nombre <= 0) throw new IllegalArgumentException("La période ne contient aucun jour ouvré.");
         verifierChevauchementEmploye(employeId, debut, fin, null);
         CircuitDemandeConge saved = circuits.save(CircuitDemandeConge.builder()
@@ -148,7 +148,7 @@ public class CircuitDemandeCongeService {
             throw new IllegalStateException("Le département doit avoir un chef et un directeur actifs.");
         if (debut == null || fin == null || fin.isBefore(debut)) throw new IllegalArgumentException("Période de congé invalide.");
         if (typeId == null) throw new IllegalArgumentException("Le type de congé est obligatoire.");
-        int nombre = joursFeries.compterJoursOuvres(debut, fin);
+        int nombre = joursFeries.compterJoursCalendaires(debut, fin);
         if (nombre <= 0) throw new IllegalArgumentException("La période ne contient aucun jour ouvré.");
         verifierChevauchementCircuit(employeId, debut, fin, null);
         CircuitDemandeConge saved = circuits.save(CircuitDemandeConge.builder().utilisateurId(employeId).typeCongeId(typeId)
@@ -236,9 +236,9 @@ public class CircuitDemandeCongeService {
                     + (d.getReliquatJours() == null ? 0 : d.getReliquatJours()) + " jour(s) retournés par l'administration.");
         }
         int joursVerifies = d.getEmployeId() != null
-                ? joursFeries.compterJoursOuvres(d.getDateDebut(), d.getDateFin())
+                ? joursFeries.compterJoursCalendaires(d.getDateDebut(), d.getDateFin())
                 : demandesHistoriques.verifierEligibiliteWorkflow(d.getUtilisateurId(), d.getTypeCongeId(), d.getDateDebut(), d.getDateFin());
-        if (joursVerifies != d.getNombreJours()) throw new IllegalStateException("Le nombre de jours ouvrés a changé. Recréez le dossier après vérification.");
+        if (joursVerifies != d.getNombreJours()) throw new IllegalStateException("Le nombre de jours calendaires a changé. Recréez le dossier après vérification.");
         if (d.getEmployeId() == null) utilisateurActif(d.getUtilisateurId());
         else employes.findById(d.getEmployeId()).filter(Employe::isActif).orElseThrow(() -> new IllegalStateException("Employé inactif ou introuvable."));
         if (d.getDepartementId() == null)
@@ -332,13 +332,13 @@ public class CircuitDemandeCongeService {
             int annee = cursor.getYear();
             LocalDate finAnnee = LocalDate.of(annee, 12, 31);
             LocalDate finSegment = dossier.getDateFin().isBefore(finAnnee) ? dossier.getDateFin() : finAnnee;
-            int jours = joursFeries.compterJoursOuvres(cursor, finSegment);
+            int jours = joursFeries.compterJoursCalendaires(cursor, finSegment);
             if (jours > 0) joursParAnnee.put(annee, jours);
             cursor = finSegment.plusDays(1);
         }
         int total = joursParAnnee.values().stream().mapToInt(Integer::intValue).sum();
         if (total != dossier.getNombreJours())
-            throw new IllegalStateException("Le nombre de jours ouvrés ne correspond plus au dossier.");
+            throw new IllegalStateException("Le nombre de jours calendaires ne correspond plus au dossier.");
 
         Solde_conge soldeReference = soldes.findByEmployeIdAndTypeCongeIdAndPeriode(
                 dossier.getEmployeId(), dossier.getTypeCongeId(), anneeReference)

@@ -320,7 +320,7 @@ public class CircuitDemandeCongeService {
         ConfirmationReliquat confirmation = confirmations
                 .findByCircuitDemandeCongeIdOrderByDateConfirmationDesc(dossier.getId()).stream()
                 .findFirst().orElseThrow(() -> new IllegalStateException("Confirmation RH du reliquat introuvable."));
-        int reliquat = confirmation.getNombreJoursConfirme() == null ? 0 : confirmation.getNombreJoursConfirme();
+        int reliquat = Math.min(dossier.getNombreJours(), confirmation.getNombreJoursConfirme() == null ? 0 : confirmation.getNombreJoursConfirme());
         int anneeReference = extraireAnneeReference(confirmation.getPeriodeReference());
         if (anneeReference >= dossier.getDateDebut().getYear())
             throw new IllegalStateException("L'exercice du reliquat doit précéder celui du congé.");

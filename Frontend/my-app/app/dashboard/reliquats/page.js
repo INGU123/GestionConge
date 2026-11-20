@@ -86,8 +86,9 @@ export default function ReliquatsPage() {
 
   const saveBalance = async (dossier, year) => {
     const key = dossier.id + "_" + year;
+    const isAnnual = getTypeLabel(dossier).toLowerCase().includes("annuel");
     const days = balanceValues[key];
-    if (days == null || days === "" || Number(days) < 0) {
+    if (!isAnnual && (days == null || days === "" || Number(days) < 0)) {
       toast("Saisissez le nombre de jours acquis validé par les RH.", "warning");
       return;
     }
@@ -95,11 +96,12 @@ export default function ReliquatsPage() {
     try {
       const query = new URLSearchParams({
         typeCongeId: String(dossier.typeCongeId),
-        periode: String(year),
-        joursAcquis: String(Number(days))
+        periode: String(year)
       });
+      const endpoint = isAnnual ? "calculer-annuel" : "initialiser";
+      if (!isAnnual) query.set("joursAcquis", String(Number(days)));
       const response = await authFetch(
-        API + "/solde/employe/" + dossier.employeId + "/initialiser?" + query.toString(),
+        API + "/solde/employe/" + dossier.employeId + "/" + endpoint + "?" + query.toString(),
         { method: "POST" }
       );
       const data = await response.json();
@@ -122,9 +124,16 @@ export default function ReliquatsPage() {
       const endpoint = isEmployee
         ? API + "/reliquats/dossier/" + id + "/confirmer"
         : API + "/circuit-conge/" + id + "/reliquat";
+      const employeeBalances = balances[id] || [];
+      const previousYear = new Date(dossier.dateDebut).getFullYear() - 1;
+      const previousBalance = employeeBalances.find(balance =>
+        String(balance.typeCongeId) === String(dossier.typeCongeId) &&
+        Number(balance.periode) === previousYear
+      );
+      const autoCarryover = Math.floor(Number(previousBalance?.soldeRestantJours ?? 0));
       const body = isEmployee
         ? {
-            nombreJoursConfirme: Number(value.days),
+            nombreJoursConfirme: Number(value.days ?? autoCarryover),
             periodeReference: value.period?.trim(),
             referenceConfirmation: value.reference?.trim(),
             justificatif: value.justificatif?.trim() || "",
@@ -191,8 +200,9 @@ export default function ReliquatsPage() {
               <b>Soldes enregistrés pour ce type de congé :</b>
               {relevantBalances.length ? relevantBalances.map(balance => (
                 <p key={balance.id}>
-                  Exercice {balance.periode} : acquis {balance.soldeAquis ?? 0} j
-                  · pris {balance.soldePris ?? 0} j · restant {balance.soldeRestant ?? 0} j
+                  Exercice {balance.periode} : acquis {balance.soldeAquisJours ?? balance.soldeAquis ?? 0} j
+                  · pris {balance.soldePrisJours ?? balance.soldePris ?? 0} j
+                  · restant {balance.soldeRestantJours ?? balance.soldeRestant ?? 0} j
                 </p>
               )) : (
                 <p className="text-amber-700">Aucun solde correspondant trouvé pour cet employé.</p>
@@ -201,16 +211,24 @@ export default function ReliquatsPage() {
                 const key = dossier.id + "_" + year;
                 return (
                   <div key={year} className="flex flex-wrap items-end gap-2 border-t pt-2">
-                    <label className="form-control">
-                      <span className="label-text">Jours acquis validés — exercice {year}</span>
-                      <input type="number" min="0" className="input input-bordered input-sm"
-                        value={balanceValues[key] ?? ""}
-                        onChange={event => setBalanceValues(previous => ({ ...previous, [key]: event.target.value }))} />
-                    </label>
+                    {getTypeLabel(dossier).toLowerCase().includes("annuel") ? (
+                      <p className="text-sm text-slate-600">
+                        Droit annuel calculé automatiquement depuis la date d'embauche pour l'exercice {year}.
+                      </p>
+                    ) : (
+                      <label className="form-control">
+                        <span className="label-text">Jours acquis validés — exercice {year}</span>
+                        <input type="number" min="0" className="input input-bordered input-sm"
+                          value={balanceValues[key] ?? ""}
+                          onChange={event => setBalanceValues(previous => ({ ...previous, [key]: event.target.value }))} />
+                      </label>
+                    )}
                     <button type="button" className="btn btn-sm btn-outline"
-                      disabled={busy === key || balanceValues[key] == null || balanceValues[key] === ""}
+                      disabled={busy === key || (!getTypeLabel(dossier).toLowerCase().includes("annuel")
+                        && (balanceValues[key] == null || balanceValues[key] === ""))}
                       onClick={() => saveBalance(dossier, year)}>
-                      {busy === key ? "Enregistrement…" : "Enregistrer le solde RH"}
+                      {busy === key ? "Calcul…" : getTypeLabel(dossier).toLowerCase().includes("annuel")
+                        ? "Calculer le solde automatiquement" : "Enregistrer le solde RH"}
                     </button>
                   </div>
                 );
@@ -221,7 +239,10 @@ export default function ReliquatsPage() {
               <label className="form-control">
                 <span className="label-text">Reliquat confirmé (jours)</span>
                 <input type="number" min="0" className="input input-bordered"
-                  value={value.days ?? ""}
+                  value={value.days ?? (isEmployee ? String(Math.floor(Number(
+                    relevantBalances.find(balance => Number(balance.periode) === new Date(dossier.dateDebut).getFullYear() - 1)
+                      ?.soldeRestantJours ?? 0
+                  ))) : "")}
                   onChange={event => update(dossier.id, "days", event.target.value)} />
               </label>
               {isEmployee && <>

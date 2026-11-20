@@ -236,8 +236,8 @@ public class CircuitDemandeCongeService {
             int disponibleExercices = soldes.findByEmployeIdAndTypeCongeId(d.getEmployeId(), d.getTypeCongeId()).stream()
                     .filter(s -> s.getPeriode() >= d.getDateDebut().getYear()
                             && s.getPeriode() <= d.getDateFin().getYear())
-                    .mapToInt(s -> Math.max(0, (s.getSoldeAquis() == null ? 0 : s.getSoldeAquis())
-                            - (s.getSoldePris() == null ? 0 : s.getSoldePris())) / 2).sum();
+                    .mapToInt(s -> Math.max(0, s.getSoldeAquisEnDemiJournees()
+                            - s.getSoldePrisEnDemiJournees()) / 2).sum();
             if (reliquat + disponibleExercices < d.getNombreJours())
                 throw new IllegalStateException("Couverture insuffisante : " + reliquat + " j de reliquat + "
                         + disponibleExercices + " j disponibles, pour " + d.getNombreJours() + " j demandés.");
@@ -353,8 +353,8 @@ public class CircuitDemandeCongeService {
         Solde_conge soldeReference = soldes.findByEmployeIdAndTypeCongeIdAndPeriode(
                 dossier.getEmployeId(), dossier.getTypeCongeId(), anneeReference)
                 .orElseThrow(() -> new IllegalStateException("Solde RH de l'exercice de référence introuvable."));
-        int acquisReference = soldeReference.getSoldeAquis() == null ? 0 : soldeReference.getSoldeAquis();
-        int prisReference = soldeReference.getSoldePris() == null ? 0 : soldeReference.getSoldePris();
+        int acquisReference = soldeReference.getSoldeAquisEnDemiJournees();
+        int prisReference = soldeReference.getSoldePrisEnDemiJournees();
         if ((acquisReference - prisReference) / 2 < reliquat)
             throw new IllegalStateException("Le reliquat de l'exercice " + anneeReference + " n'est plus disponible.");
 
@@ -366,8 +366,8 @@ public class CircuitDemandeCongeService {
                     dossier.getEmployeId(), dossier.getTypeCongeId(), entry.getKey())
                     .orElseThrow(() -> new IllegalStateException("Aucun solde employé saisi pour l'exercice "
                             + entry.getKey() + "."));
-            int acquis = solde.getSoldeAquis() == null ? 0 : solde.getSoldeAquis();
-            int pris = solde.getSoldePris() == null ? 0 : solde.getSoldePris();
+            int acquis = solde.getSoldeAquisEnDemiJournees();
+            int pris = solde.getSoldePrisEnDemiJournees();
             int debit = Math.min(entry.getValue(), aDebiterSurExercicesConges);
             if ((acquis - pris) / 2 < debit)
                 throw new IllegalStateException("Solde insuffisant pour l'exercice " + entry.getKey()
@@ -380,6 +380,7 @@ public class CircuitDemandeCongeService {
             throw new IllegalStateException("Les soldes des exercices du congé ne couvrent pas le complément de "
                     + aDebiterSurExercicesConges + " jour(s).");
 
+        soldeReference.setEnDemiJournees(true);
         soldeReference.setSoldePris(prisReference + reliquat * 2);
         soldeReference.setSoldeRestant(Math.max(0, acquisReference - soldeReference.getSoldePris()));
         soldeReference.setDate_maj(new java.sql.Timestamp(System.currentTimeMillis()));
@@ -392,8 +393,9 @@ public class CircuitDemandeCongeService {
             int debit = entry.getValue();
             if (debit <= 0) continue;
             Solde_conge solde = soldesVerifies.get(entry.getKey());
-            int pris = solde.getSoldePris() == null ? 0 : solde.getSoldePris();
-            int acquis = solde.getSoldeAquis() == null ? 0 : solde.getSoldeAquis();
+            int pris = solde.getSoldePrisEnDemiJournees();
+            int acquis = solde.getSoldeAquisEnDemiJournees();
+            solde.setEnDemiJournees(true);
             solde.setSoldePris(pris + debit * 2);
             solde.setSoldeRestant(Math.max(0, acquis - solde.getSoldePris()));
             solde.setDate_maj(new java.sql.Timestamp(System.currentTimeMillis()));

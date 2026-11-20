@@ -85,9 +85,11 @@ public class Solde_congeService {
         solde.setEmployeId(employe.getId());
         solde.setTypeCongeId(type.getId());
         solde.setPeriode(periode);
-        solde.setSoldeAquis(joursAcquis);
+        // Pour un employé du référentiel, 1 jour = 2 unités de demi-journée.
+        int acquisDemiJournees = Math.multiplyExact(joursAcquis, 2);
+        solde.setSoldeAquis(acquisDemiJournees);
         solde.setSoldePris(0);
-        solde.setSoldeRestant(joursAcquis);
+        solde.setSoldeRestant(acquisDemiJournees);
         solde.setDate_maj(new Timestamp(System.currentTimeMillis()));
         return soldeCongeRepository.save(solde);
     }
@@ -193,13 +195,15 @@ public class Solde_congeService {
                 .orElseThrow(() -> new IllegalArgumentException("Solde introuvable"));
         if (Objects.equals(solde.getUtilisateurId(), acteurId))
             throw new AccessDeniedException("Vous ne pouvez pas ajuster votre propre solde.");
-        int ancienRestant = solde.getSoldeRestant() != null ? solde.getSoldeRestant() : 0;
+        int facteur = solde.getEmployeId() != null ? 2 : 1;
+        int nouveauRestantStocke = Math.multiplyExact(nouveauNombreJoursRestants, facteur);
+        int ancienRestantStocke = solde.getSoldeRestant() != null ? solde.getSoldeRestant() : 0;
         int joursDejaPris = solde.getSoldePris() != null ? solde.getSoldePris() : 0;
-        solde.setSoldeAquis(joursDejaPris + nouveauNombreJoursRestants);
-        solde.setSoldeRestant(nouveauNombreJoursRestants);
+        solde.setSoldeAquis(joursDejaPris + nouveauRestantStocke);
+        solde.setSoldeRestant(nouveauRestantStocke);
         solde.setDate_maj(new Timestamp(System.currentTimeMillis()));
         Solde_conge saved = soldeCongeRepository.save(solde);
-        int delta = Math.abs(nouveauNombreJoursRestants - ancienRestant);
+        int delta = Math.abs(nouveauRestantStocke - ancienRestantStocke) / facteur;
         String commentaire = "Ajustement manuel du solde : " + ancienRestant + " -> " + nouveauNombreJoursRestants
                 + " | Motif : " + motif.trim();
         if (solde.getEmployeId() != null)

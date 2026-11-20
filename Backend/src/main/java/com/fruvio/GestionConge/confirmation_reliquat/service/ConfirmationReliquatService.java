@@ -118,10 +118,8 @@ public class ConfirmationReliquatService {
     }
 
     private int disponible(Solde_conge solde) {
-        int acquisDemiJournees = solde.getSoldeAquis() == null ? 0 : solde.getSoldeAquis();
-        int prisDemiJournees = solde.getSoldePris() == null ? 0 : solde.getSoldePris();
-        // Les soldes employés sont enregistrés en demi-journées ; la demande reste en jours entiers.
-        return Math.max(0, acquisDemiJournees - prisDemiJournees) / 2;
+        return Math.max(0, solde.getSoldeAquisEnDemiJournees()
+                - solde.getSoldePrisEnDemiJournees()) / 2;
     }
 
     private int extraireAnneeReference(String periode) {

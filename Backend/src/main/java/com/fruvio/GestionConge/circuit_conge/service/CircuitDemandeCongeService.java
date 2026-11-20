@@ -61,6 +61,16 @@ public class CircuitDemandeCongeService {
         this.confirmations = confirmations;
     }
 
+    // Constructeur de compatibilité pour les appels et tests utilisant l'ancienne signature.
+    public CircuitDemandeCongeService(CircuitDemandeCongeRepository circuits, UtilisateurRepository utilisateurs,
+            EmployeRepository employes, Type_congeRepository typesConge, Service_congeRepository services,
+            DepartementRepository departements, JourFerieService joursFeries,
+            DemandeCongeService demandesHistoriques, Notification_congeService notifications,
+            Solde_congeRepository soldes, Historique_mouvementService mouvements) {
+        this(circuits, utilisateurs, employes, typesConge, services, departements, joursFeries,
+                demandesHistoriques, notifications, soldes, mouvements, null);
+    }
+
     // Constructeur de compatibilité pour les tests unitaires historiques.
     public CircuitDemandeCongeService(CircuitDemandeCongeRepository circuits, UtilisateurRepository utilisateurs,
             EmployeRepository employes, Type_congeRepository typesConge, Service_congeRepository services,

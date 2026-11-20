@@ -13,6 +13,10 @@ import {
   Calendar,
   Mail,
   ShieldCheck,
+  UserRound,
+  ClipboardCheck,
+  Network,
+  Send,
   X,
 } from "lucide-react";
 import { 
@@ -402,13 +406,33 @@ export default function UtilisateursPage() {
           </span>
         );
       case "ASSISTANT_DIRECTION":
-        return <span className="badge badge-info">DEMANDEUR</span>;
+        return (
+          <span className="inline-flex items-center gap-1.5 rounded-md border border-cyan-200 bg-cyan-50 px-2.5 py-1 text-xs font-bold text-cyan-800 shadow-sm">
+            <Send className="h-3.5 w-3.5" />
+            DEMANDEUR
+          </span>
+        );
       case "ADMINISTRATION_PERSONNEL":
-        return <span className="badge badge-secondary">ADMINISTRATION DU PERSONNEL</span>;
+        return (
+          <span className="inline-flex items-center gap-1.5 rounded-md border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-800 shadow-sm">
+            <ClipboardCheck className="h-3.5 w-3.5" />
+            ADMINISTRATION DU PERSONNEL
+          </span>
+        );
       case "CHEF_DEPARTEMENT":
-        return <span className="badge badge-secondary">CHEF DE DÉPARTEMENT</span>;
+        return (
+          <span className="inline-flex items-center gap-1.5 rounded-md border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs font-bold text-amber-800 shadow-sm">
+            <Network className="h-3.5 w-3.5" />
+            CHEF DE DÉPARTEMENT
+          </span>
+        );
       case "DIRECTEUR":
-        return <span className="badge badge-secondary">DIRECTEUR</span>;
+        return (
+          <span className="inline-flex items-center gap-1.5 rounded-md border border-violet-200 bg-violet-50 px-2.5 py-1 text-xs font-bold text-violet-800 shadow-sm">
+            <UserRound className="h-3.5 w-3.5" />
+            DIRECTEUR
+          </span>
+        );
       default:
         return null;
     }

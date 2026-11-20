@@ -172,8 +172,8 @@ export default function ReliquatsPage() {
         const value = values[dossier.id] || {};
         const isEmployee = Boolean(dossier.employeId);
         const requestYears = isEmployee ? Array.from(
-          { length: Math.max(1, new Date(dossier.dateFin).getFullYear() - new Date(dossier.dateDebut).getFullYear() + 1) },
-          (_, index) => new Date(dossier.dateDebut).getFullYear() + index
+          { length: Math.max(1, new Date(dossier.dateFin).getFullYear() - new Date(dossier.dateDebut).getFullYear() + 2) },
+          (_, index) => new Date(dossier.dateDebut).getFullYear() - 1 + index
         ) : [];
         const missingBalanceYears = requestYears.filter(
           year => !relevantBalances.some(balance => Number(balance.periode) === year)

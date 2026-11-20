@@ -10,7 +10,6 @@ const API = "http://localhost:8080";
 export default function ReliquatsPage() {
   const [rows, setRows] = useState([]);
   const [typesConge, setTypesConge] = useState([]);
-  const [balances, setBalances] = useState({});
   const [values, setValues] = useState({});
   const [busy, setBusy] = useState(null);
   const toast = useToast();
@@ -23,25 +22,6 @@ export default function ReliquatsPage() {
     const loadedTypes = await getAllTypeConge();
     setTypesConge(loadedTypes);
 
-    const fetchBalances = async () => Promise.all(data.map(async dossier => {
-      const endpoint = dossier.employeId
-        ? "/solde/employe/" + dossier.employeId
-        : "/solde/utilisateur/" + dossier.utilisateurId;
-      const result = await authFetch(API + endpoint);
-      if (!result.ok) {
-        const detail = await result.text();
-        throw new Error(
-          `Chargement du solde du dossier #${dossier.id} : HTTP ${result.status}` +
-          (detail ? ` — ${detail}` : "")
-        );
-      }
-      return [dossier.id, await result.json()];
-    }));
-
-    let pairs = await fetchBalances();
-    const existing = new Set(pairs.flatMap(([id, items]) =>
-      items.map(item => `${item.employeId}:${item.typeCongeId}:${item.periode}`)
-    ));
     const targets = new Map();
     for (const dossier of data) {
       if (!dossier.employeId) continue;
@@ -54,7 +34,7 @@ export default function ReliquatsPage() {
       const lastYear = new Date(dossier.dateFin).getFullYear();
       for (let year = firstYear; year <= lastYear; year++) {
         const key = `${dossier.employeId}:${typeId}:${year}`;
-        if (!existing.has(key)) targets.set(key, { employeId: dossier.employeId, typeId, year });
+        targets.set(key, { employeId: dossier.employeId, typeId, year });
       }
     }
     for (const target of targets.values()) {
@@ -71,8 +51,6 @@ export default function ReliquatsPage() {
         throw new Error(detail || `Calcul automatique impossible pour l’exercice ${target.year}.`);
       }
     }
-    if (targets.size) pairs = await fetchBalances();
-    setBalances(Object.fromEntries(pairs));
   }, []);
 
   useEffect(() => {
@@ -163,10 +141,6 @@ export default function ReliquatsPage() {
       </header>
 
       {rows.map(dossier => {
-        const employeeBalances = balances[dossier.id] || [];
-        const relevantBalances = employeeBalances.filter(
-          balance => String(balance.typeCongeId) === String(dossier.typeCongeId)
-        );
         const value = values[dossier.id] || {};
         const isEmployee = Boolean(dossier.employeId);
 

@@ -118,7 +118,7 @@ export default function CircuitCongePage() {
           <div className="grid gap-4 rounded-xl border border-base-300 p-4 md:grid-cols-3">
             <label className="form-control">
               <span className="mb-2 text-sm font-medium">Matricule exact <span className="text-error">*</span></span>
-              <input className="input input-bordered w-full font-mono tracking-wide" value={matricule} onChange={e=>{setMatricule(e.target.value.replace(/[^0-9]/g,""));setEmploye(null);}} placeholder="Ex. 2026100" inputMode="numeric" pattern="[0-9]+" required autoComplete="off"/>
+              <input className="input input-bordered w-full font-mono tracking-wide" value={matricule} onChange={e=>{setMatricule(e.target.value.replace(/[^0-9]/g,""));setEmploye(null);setForm(v=>({...v,employeId:""}));}} placeholder="Ex. 2026100" inputMode="numeric" pattern="[0-9]+" required autoComplete="off"/>
               <span className="mt-1.5 text-xs text-base-content/55">{lookupBusy?"Recherche du collaborateur…":"La recherche démarre automatiquement après la saisie du matricule."}</span>
             </label>
             <div className="rounded-lg bg-base-200/70 p-3 md:col-span-2">

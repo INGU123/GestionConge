@@ -12,6 +12,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.fruvio.GestionConge.circuit_conge.entity.CircuitDemandeConge;
 import com.fruvio.GestionConge.circuit_conge.repository.CircuitDemandeCongeRepository;
+import com.fruvio.GestionConge.confirmation_reliquat.entity.ConfirmationReliquat;
+import com.fruvio.GestionConge.confirmation_reliquat.repository.ConfirmationReliquatRepository;
 import com.fruvio.GestionConge.demande_conge.entity.DemandeConge;
 import com.fruvio.GestionConge.demande_conge.service.DemandeCongeService;
 import com.fruvio.GestionConge.employe.entity.Employe;
@@ -43,17 +45,20 @@ public class CircuitDemandeCongeService {
     private final Notification_congeService notifications;
     private final Solde_congeRepository soldes;
     private final Historique_mouvementService mouvements;
+    private final ConfirmationReliquatRepository confirmations;
 
     @Autowired
     public CircuitDemandeCongeService(CircuitDemandeCongeRepository circuits, UtilisateurRepository utilisateurs,
             EmployeRepository employes, Type_congeRepository typesConge, Service_congeRepository services,
             DepartementRepository departements, JourFerieService joursFeries,
             DemandeCongeService demandesHistoriques, Notification_congeService notifications,
-            Solde_congeRepository soldes, Historique_mouvementService mouvements) {
+            Solde_congeRepository soldes, Historique_mouvementService mouvements,
+            ConfirmationReliquatRepository confirmations) {
         this.circuits = circuits; this.utilisateurs = utilisateurs; this.employes = employes;
         this.typesConge = typesConge; this.services = services; this.departements = departements;
         this.joursFeries = joursFeries; this.demandesHistoriques = demandesHistoriques;
         this.notifications = notifications; this.soldes = soldes; this.mouvements = mouvements;
+        this.confirmations = confirmations;
     }
 
     // Constructeur de compatibilité pour les tests unitaires historiques.
@@ -62,7 +67,7 @@ public class CircuitDemandeCongeService {
             DepartementRepository departements, JourFerieService joursFeries,
             DemandeCongeService demandesHistoriques, Notification_congeService notifications) {
         this(circuits, utilisateurs, employes, typesConge, services, departements, joursFeries,
-                demandesHistoriques, notifications, null, null);
+                demandesHistoriques, notifications, null, null, null);
     }
 
     public CircuitDemandeCongeService(CircuitDemandeCongeRepository circuits, UtilisateurRepository utilisateurs,
@@ -71,7 +76,7 @@ public class CircuitDemandeCongeService {
         this.circuits = circuits; this.utilisateurs = utilisateurs; this.employes = null; this.typesConge = null;
         this.services = services; this.departements = departements; this.joursFeries = joursFeries;
         this.demandesHistoriques = demandesHistoriques; this.notifications = notifications;
-        this.soldes = null; this.mouvements = null;
+        this.soldes = null; this.mouvements = null; this.confirmations = null;
     }
 
     @Transactional
@@ -368,6 +373,16 @@ public class CircuitDemandeCongeService {
                 dossier.setUtilisateurNom(u.getNom()); dossier.setUtilisateurPrenom(u.getPrenom());
                 dossier.setUtilisateurMatricule(u.getMatricule());
             });
+        }
+        if (confirmations != null && dossier.getId() != null) {
+            confirmations.findByCircuitDemandeCongeIdOrderByDateConfirmationDesc(dossier.getId())
+                    .stream().findFirst().ifPresent(c -> {
+                        dossier.setReliquatPeriodeReference(c.getPeriodeReference());
+                        dossier.setReliquatReferenceConfirmation(c.getReferenceConfirmation());
+                        dossier.setReliquatJustificatif(c.getJustificatif());
+                        dossier.setReliquatObservation(c.getObservation());
+                        dossier.setReliquatDateConfirmation(c.getDateConfirmation());
+                    });
         }
         return dossier;
     }

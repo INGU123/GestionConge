@@ -220,9 +220,20 @@ public class CircuitDemandeCongeService {
         if (!"RELIQUAT_RETOURNE".equals(d.getStatut())) throw new IllegalStateException("Le reliquat doit d'abord être retourné.");
         if (d.getEmployeId() != null) verifierChevauchementEmploye(d.getEmployeId(), d.getDateDebut(), d.getDateFin(), d.getId());
         else verifierChevauchementCircuit(d.getUtilisateurId(), d.getDateDebut(), d.getDateFin(), d.getId());
-        if (d.getReliquatJours() == null || d.getReliquatJours() < d.getNombreJours())
+        if (d.getEmployeId() != null) {
+            int reliquat = d.getReliquatJours() == null ? 0 : d.getReliquatJours();
+            int disponibleExercices = soldes.findByEmployeIdAndTypeCongeId(d.getEmployeId(), d.getTypeCongeId()).stream()
+                    .filter(s -> s.getPeriode() >= d.getDateDebut().getYear()
+                            && s.getPeriode() <= d.getDateFin().getYear())
+                    .mapToInt(s -> Math.max(0, (s.getSoldeAquis() == null ? 0 : s.getSoldeAquis())
+                            - (s.getSoldePris() == null ? 0 : s.getSoldePris()))).sum();
+            if (reliquat + disponibleExercices < d.getNombreJours())
+                throw new IllegalStateException("Couverture insuffisante : " + reliquat + " j de reliquat + "
+                        + disponibleExercices + " j disponibles, pour " + d.getNombreJours() + " j demandés.");
+        } else if (d.getReliquatJours() == null || d.getReliquatJours() < d.getNombreJours()) {
             throw new IllegalStateException("Reliquat insuffisant : " + d.getNombreJours() + " jour(s) demandés, "
                     + (d.getReliquatJours() == null ? 0 : d.getReliquatJours()) + " jour(s) retournés par l'administration.");
+        }
         int joursVerifies = d.getEmployeId() != null
                 ? joursFeries.compterJoursOuvres(d.getDateDebut(), d.getDateFin())
                 : demandesHistoriques.verifierEligibiliteWorkflow(d.getUtilisateurId(), d.getTypeCongeId(), d.getDateDebut(), d.getDateFin());
@@ -303,8 +314,16 @@ public class CircuitDemandeCongeService {
      * Les soldes doivent avoir été saisis explicitement par l'administration ; aucun quota SPAT n'est inventé.
      */
     private void debiterSoldesEmploye(CircuitDemandeConge dossier, Utilisateur directeur, Long demandeId) {
-        if (soldes == null || mouvements == null)
+        if (soldes == null || mouvements == null || confirmations == null)
             throw new IllegalStateException("Le service de soldes employés n'est pas configuré.");
+
+        ConfirmationReliquat confirmation = confirmations
+                .findByCircuitDemandeCongeIdOrderByDateConfirmationDesc(dossier.getId()).stream()
+                .findFirst().orElseThrow(() -> new IllegalStateException("Confirmation RH du reliquat introuvable."));
+        int reliquat = confirmation.getNombreJoursConfirme() == null ? 0 : confirmation.getNombreJoursConfirme();
+        int anneeReference = extraireAnneeReference(confirmation.getPeriodeReference());
+        if (anneeReference >= dossier.getDateDebut().getYear())
+            throw new IllegalStateException("L'exercice du reliquat doit précéder celui du congé.");
 
         Map<Integer, Integer> joursParAnnee = new TreeMap<>();
         LocalDate cursor = dossier.getDateDebut();
@@ -320,34 +339,67 @@ public class CircuitDemandeCongeService {
         if (total != dossier.getNombreJours())
             throw new IllegalStateException("Le nombre de jours ouvrés ne correspond plus au dossier.");
 
+        Solde_conge soldeReference = soldes.findByEmployeIdAndTypeCongeIdAndPeriode(
+                dossier.getEmployeId(), dossier.getTypeCongeId(), anneeReference)
+                .orElseThrow(() -> new IllegalStateException("Solde RH de l'exercice de référence introuvable."));
+        int acquisReference = soldeReference.getSoldeAquis() == null ? 0 : soldeReference.getSoldeAquis();
+        int prisReference = soldeReference.getSoldePris() == null ? 0 : soldeReference.getSoldePris();
+        if (acquisReference - prisReference < reliquat)
+            throw new IllegalStateException("Le reliquat de l'exercice " + anneeReference + " n'est plus disponible.");
+
+        int aDebiterSurExercicesConges = total - reliquat;
         Map<Integer, Solde_conge> soldesVerifies = new LinkedHashMap<>();
+        Map<Integer, Integer> debitsParAnnee = new LinkedHashMap<>();
         for (Map.Entry<Integer, Integer> entry : joursParAnnee.entrySet()) {
             Solde_conge solde = soldes.findByEmployeIdAndTypeCongeIdAndPeriode(
                     dossier.getEmployeId(), dossier.getTypeCongeId(), entry.getKey())
                     .orElseThrow(() -> new IllegalStateException("Aucun solde employé saisi pour l'exercice "
-                            + entry.getKey() + ". L'administration doit enregistrer le solde avant validation."));
+                            + entry.getKey() + "."));
             int acquis = solde.getSoldeAquis() == null ? 0 : solde.getSoldeAquis();
             int pris = solde.getSoldePris() == null ? 0 : solde.getSoldePris();
-            int disponible = Math.max(0, acquis - pris);
-            if (disponible < entry.getValue())
+            int debit = Math.min(entry.getValue(), aDebiterSurExercicesConges);
+            if (acquis - pris < debit)
                 throw new IllegalStateException("Solde insuffisant pour l'exercice " + entry.getKey()
-                        + " : " + entry.getValue() + " jour(s) requis, " + disponible + " disponible(s).");
+                        + " : " + debit + " jour(s) requis, " + Math.max(0, acquis - pris) + " disponible(s).");
             soldesVerifies.put(entry.getKey(), solde);
+            debitsParAnnee.put(entry.getKey(), debit);
+            aDebiterSurExercicesConges -= debit;
         }
+        if (aDebiterSurExercicesConges > 0)
+            throw new IllegalStateException("Les soldes des exercices du congé ne couvrent pas le complément de "
+                    + aDebiterSurExercicesConges + " jour(s).");
 
-        for (Map.Entry<Integer, Integer> entry : joursParAnnee.entrySet()) {
+        soldeReference.setSoldePris(prisReference + reliquat);
+        soldeReference.setSoldeRestant(Math.max(0, acquisReference - soldeReference.getSoldePris()));
+        soldeReference.setDate_maj(new java.sql.Timestamp(System.currentTimeMillis()));
+        soldes.save(soldeReference);
+        if (reliquat > 0) mouvements.enregistrerMouvementPourEmploye(dossier.getEmployeId(), "DEBIT_RELIQUAT",
+                reliquat, dossier.getTypeCongeId(), demandeId,
+                "Consommation du reliquat confirmé de l'exercice " + anneeReference, directeur.getId());
+
+        for (Map.Entry<Integer, Integer> entry : debitsParAnnee.entrySet()) {
+            int debit = entry.getValue();
+            if (debit <= 0) continue;
             Solde_conge solde = soldesVerifies.get(entry.getKey());
             int pris = solde.getSoldePris() == null ? 0 : solde.getSoldePris();
             int acquis = solde.getSoldeAquis() == null ? 0 : solde.getSoldeAquis();
-            solde.setSoldePris(pris + entry.getValue());
+            solde.setSoldePris(pris + debit);
             solde.setSoldeRestant(Math.max(0, acquis - solde.getSoldePris()));
             solde.setDate_maj(new java.sql.Timestamp(System.currentTimeMillis()));
             soldes.save(solde);
             mouvements.enregistrerMouvementPourEmploye(dossier.getEmployeId(), "DEBIT_CONGE",
-                    entry.getValue(), dossier.getTypeCongeId(), demandeId,
+                    debit, dossier.getTypeCongeId(), demandeId,
                     "Congé validé par le directeur #" + directeur.getId()
                             + " (exercice " + entry.getKey() + ")", directeur.getId());
         }
+    }
+
+    private int extraireAnneeReference(String periode) {
+        java.util.regex.Matcher matcher = java.util.regex.Pattern
+                .compile("(?:19|20)\\d{2}").matcher(periode == null ? "" : periode);
+        if (!matcher.find())
+            throw new IllegalStateException("La période de référence RH doit contenir une année explicite.");
+        return Integer.parseInt(matcher.group());
     }
 
     public CircuitDemandeConge dossierPourPdf(Long id, Utilisateur user) {

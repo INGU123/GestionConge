@@ -123,6 +123,11 @@ export default function DashboardLayout({
     ? user.role.toString().trim().toUpperCase()
     : "";
 
+  const userRoleDisplay =
+    userRoleClean.replace(/^ROLE_/, "") === "ASSISTANT_DIRECTION"
+      ? "Demandeur"
+      : user?.role || "";
+
   const isAdmin =
     userRoleClean === "ADMIN" || userRoleClean === "ROLE_ADMIN";
 
@@ -373,7 +378,7 @@ export default function DashboardLayout({
                       : "badge-ghost"
                   }`}
                 >
-                  {user.role}
+                  {userRoleDisplay}
                 </span>
               )}
             </div>
@@ -402,7 +407,7 @@ export default function DashboardLayout({
             }}
           >
             <div className={`flex items-center mb-4 ${sidebarCollapsed ? "justify-center" : "justify-between px-2"}`}>
-              {!sidebarCollapsed && <div className="text-xs uppercase tracking-wider font-bold" style={{ color: "var(--sidebar-text)", opacity: 0.72 }}>Menu ({userRoleClean || "EMPLOYE"})</div>}
+              {!sidebarCollapsed && <div className="text-xs uppercase tracking-wider font-bold" style={{ color: "var(--sidebar-text)", opacity: 0.72 }}>Menu ({userRoleDisplay || "EMPLOYE"})</div>}
               <button type="button" onClick={() => setSidebarCollapsed((value) => !value)} className="spat-sidebar-toggle inline-flex h-9 w-9 items-center justify-center rounded-lg transition-colors" title={sidebarCollapsed ? "Déployer le menu" : "Rétracter le menu"} aria-label={sidebarCollapsed ? "Déployer le menu" : "Rétracter le menu"}>
                 {sidebarCollapsed ? <FiChevronRight className="h-5 w-5" /> : <FiChevronLeft className="h-5 w-5" />}
               </button>

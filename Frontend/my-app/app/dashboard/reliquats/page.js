@@ -21,9 +21,10 @@ export default function ReliquatsPage() {
     if (!response.ok) throw new Error("Chargement impossible");
     const data = await response.json();
     setRows(data);
-    setTypesConge(await getAllTypeConge());
+    const loadedTypes = await getAllTypeConge();
+    setTypesConge(loadedTypes);
 
-    const pairs = await Promise.all(data.map(async dossier => {
+    const fetchBalances = async () => Promise.all(data.map(async dossier => {
       const endpoint = dossier.employeId
         ? "/solde/employe/" + dossier.employeId
         : "/solde/utilisateur/" + dossier.utilisateurId;
@@ -37,6 +38,41 @@ export default function ReliquatsPage() {
       }
       return [dossier.id, await result.json()];
     }));
+
+    let pairs = await fetchBalances();
+    const existing = new Set(pairs.flatMap(([id, items]) =>
+      items.map(item => `${item.employeId}:${item.typeCongeId}:${item.periode}`)
+    ));
+    const targets = new Map();
+    for (const dossier of data) {
+      if (!dossier.employeId) continue;
+      const typeId = dossier.typeCongeId ?? dossier.typeConge?.id;
+      const type = loadedTypes.find(item => String(item.id) === String(typeId));
+      const annual = `${type?.code || ""} ${type?.libelle || dossier.typeConge?.libelle || ""}`
+        .toLowerCase().includes("annuel");
+      if (!annual) continue;
+      const firstYear = new Date(dossier.dateDebut).getFullYear() - 1;
+      const lastYear = new Date(dossier.dateFin).getFullYear();
+      for (let year = firstYear; year <= lastYear; year++) {
+        const key = `${dossier.employeId}:${typeId}:${year}`;
+        if (!existing.has(key)) targets.set(key, { employeId: dossier.employeId, typeId, year });
+      }
+    }
+    for (const target of targets.values()) {
+      const query = new URLSearchParams({
+        typeCongeId: String(target.typeId),
+        periode: String(target.year)
+      });
+      const result = await authFetch(
+        API + "/solde/employe/" + target.employeId + "/calculer-annuel?" + query.toString(),
+        { method: "POST" }
+      );
+      if (!result.ok) {
+        const detail = await result.text();
+        toast(detail || `Calcul automatique impossible pour l'exercice ${target.year}.`, "warning");
+      }
+    }
+    if (targets.size) pairs = await fetchBalances();
     setBalances(Object.fromEntries(pairs));
   }, []);
 

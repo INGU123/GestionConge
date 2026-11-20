@@ -377,23 +377,9 @@ export default function HistoriquePage() {
           {isManager && (
             <div className="inline-flex p-1 bg-slate-800 rounded-xl border border-slate-700">
               <button
-                onClick={() => setViewAll(false)}
-                className={`px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all flex items-center gap-1.5 ${
-                  !viewAll
-                    ? "bg-blue-600 text-white shadow-sm"
-                    : "text-slate-300 hover:text-white"
-                }`}
-              >
-                <User className="w-3.5 h-3.5" />
-                Mes mouvements
-              </button>
-              <button
+                type="button"
                 onClick={() => setViewAll(true)}
-                className={`px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all flex items-center gap-1.5 ${
-                  viewAll
-                    ? "bg-blue-600 text-white shadow-sm"
-                    : "text-slate-300 hover:text-white"
-                }`}
+                className="px-3.5 py-1.5 text-xs font-semibold rounded-lg bg-blue-600 text-white shadow-sm transition-all flex items-center gap-1.5"
               >
                 <Users className="w-3.5 h-3.5" />
                 Tous les collaborateurs

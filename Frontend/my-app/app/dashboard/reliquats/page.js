@@ -133,7 +133,7 @@ export default function ReliquatsPage() {
       const value = values[id] || {};
       const isEmployee = Boolean(dossier.employeId);
       const endpoint = isEmployee
-        ? API + "/reliquats/dossier/" + id + "/confirmer"
+        ? API + "/reliquats/dossier/" + id + "/confirmer-automatiquement"
         : API + "/circuit-conge/" + id + "/reliquat";
       const body = isEmployee
         ? { observation: value.observation?.trim() || "" }

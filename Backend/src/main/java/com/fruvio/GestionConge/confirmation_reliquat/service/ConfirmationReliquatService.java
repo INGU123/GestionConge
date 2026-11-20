@@ -2,6 +2,8 @@ package com.fruvio.GestionConge.confirmation_reliquat.service;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
@@ -58,20 +60,37 @@ public class ConfirmationReliquatService {
 
         int anneeDebut = dossier.getDateDebut().getYear();
         int anneeFin = dossier.getDateFin().getYear();
-        List<Solde_conge> soldesPeriode = soldes.findByEmployeIdAndTypeCongeId(
+        int anneeReference = extraireAnneeReference(periode);
+        if (anneeReference >= anneeDebut)
+            throw new IllegalArgumentException("La période de référence du reliquat doit précéder l'exercice du congé demandé.");
+
+        Solde_conge soldeReference = soldes.findByEmployeIdAndTypeCongeIdAndPeriode(
+                employe.getId(), dossier.getTypeCongeId(), anneeReference)
+                .orElseThrow(() -> new IllegalStateException("Aucun solde RH enregistré pour l'exercice de référence " + anneeReference + "."));
+        int disponibleReference = disponible(soldeReference);
+        int dejaReserve = confirmations.findByEmployeIdOrderByDateConfirmationDesc(employe.getId()).stream()
+                .filter(c -> !c.getCircuitDemandeCongeId().equals(dossier.getId()))
+                .filter(c -> extraireAnneeReference(c.getPeriodeReference()) == anneeReference)
+                .filter(c -> circuits.findById(c.getCircuitDemandeCongeId())
+                        .map(x -> List.of("RELIQUAT_RETOURNE", "CHEF_EN_ATTENTE", "DIRECTEUR_EN_ATTENTE").contains(x.getStatut()))
+                        .orElse(false))
+                .mapToInt(ConfirmationReliquat::getNombreJoursConfirme).sum();
+        int disponibleReferenceNonReserve = Math.max(0, disponibleReference - dejaReserve);
+        if (jours > disponibleReferenceNonReserve)
+            throw new IllegalArgumentException("Le reliquat confirmé (" + jours + " j) dépasse le reliquat disponible de l'exercice "
+                    + anneeReference + " (" + disponibleReferenceNonReserve + " j après réservations).");
+
+        List<Solde_conge> soldesConges = soldes.findByEmployeIdAndTypeCongeId(
                 employe.getId(), dossier.getTypeCongeId()).stream()
                 .filter(s -> s.getPeriode() >= anneeDebut && s.getPeriode() <= anneeFin)
                 .toList();
-        if (soldesPeriode.size() != anneeFin - anneeDebut + 1)
-            throw new IllegalStateException("Les soldes RH de tous les exercices concernés doivent être enregistrés avant la confirmation.");
-        int disponible = soldesPeriode.stream().mapToInt(s -> {
-            if (s.getSoldeRestant() != null) return Math.max(0, s.getSoldeRestant());
-            int acquis = s.getSoldeAquis() == null ? 0 : s.getSoldeAquis();
-            int pris = s.getSoldePris() == null ? 0 : s.getSoldePris();
-            return Math.max(0, acquis - pris);
-        }).sum();
-        if (jours > disponible)
-            throw new IllegalArgumentException("Le reliquat confirmé (" + jours + " j) dépasse le solde RH disponible (" + disponible + " j).");
+        if (soldesConges.size() != anneeFin - anneeDebut + 1)
+            throw new IllegalStateException("Les soldes RH de tous les exercices du congé doivent être enregistrés.");
+        int besoinCourant = Math.max(0, dossier.getNombreJours() - jours);
+        int disponibleCourant = soldesConges.stream().mapToInt(this::disponible).sum();
+        if (besoinCourant > disponibleCourant)
+            throw new IllegalArgumentException("Couverture insuffisante : " + jours + " j de reliquat + "
+                    + disponibleCourant + " j disponibles sur les exercices du congé, pour " + dossier.getNombreJours() + " j demandés.");
 
         ConfirmationReliquat confirmation = confirmations.save(ConfirmationReliquat.builder()
                 .circuitDemandeCongeId(dossier.getId())
@@ -96,6 +115,19 @@ public class ConfirmationReliquatService {
                 "Le reliquat du dossier #" + dossier.getId() + " a été confirmé (" + jours + " jour(s)).",
                 "CIRCUIT_CONGE", "/dashboard/circuit-conge");
         return confirmation;
+    }
+
+    private int disponible(Solde_conge solde) {
+        int acquis = solde.getSoldeAquis() == null ? 0 : solde.getSoldeAquis();
+        int pris = solde.getSoldePris() == null ? 0 : solde.getSoldePris();
+        return Math.max(0, acquis - pris);
+    }
+
+    private int extraireAnneeReference(String periode) {
+        Matcher matcher = Pattern.compile("(?:19|20)\\d{2}").matcher(periode == null ? "" : periode);
+        if (!matcher.find())
+            throw new IllegalArgumentException("La période de référence doit contenir une année explicite (ex. 2025).");
+        return Integer.parseInt(matcher.group());
     }
 
     @Transactional(readOnly = true)

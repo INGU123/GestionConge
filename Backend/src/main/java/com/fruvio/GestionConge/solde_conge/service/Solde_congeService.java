@@ -135,14 +135,8 @@ public class Solde_congeService {
         }
         if (demandeCongeRepository == null)
             throw new IllegalStateException("L'historique des congés est indisponible : calcul automatique refusé.");
-        boolean historiqueValideSansSolde = demandeCongeRepository
-                .findByEmployeIdAndTypeCongeId(employeId, typeCongeId).stream()
-                .anyMatch(d -> "VALIDEE".equalsIgnoreCase(d.getStatut())
-                        && d.getDateDebut() != null && d.getDateFin() != null
-                        && !d.getDateFin().isBefore(debutExercice)
-                        && !d.getDateDebut().isAfter(finExercice));
-        if (historiqueValideSansSolde)
-            throw new IllegalStateException("Des congés validés existent sur cet exercice sans solde RH correspondant. Vérification manuelle nécessaire pour éviter un reliquat erroné.");
+        // L'historique validé est la source des jours déjà consommés :
+        // aucun solde RH ne doit être saisi manuellement pour le reconstituer.
         LocalDate limite = LocalDate.now().isBefore(finExercice) ? LocalDate.now() : finExercice;
         int moisComplets = 0;
         int indexMois = 1;
@@ -153,18 +147,39 @@ public class Solde_congeService {
             prochaineEcheance = employe.getDateEmbauche().plusMonths(indexMois).minusDays(1);
         }
         int acquisDemiJournees = moisComplets * 5;
+        int joursPris = demandeCongeRepository.findByEmployeIdAndTypeCongeId(employeId, typeCongeId).stream()
+                .filter(d -> "VALIDEE".equalsIgnoreCase(d.getStatut()))
+                .filter(d -> d.getDateDebut() != null && d.getDateFin() != null && d.getNombreJours() != null)
+                .mapToInt(d -> joursConsommesPourExercice(d.getDateDebut(), d.getDateFin(),
+                        d.getNombreJours(), periode))
+                .sum();
+        int prisDemiJournees = Math.multiplyExact(joursPris, 2);
+        int restantDemiJournees = Math.max(0, acquisDemiJournees - prisDemiJournees);
         Solde_conge solde = new Solde_conge();
         solde.setEmployeId(employeId);
         solde.setTypeCongeId(typeCongeId);
         solde.setPeriode(periode);
         solde.setEnDemiJournees(true);
         solde.setSoldeAquis(acquisDemiJournees);
-        solde.setSoldePris(0);
-        solde.setSoldeRestant(acquisDemiJournees);
+        solde.setSoldePris(prisDemiJournees);
+        solde.setSoldeRestant(restantDemiJournees);
         solde.setDate_maj(new Timestamp(System.currentTimeMillis()));
         Solde_conge saved = soldeCongeRepository.save(solde);
         saved.exposerSoldesEmployeEnJours();
         return saved;
+    }
+
+    private int joursConsommesPourExercice(LocalDate debut, LocalDate fin, int nombreJours, int periode) {
+        LocalDate debutAnnee = LocalDate.of(periode, 1, 1);
+        LocalDate finAnnee = LocalDate.of(periode, 12, 31);
+        LocalDate debutSegment = debut.isAfter(debutAnnee) ? debut : debutAnnee;
+        LocalDate finSegment = fin.isBefore(finAnnee) ? fin : finAnnee;
+        if (finSegment.isBefore(debutSegment)) return 0;
+        long totalCalendrier = java.time.temporal.ChronoUnit.DAYS.between(debut, fin) + 1;
+        long joursCalendrierSegment = java.time.temporal.ChronoUnit.DAYS.between(debutSegment, finSegment) + 1;
+        if (totalCalendrier <= 0) return 0;
+        if (totalCalendrier == joursCalendrierSegment) return nombreJours;
+        return (int) Math.round((double) nombreJours * joursCalendrierSegment / totalCalendrier);
     }
 
     public List<Solde_conge> getAllSoldes(Utilisateur currentUser) {

@@ -4,6 +4,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.UUID;
 
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
@@ -18,6 +19,7 @@ import com.fruvio.GestionConge.employe.repository.EmployeRepository;
 import com.fruvio.GestionConge.notifications_conge.service.Notification_congeService;
 import com.fruvio.GestionConge.solde_conge.entity.Solde_conge;
 import com.fruvio.GestionConge.solde_conge.repository.Solde_congeRepository;
+import com.fruvio.GestionConge.solde_conge.service.Solde_congeService;
 import com.fruvio.GestionConge.utilisateur.entity.Role;
 import com.fruvio.GestionConge.utilisateur.entity.Utilisateur;
 
@@ -28,15 +30,25 @@ public class ConfirmationReliquatService {
     private final EmployeRepository employes;
     private final Notification_congeService notifications;
     private final Solde_congeRepository soldes;
+    private final Solde_congeService soldeService;
 
+    @org.springframework.beans.factory.annotation.Autowired
     public ConfirmationReliquatService(ConfirmationReliquatRepository confirmations,
             CircuitDemandeCongeRepository circuits, EmployeRepository employes,
-            Notification_congeService notifications, Solde_congeRepository soldes) {
+            Notification_congeService notifications, Solde_congeRepository soldes,
+            Solde_congeService soldeService) {
         this.confirmations = confirmations;
         this.circuits = circuits;
         this.employes = employes;
         this.notifications = notifications;
         this.soldes = soldes;
+        this.soldeService = soldeService;
+    }
+
+    public ConfirmationReliquatService(ConfirmationReliquatRepository confirmations,
+            CircuitDemandeCongeRepository circuits, EmployeRepository employes,
+            Notification_congeService notifications, Solde_congeRepository soldes) {
+        this(confirmations, circuits, employes, notifications, soldes, null);
     }
 
     @Transactional
@@ -115,6 +127,49 @@ public class ConfirmationReliquatService {
                 "Le reliquat du dossier #" + dossier.getId() + " a été confirmé (" + jours + " jour(s)).",
                 "CIRCUIT_CONGE", "/dashboard/circuit-conge");
         return confirmation;
+    }
+
+    /**
+     * Confirme automatiquement le reliquat annuel à partir des soldes calculés
+     * depuis la date d'embauche et de l'historique des congés validés.
+     */
+    @Transactional
+    public ConfirmationReliquat confirmerAutomatiquement(Long dossierId, String observation, Utilisateur acteur) {
+        exigerAdministration(acteur);
+        CircuitDemandeConge dossier = circuits.findByIdForUpdate(dossierId)
+                .orElseThrow(() -> new IllegalArgumentException("Dossier introuvable."));
+        if (dossier.getEmployeId() == null)
+            throw new IllegalStateException("Ce dossier historique doit suivre son circuit habituel.");
+        if (!"RELIQUAT_EN_ATTENTE".equals(dossier.getStatut()))
+            throw new IllegalStateException("Ce dossier n'attend pas une confirmation de reliquat.");
+        if (soldeService == null) throw new IllegalStateException("Le calcul automatique des soldes n'est pas configuré.");
+        Employe employe = employes.findById(dossier.getEmployeId()).filter(Employe::isActif)
+                .orElseThrow(() -> new IllegalStateException("Employé actif introuvable."));
+
+        int anneeDebut = dossier.getDateDebut().getYear();
+        int anneeFin = dossier.getDateFin().getYear();
+        int anneeReference = anneeDebut - 1;
+
+        soldeService.calculerSoldeAnnuelEmploye(employe.getId(), dossier.getTypeCongeId(), anneeReference, acteur);
+        for (int annee = anneeDebut; annee <= anneeFin; annee++) {
+            soldeService.calculerSoldeAnnuelEmploye(employe.getId(), dossier.getTypeCongeId(), annee, acteur);
+        }
+
+        Solde_conge soldeReference = soldes.findByEmployeIdAndTypeCongeIdAndPeriode(
+                employe.getId(), dossier.getTypeCongeId(), anneeReference)
+                .orElseThrow(() -> new IllegalStateException("Le solde de référence n'a pas pu être calculé."));
+        int dejaReserve = confirmations.findByEmployeIdOrderByDateConfirmationDesc(employe.getId()).stream()
+                .filter(c -> !c.getCircuitDemandeCongeId().equals(dossier.getId()))
+                .filter(c -> extraireAnneeReference(c.getPeriodeReference()) == anneeReference)
+                .filter(c -> circuits.findById(c.getCircuitDemandeCongeId())
+                        .map(x -> List.of("RELIQUAT_RETOURNE", "CHEF_EN_ATTENTE", "DIRECTEUR_EN_ATTENTE").contains(x.getStatut()))
+                        .orElse(false))
+                .mapToInt(ConfirmationReliquat::getNombreJoursConfirme).sum();
+        int jours = Math.max(0, disponible(soldeReference) - dejaReserve);
+        String periode = "Exercice " + anneeReference;
+        String reference = "AUTO-RH-" + dossierId + "-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+
+        return confirmer(dossierId, jours, periode, reference, null, observation, acteur);
     }
 
     private int disponible(Solde_conge solde) {

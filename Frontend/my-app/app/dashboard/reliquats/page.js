@@ -68,11 +68,7 @@ export default function ReliquatsPage() {
       );
       if (!result.ok) {
         const detail = await result.text();
-        setManualReviewYears(previous => ({
-          ...previous,
-          [`${target.employeId}_${target.year}`]: true
-        }));
-        toast(detail || `Calcul automatique impossible pour l'exercice ${target.year}.`, "warning");
+        throw new Error(detail || `Calcul automatique impossible pour l’exercice ${target.year}.`);
       }
     }
     if (targets.size) pairs = await fetchBalances();

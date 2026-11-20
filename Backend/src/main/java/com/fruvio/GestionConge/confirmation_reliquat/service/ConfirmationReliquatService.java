@@ -32,6 +32,7 @@ public class ConfirmationReliquatService {
     private final Solde_congeRepository soldes;
     private final Solde_congeService soldeService;
 
+    @org.springframework.beans.factory.annotation.Autowired
     public ConfirmationReliquatService(ConfirmationReliquatRepository confirmations,
             CircuitDemandeCongeRepository circuits, EmployeRepository employes,
             Notification_congeService notifications, Solde_congeRepository soldes,

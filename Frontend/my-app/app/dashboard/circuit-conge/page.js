@@ -96,8 +96,8 @@ export default function CircuitCongePage() {
       <div className="border-b border-base-300 bg-base-200/60 px-5 py-4 sm:px-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h2 className="text-lg font-bold">Nouvelle demande de reliquat</h2>
-            <p className="mt-1 text-sm text-base-content/60">Les informations administratives du collaborateur sont chargées depuis le référentiel.</p>
+            <h2 className="text-lg font-bold text-base-content">Nouvelle demande de reliquat</h2>
+            <p className="mt-1 text-sm leading-relaxed text-base-content/70">Les informations administratives du collaborateur sont chargées depuis le référentiel.</p>
           </div>
           <span className="rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">Nouveau dossier</span>
         </div>

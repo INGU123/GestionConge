@@ -9,7 +9,7 @@ export default function CircuitCongePage() {
   const [form,setForm]=useState({employeId:"",typeCongeId:"",serviceId:"",dateDebut:"",dateFin:"",commentaire:""});
   const selectedService=services.find(x=>String(x.id)===String(form.serviceId));
   const selectedDepartment=departements.find(x=>String(x.id)===String(selectedService?.departementId));
-  const [busy,setBusy]=useState(false); const toast=useToast();
+  const [busy,setBusy]=useState(false); const [scan,setScan]=useState(null); const [pendingScan,setPendingScan]=useState(null); const toast=useToast();
   const load=async()=>{const [t,d,s,dep]=await Promise.all([
     authFetch(API+"/type-conge/all").then(r=>r.ok?r.json():[]),
     authFetch(API+"/circuit-conge/assistant/mes-dossiers").then(r=>r.ok?r.json():[]),
@@ -18,11 +18,53 @@ export default function CircuitCongePage() {
   ]);setTypes(t);setDossiers(d);setServices(s);setDepartements(dep);};
   useEffect(()=>{let actif=true;Promise.resolve().then(()=>load()).catch(()=>{if(actif)toast("Impossible de charger les données.","error");});return()=>{actif=false;};},[toast]);
   const rechercherEmploye=async()=>{const code=matricule.trim();if(!code)return;setLookupBusy(true);setEmploye(null);setForm({...form,employeId:""});try{const r=await authFetch(API+"/employes/recherche-matricule?matricule="+encodeURIComponent(code));const d=await r.json();if(!r.ok)throw new Error(d.message||"Matricule introuvable");setEmploye(d);setForm(v=>({...v,employeId:String(d.id)}));}catch(e){toast(e.message,"error");}finally{setLookupBusy(false);}};
-  const create=async e=>{e.preventDefault();setBusy(true);try{
-    const r=await authFetch(API+"/circuit-conge",{method:"POST",body:JSON.stringify({...form,employeId:Number(form.employeId),typeCongeId:Number(form.typeCongeId),serviceId:Number(form.serviceId)})});
-    const data=await r.json();if(!r.ok)throw new Error(data.message||"Création impossible");
-    toast("Demande de reliquat créée.","success");setEmploye(null);setMatricule("");setForm({employeId:"",typeCongeId:"",serviceId:"",dateDebut:"",dateFin:"",commentaire:""});await load();
-  }catch(e){toast(e.message,"error");}finally{setBusy(false);}};
+  const uploadScan=async(id,file)=>{
+    const body=new FormData();
+    body.append("fichier",file);
+    const response=await authFetch(API+`/circuit-conge/${id}/piece-jointe`,{method:"POST",body});
+    const data=await response.json().catch(()=>({}));
+    if(!response.ok)throw new Error(data.message||"Envoi du scan impossible");
+  };
+
+  const retryScan=async()=>{
+    if(!pendingScan)return;
+    setBusy(true);
+    try{
+      await uploadScan(pendingScan.id,pendingScan.file);
+      setPendingScan(null);
+      toast("Scan joint au dossier #"+pendingScan.id+".","success");
+      await load();
+    }catch(error){toast(error.message,"error");}
+    finally{setBusy(false);}
+  };
+
+  const create=async e=>{
+    e.preventDefault();
+    if(!scan){toast("Sélectionnez le scan du formulaire papier.","warning");return;}
+    if(scan.size>10*1024*1024){toast("Le scan dépasse 10 Mo.","error");return;}
+    setBusy(true);
+    try{
+      const r=await authFetch(API+"/circuit-conge",{method:"POST",body:JSON.stringify({...form,employeId:Number(form.employeId),typeCongeId:Number(form.typeCongeId),serviceId:Number(form.serviceId)})});
+      const data=await r.json();
+      if(!r.ok)throw new Error(data.message||"Création impossible");
+      if(!data.id)throw new Error("Identifiant du dossier absent de la réponse.");
+      setEmploye(null);
+      setMatricule("");
+      setForm({employeId:"",typeCongeId:"",serviceId:"",dateDebut:"",dateFin:"",commentaire:""});
+      try{
+        await uploadScan(data.id,scan);
+        setScan(null);
+        setPendingScan(null);
+        toast("Demande créée et scan joint au dossier #"+data.id+".","success");
+      }catch(error){
+        setScan(null);
+        setPendingScan({id:data.id,file:scan});
+        toast("Dossier créé, mais scan non envoyé : "+error.message,"warning");
+      }
+      await load();
+    }catch(error){toast(error.message,"error");}
+    finally{setBusy(false);}
+  };
   const submit=async id=>{try{const r=await authFetch(API+`/circuit-conge/${id}/soumettre-chef`,{method:"POST"});const d=await r.json();if(!r.ok)throw new Error(d.message||"Transmission impossible");toast("Dossier transmis au chef de département.","success");await load();}catch(e){toast(e.message,"error");}};
   const download=async id=>{try{const r=await authFetch(API+`/circuit-conge/${id}/pdf`);if(!r.ok)throw new Error("PDF indisponible");const blob=await r.blob();const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=`decision-conge-${id}.pdf`;a.click();URL.revokeObjectURL(url);}catch(e){toast(e.message,"error");}};
   return <div className="space-y-6">
@@ -36,7 +78,13 @@ export default function CircuitCongePage() {
       <label className="form-control"><span className="label-text">Date de début</span><input required type="date" className="input input-bordered" value={form.dateDebut} onChange={e=>setForm({...form,dateDebut:e.target.value})}/></label>
       <label className="form-control"><span className="label-text">Date de fin</span><input required type="date" className="input input-bordered" value={form.dateFin} onChange={e=>setForm({...form,dateFin:e.target.value})}/></label>
       <label className="form-control md:col-span-2"><span className="label-text">Commentaire (facultatif)</span><textarea className="textarea textarea-bordered" value={form.commentaire} onChange={e=>setForm({...form,commentaire:e.target.value})}/></label>
-      <button disabled={busy||!form.employeId} className="btn btn-primary md:col-span-2">{busy?"Enregistrement…":"Créer la demande de reliquat"}</button>
+      <label className="form-control md:col-span-2">
+        <span className="label-text">Scan du formulaire papier (PDF, JPG ou PNG — 10 Mo maximum)</span>
+        <input type="file" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png" className="file-input file-input-bordered w-full" required onChange={e=>{const file=e.target.files?.[0]||null;if(file&&file.size>10*1024*1024){toast("Le scan dépasse 10 Mo.","error");e.target.value="";setScan(null);}else setScan(file);}}/>
+        <span className="text-xs text-slate-500">{scan?scan.name:"Joindre le formulaire papier scanné."}</span>
+      </label>
+      <button disabled={busy||!form.employeId||!scan} className="btn btn-primary md:col-span-2">{busy?"Enregistrement…":"Créer la demande et joindre le scan"}</button>
+      {pendingScan&&<div className="md:col-span-2 rounded-lg border border-warning p-3 text-sm"><p>Le dossier #{pendingScan.id} existe, mais son scan reste à envoyer.</p><button type="button" className="btn btn-sm btn-warning mt-2" disabled={busy} onClick={retryScan}>Réessayer l’envoi du scan</button></div>}
     </form>
     <section className="card bg-base-100 border p-5"><h2 className="font-semibold mb-3">Mes dossiers et décisions reçues</h2><div className="overflow-x-auto"><table className="table table-sm"><thead><tr><th>Agent</th><th>Période</th><th>Jours</th><th>Reliquat</th><th>Observation RH</th><th>Statut</th><th>Action</th></tr></thead><tbody>{dossiers.map(d=><tr key={d.id}><td>{d.utilisateurPrenom} {d.utilisateurNom} ({d.utilisateurMatricule})</td><td>{d.dateDebut} → {d.dateFin}</td><td>{d.nombreJours}</td><td>{d.reliquatJours??"—"}</td><td>{d.reliquatCommentaire||"—"}</td><td>{d.statut}</td><td className="flex gap-2">{d.statut==="RELIQUAT_RETOURNE"&&<button className="btn btn-xs btn-primary" disabled={d.reliquatJours < d.nombreJours} onClick={()=>submit(d.id)}>{d.reliquatJours < d.nombreJours ? "Reliquat insuffisant" : "Soumettre au chef"}</button>}{["VALIDEE","REFUSEE"].includes(d.statut)&&<button className="btn btn-xs btn-outline" onClick={()=>download(d.id)}>PDF décision</button>}</td></tr>)}{!dossiers.length&&<tr><td colSpan="7" className="text-center text-slate-400">Aucun dossier.</td></tr>}</tbody></table></div></section>
   </div>;

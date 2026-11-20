@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { authFetch } from "@/lib/apiClient";
 import { useToast } from "../../Components/ToastProvider";
 
@@ -14,7 +14,7 @@ export default function ReliquatsPage() {
   const [busy, setBusy] = useState(null);
   const toast = useToast();
 
-  const load = async () => {
+  const load = useCallback(async () => {
     const response = await authFetch(API + "/circuit-conge/administration/en-attente");
     if (!response.ok) throw new Error("Chargement impossible");
     const data = await response.json();
@@ -25,14 +25,48 @@ export default function ReliquatsPage() {
         ? "/solde/employe/" + dossier.employeId
         : "/solde/utilisateur/" + dossier.utilisateurId;
       const result = await authFetch(API + endpoint);
-      return [dossier.id, result.ok ? await result.json() : []];
+      if (!result.ok) {
+        const detail = await result.text();
+        throw new Error(
+          `Chargement du solde du dossier #${dossier.id} : HTTP ${result.status}` +
+          (detail ? ` — ${detail}` : "")
+        );
+      }
+      return [dossier.id, await result.json()];
     }));
     setBalances(Object.fromEntries(pairs));
-  };
+  }, []);
 
   useEffect(() => {
-    load().catch(error => toast(error.message, "error"));
-  }, []);
+    const timer = setTimeout(() => {
+      load().catch(error => toast(error.message, "error"));
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [load, toast]);
+
+  const downloadScan = async id => {
+    try {
+      const response = await authFetch(API + "/circuit-conge/" + id + "/piece-jointe");
+      if (!response.ok) {
+        const detail = await response.text();
+        throw new Error(detail || "Scan indisponible pour ce dossier.");
+      }
+      const blob = await response.blob();
+      const extension = blob.type.includes("pdf") ? "pdf"
+        : blob.type.includes("png") ? "png"
+        : blob.type.includes("jpeg") ? "jpg" : "bin";
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "scan-demande-conge-" + id + "." + extension;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (error) {
+      toast(error.message, "error");
+    }
+  };
 
   const update = (id, key, value) => {
     setValues(previous => ({
@@ -138,6 +172,10 @@ export default function ReliquatsPage() {
                 Type #{dossier.typeCongeId} · {dossier.dateDebut} → {dossier.dateFin}
                 · {dossier.nombreJours} jour(s) demandés
               </span>
+              <button type="button" className="btn btn-sm btn-outline"
+                onClick={() => downloadScan(dossier.id)}>
+                Télécharger le scan
+              </button>
             </div>
 
             <div className="rounded-lg bg-slate-50 border p-3 text-sm space-y-2">

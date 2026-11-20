@@ -119,12 +119,13 @@ public class Solde_congeService {
         LocalDate debutExercice = LocalDate.of(periode, 1, 1);
         LocalDate finExercice = LocalDate.of(periode, 12, 31);
         LocalDate limite = LocalDate.now().isBefore(finExercice) ? LocalDate.now() : finExercice;
-        LocalDate prochaineEcheance = employe.getDateEmbauche().plusMonths(1).minusDays(1);
         int moisComplets = 0;
+        int indexMois = 1;
+        LocalDate prochaineEcheance = employe.getDateEmbauche().plusMonths(indexMois).minusDays(1);
         while (!prochaineEcheance.isAfter(limite)) {
             if (!prochaineEcheance.isBefore(debutExercice)) moisComplets++;
-            prochaineEcheance = employe.getDateEmbauche()
-                    .plusMonths(++moisComplets + 1).minusDays(1);
+            indexMois++;
+            prochaineEcheance = employe.getDateEmbauche().plusMonths(indexMois).minusDays(1);
         }
         int acquisDemiJournees = moisComplets * 5;
         Solde_conge solde = new Solde_conge();

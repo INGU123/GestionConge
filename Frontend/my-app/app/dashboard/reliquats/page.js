@@ -13,6 +13,7 @@ export default function ReliquatsPage() {
   const [balances, setBalances] = useState({});
   const [values, setValues] = useState({});
   const [balanceValues, setBalanceValues] = useState({});
+  const [manualReviewYears, setManualReviewYears] = useState({});
   const [busy, setBusy] = useState(null);
   const toast = useToast();
 
@@ -69,6 +70,10 @@ export default function ReliquatsPage() {
       );
       if (!result.ok) {
         const detail = await result.text();
+        setManualReviewYears(previous => ({
+          ...previous,
+          [`${target.employeId}_${target.year}`]: true
+        }));
         toast(detail || `Calcul automatique impossible pour l'exercice ${target.year}.`, "warning");
       }
     }
@@ -254,7 +259,7 @@ export default function ReliquatsPage() {
                 const key = dossier.id + "_" + year;
                 return (
                   <div key={year} className="flex flex-wrap items-end gap-2 border-t pt-2">
-                    {isAnnualType(dossier) ? (
+                    {isAnnualType(dossier) && !manualReviewYears[`${dossier.employeId}_${year}`] ? (
                       <p className="text-sm text-slate-600">
                         Droit annuel calculé automatiquement depuis la date d'embauche pour l'exercice {year}.
                       </p>
@@ -267,10 +272,12 @@ export default function ReliquatsPage() {
                       </label>
                     )}
                     <button type="button" className="btn btn-sm btn-outline"
-                      disabled={busy === key || (!isAnnualType(dossier)
+                      disabled={busy === key || (( !isAnnualType(dossier)
+                        || manualReviewYears[`${dossier.employeId}_${year}`])
                         && (balanceValues[key] == null || balanceValues[key] === ""))}
                       onClick={() => saveBalance(dossier, year)}>
                       {busy === key ? "Calcul…" : isAnnualType(dossier)
+                        && !manualReviewYears[`${dossier.employeId}_${year}`]
                         ? "Calculer le solde automatiquement" : "Enregistrer le solde RH"}
                     </button>
                   </div>

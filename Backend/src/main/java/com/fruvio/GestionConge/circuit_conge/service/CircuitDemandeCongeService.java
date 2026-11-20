@@ -89,14 +89,15 @@ public class CircuitDemandeCongeService {
     }
 
     @Transactional
-    public CircuitDemandeConge creerPourEmploye(Long employeId, Long typeId, Long serviceId,
+    public CircuitDemandeConge creerPourEmploye(Long employeId, Long typeId,
             java.time.LocalDate debut, java.time.LocalDate fin, String commentaire, Utilisateur assistant) {
         exiger(assistant, Role.ASSISTANT_DIRECTION);
         Employe employe = employes.findById(employeId).filter(Employe::isActif)
                 .orElseThrow(() -> new IllegalArgumentException("Employé actif introuvable. Recherchez son matricule exact."));
-        if (serviceId == null) throw new IllegalArgumentException("Le service est obligatoire.");
-        Services serviceChoisi = services.findById(serviceId)
-                .orElseThrow(() -> new IllegalArgumentException("Service sélectionné introuvable."));
+        if (employe.getServiceId() == null)
+            throw new IllegalStateException("Aucun service n'est associé à ce collaborateur dans le référentiel.");
+        Services serviceChoisi = services.findById(employe.getServiceId())
+                .orElseThrow(() -> new IllegalArgumentException("Le service du collaborateur est introuvable."));
         if (serviceChoisi.getDepartementId() == null) throw new IllegalStateException("Service sans département.");
         Departement dep = departements.findById(serviceChoisi.getDepartementId())
                 .orElseThrow(() -> new IllegalStateException("Département introuvable."));

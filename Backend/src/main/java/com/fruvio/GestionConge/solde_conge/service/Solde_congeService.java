@@ -15,6 +15,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.fruvio.GestionConge.employe.entity.Employe;
+import com.fruvio.GestionConge.demande_conge.entity.DemandeConge;
+import com.fruvio.GestionConge.demande_conge.repository.DemandeCongeRepository;
 import com.fruvio.GestionConge.employe.repository.EmployeRepository;
 import com.fruvio.GestionConge.historique_mouvement.service.Historique_mouvementService;
 import com.fruvio.GestionConge.solde_conge.entity.Solde_conge;
@@ -31,23 +33,33 @@ public class Solde_congeService {
     private final Type_congeRepository typeCongeRepository;
     private final UtilisateurRepository utilisateurRepository;
     private final EmployeRepository employeRepository;
+    private final DemandeCongeRepository demandeCongeRepository;
     private final Historique_mouvementService historiqueMouvementService;
 
     @Autowired
     public Solde_congeService(Solde_congeRepository soldeCongeRepository, Type_congeRepository typeCongeRepository,
             UtilisateurRepository utilisateurRepository, EmployeRepository employeRepository,
-            Historique_mouvementService historiqueMouvementService) {
+            DemandeCongeRepository demandeCongeRepository, Historique_mouvementService historiqueMouvementService) {
         this.soldeCongeRepository = soldeCongeRepository;
         this.typeCongeRepository = typeCongeRepository;
         this.utilisateurRepository = utilisateurRepository;
         this.employeRepository = employeRepository;
+        this.demandeCongeRepository = demandeCongeRepository;
         this.historiqueMouvementService = historiqueMouvementService;
     }
 
-    // Constructeur conservé pour les tests unitaires historiques.
+    // Constructeurs conservés pour les tests et appels historiques.
+    public Solde_congeService(Solde_congeRepository soldeCongeRepository, Type_congeRepository typeCongeRepository,
+            UtilisateurRepository utilisateurRepository, EmployeRepository employeRepository,
+            Historique_mouvementService historiqueMouvementService) {
+        this(soldeCongeRepository, typeCongeRepository, utilisateurRepository, employeRepository, null,
+                historiqueMouvementService);
+    }
+
     public Solde_congeService(Solde_congeRepository soldeCongeRepository, Type_congeRepository typeCongeRepository,
             UtilisateurRepository utilisateurRepository, Historique_mouvementService historiqueMouvementService) {
-        this(soldeCongeRepository, typeCongeRepository, utilisateurRepository, null, historiqueMouvementService);
+        this(soldeCongeRepository, typeCongeRepository, utilisateurRepository, null, null,
+                historiqueMouvementService);
     }
 
     public List<Solde_conge> getSoldesParUtilisateur(Long utilisateurId, Utilisateur currentUser) {
@@ -113,14 +125,24 @@ public class Solde_congeService {
         String libelle = type.getLibelle() == null ? "" : type.getLibelle().toUpperCase();
         if (!code.contains("ANNUEL") && !libelle.contains("ANNUEL"))
             throw new IllegalArgumentException("Le calcul légal automatique s'applique uniquement au congé annuel.");
+        LocalDate debutExercice = LocalDate.of(periode, 1, 1);
+        LocalDate finExercice = LocalDate.of(periode, 12, 31);
+        if (demandeCongeRepository == null)
+            throw new IllegalStateException("L'historique des congés est indisponible : calcul automatique refusé.");
+        boolean historiqueValideSansSolde = demandeCongeRepository
+                .findByEmployeIdAndTypeCongeId(employeId, typeCongeId).stream()
+                .anyMatch(d -> "VALIDEE".equalsIgnoreCase(d.getStatut())
+                        && d.getDateDebut() != null && d.getDateFin() != null
+                        && !d.getDateFin().isBefore(debutExercice)
+                        && !d.getDateDebut().isAfter(finExercice));
+        if (historiqueValideSansSolde)
+            throw new IllegalStateException("Des congés validés existent sur cet exercice sans solde RH correspondant. Vérification manuelle nécessaire pour éviter un reliquat erroné.");
         var existing = soldeCongeRepository.findByEmployeIdAndTypeCongeIdAndPeriode(employeId, typeCongeId, periode);
         if (existing.isPresent()) {
             Solde_conge saved = existing.get();
             saved.exposerSoldesEmployeEnJours();
             return saved;
         }
-        LocalDate debutExercice = LocalDate.of(periode, 1, 1);
-        LocalDate finExercice = LocalDate.of(periode, 12, 31);
         LocalDate limite = LocalDate.now().isBefore(finExercice) ? LocalDate.now() : finExercice;
         int moisComplets = 0;
         int indexMois = 1;

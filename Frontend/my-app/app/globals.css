@@ -1348,3 +1348,61 @@ html[data-theme="night"] body :is(
 html[data-theme="night"] body :is(input, textarea, select) {
   color-scheme: dark;
 }
+
+/* CORRECTIF MODE NUIT — ÉCRANS RELIQUATS
+   Limité aux deux écrans concernés : aucune incidence sur les autres pages. */
+.theme-shell[data-theme="night"] main :is(.reliquats-theme, .circuit-conge-theme) {
+  color-scheme: dark;
+  color: #edf4ff;
+  --color-base-100: #101f31;
+  --color-base-200: #142941;
+  --color-base-300: #263b52;
+  --color-base-content: #edf4ff;
+  --color-primary: #60a5fa;
+  --color-primary-content: #071321;
+  --color-warning: #fbbf24;
+  --color-warning-content: #1f2937;
+  --color-success: #34d399;
+  --color-success-content: #062b25;
+  --color-error: #fb7185;
+  --color-error-content: #3b0a16;
+}
+.theme-shell[data-theme="night"] main :is(.reliquats-theme, .circuit-conge-theme) .bg-base-100,
+.theme-shell[data-theme="night"] main :is(.reliquats-theme, .circuit-conge-theme) .card {
+  background-color: #101f31 !important;
+  color: #edf4ff !important;
+}
+.theme-shell[data-theme="night"] main :is(.reliquats-theme, .circuit-conge-theme) [class*="bg-base-200"] {
+  background-color: #142941 !important;
+  color: #edf4ff;
+}
+.theme-shell[data-theme="night"] main :is(.reliquats-theme, .circuit-conge-theme) [class*="border-base-"],
+.theme-shell[data-theme="night"] main :is(.reliquats-theme, .circuit-conge-theme) .border {
+  border-color: #30465f !important;
+}
+.theme-shell[data-theme="night"] main :is(.reliquats-theme, .circuit-conge-theme) {
+  --text-main: #edf4ff;
+  --text-muted: #a9bdd5;
+}
+.theme-shell[data-theme="night"] main :is(.reliquats-theme, .circuit-conge-theme) :is(h1,h2,h3,h4,p,span,label,th,td,li) {
+  border-color: #30465f;
+}
+.theme-shell[data-theme="night"] main :is(.reliquats-theme, .circuit-conge-theme) :is(input,textarea,select) {
+  background-color: #0c1b2b !important;
+  color: #edf4ff !important;
+  border-color: #405873 !important;
+}
+.theme-shell[data-theme="night"] main :is(.reliquats-theme, .circuit-conge-theme) :is(input,textarea,select)::placeholder {
+  color: #9fb3ca !important;
+  opacity: 1;
+}
+.theme-shell[data-theme="night"] main :is(.reliquats-theme, .circuit-conge-theme) table {
+  color: #edf4ff;
+}
+.theme-shell[data-theme="night"] main :is(.reliquats-theme, .circuit-conge-theme) th {
+  color: #b9cbe0;
+}
+.theme-shell[data-theme="night"] main :is(.reliquats-theme, .circuit-conge-theme) .text-slate-500,
+.theme-shell[data-theme="night"] main :is(.reliquats-theme, .circuit-conge-theme) .text-slate-400,
+.theme-shell[data-theme="night"] main :is(.reliquats-theme, .circuit-conge-theme) .text-gray-500 {
+  color: #a9bdd5 !important;}

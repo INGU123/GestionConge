@@ -231,7 +231,7 @@ public class CircuitDemandeCongeService {
         if (!"RELIQUAT_RETOURNE".equals(d.getStatut())) throw new IllegalStateException("Le reliquat doit d'abord être retourné.");
         if (d.getEmployeId() != null) verifierChevauchementEmploye(d.getEmployeId(), d.getDateDebut(), d.getDateFin(), d.getId());
         else verifierChevauchementCircuit(d.getUtilisateurId(), d.getDateDebut(), d.getDateFin(), d.getId());
-        if (d.getEmployeId() != null) {
+        if (d.getEmployeId() != null && estCongeAnnuel(d.getTypeCongeId())) {
             int reliquat = d.getReliquatJours() == null ? 0 : d.getReliquatJours();
             int disponibleExercices = soldes.findByEmployeIdAndTypeCongeId(d.getEmployeId(), d.getTypeCongeId()).stream()
                     .filter(s -> s.getPeriode() >= d.getDateDebut().getYear()
@@ -325,6 +325,7 @@ public class CircuitDemandeCongeService {
      * Les soldes doivent avoir été saisis explicitement par l'administration ; aucun quota SPAT n'est inventé.
      */
     private void debiterSoldesEmploye(CircuitDemandeConge dossier, Utilisateur directeur, Long demandeId) {
+        if (!estCongeAnnuel(dossier.getTypeCongeId())) return;
         if (soldes == null || mouvements == null || confirmations == null)
             throw new IllegalStateException("Le service de soldes employés n'est pas configuré.");
 
@@ -405,6 +406,16 @@ public class CircuitDemandeCongeService {
                     "Congé validé par le directeur #" + directeur.getId()
                             + " (exercice " + entry.getKey() + ")", directeur.getId());
         }
+    }
+
+    private boolean estCongeAnnuel(Long typeCongeId) {
+        if (typesConge == null || typeCongeId == null)
+            throw new IllegalStateException("Le référentiel des types de congé n'est pas configuré.");
+        var type = typesConge.findById(typeCongeId)
+                .orElseThrow(() -> new IllegalStateException("Type de congé introuvable."));
+        String code = type.getCode() == null ? "" : type.getCode().toUpperCase();
+        String libelle = type.getLibelle() == null ? "" : type.getLibelle().toUpperCase();
+        return code.contains("ANNUEL") || libelle.contains("ANNUEL");
     }
 
     private int extraireAnneeReference(String periode) {

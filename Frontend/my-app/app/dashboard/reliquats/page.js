@@ -158,20 +158,21 @@ export default function ReliquatsPage() {
 
         return (
           <article key={dossier.id} className="card bg-base-100 border p-5 space-y-3">
-            <div className="flex flex-wrap justify-between gap-2">
-              <b>
-                Dossier #{dossier.id} — {dossier.utilisateurPrenom} {dossier.utilisateurNom}
-                ({dossier.utilisateurMatricule})
-              </b>
-              <span>
-                {getTypeLabel(dossier)} · {dossier.dateDebut} → {dossier.dateFin}
-                · {dossier.nombreJours} jour(s) demandés
-              </span>
-              <button type="button" className="btn btn-sm btn-outline"
-                onClick={() => downloadScan(dossier.id)}>
-                Télécharger le scan
-              </button>
-            </div>
+            <header className="space-y-2">
+              <p className="text-xs font-bold uppercase tracking-wide text-base-content/60">Dossier #{dossier.id}</p>
+              <h2 className="text-lg font-bold">{dossier.utilisateurPrenom} {dossier.utilisateurNom}</h2>
+              <p className="text-sm text-base-content/70">Matricule : {dossier.utilisateurMatricule}</p>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-sm">
+                  <span className="font-medium">{getTypeLabel(dossier)}</span>
+                  <span> · {dossier.dateDebut} → {dossier.dateFin} · {dossier.nombreJours} jour(s) demandés</span>
+                </p>
+                <button type="button" className="btn btn-sm btn-outline"
+                  onClick={() => downloadScan(dossier.id)}>
+                  Télécharger le scan
+                </button>
+              </div>
+            </header>
 
             <div className="rounded-xl border border-base-300 bg-base-200/50 p-4 space-y-3">
               {annualCalculation ? <>
@@ -190,7 +191,9 @@ export default function ReliquatsPage() {
               </p>}
             </div>
 
-            <div className="grid md:grid-cols-2 gap-3">
+            <section className="space-y-3">
+              <h3 className="font-semibold text-base">Confirmation administrative</h3>
+              <div className="grid md:grid-cols-2 gap-3">
               <label className="form-control">
                 <span className="label-text font-semibold">Reliquat confirmé (jours) *</span>
                 <input type="number" min="0" step="1" className="input input-bordered"
@@ -222,7 +225,8 @@ export default function ReliquatsPage() {
                     onChange={event => update(dossier.id, "justificatif", event.target.value)} />
                 </label>
               </>}
-            </div>
+              </div>
+            </section>
 
             <div className="grid md:grid-cols-2 gap-3">
               <label className="form-control md:col-span-2">

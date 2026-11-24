@@ -4,7 +4,7 @@ import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter, usePathname } from "next/navigation";
-import { FiMoon, FiSun } from "react-icons/fi";
+import { FiMoon, FiSun, FiLogOut } from "react-icons/fi";
 import { getCurrentUser, clearAuthSession } from "@/lib/apiClient";
 import NotificationHeaderMenu from "./notifications/page";
 import { ToastProvider } from "../components/ToastProvider";
@@ -416,11 +416,14 @@ export default function DashboardLayout({
 
             {/* DECONNEXION */}
             <button
+              type="button"
               onClick={handleLogout}
-              className="btn btn-outline btn-sm flex items-center gap-1"
+              className="inline-flex h-9 w-9 items-center justify-center rounded-full border transition-colors hover:bg-red-50 hover:text-red-600"
+              style={{ borderColor: "var(--primary-border)", color: "var(--header-text)" }}
               title="Se déconnecter"
+              aria-label="Se déconnecter"
             >
-              <span>Déconnexion</span>
+              <FiLogOut className="text-lg" aria-hidden="true" />
             </button>
           </div>
         </header>

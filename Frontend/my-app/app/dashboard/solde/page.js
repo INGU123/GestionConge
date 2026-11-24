@@ -718,11 +718,12 @@ export default function SoldeConge() {
                                 type.libelle
                               )
                             }
-                            className="btn btn-xs btn-outline btn-primary font-semibold gap-1"
-                          >
+                            type="button"
+                            className="btn btn-circle btn-sm btn-outline btn-primary"
                             title="Ajuster le solde de congé"
                             aria-label="Ajuster le solde de congé"
-                            <Sliders className="w-3 h-3" aria-hidden="true" />
+                          >
+                            <Sliders className="w-4 h-4" aria-hidden="true" />
                           </button>
                         </td>
                       )}

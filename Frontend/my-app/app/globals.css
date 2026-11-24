@@ -1230,3 +1230,121 @@ body {
 .spat-auth-eye:hover {
   color: #064d91;
 }
+
+
+/* ===== CORRECTION COUVERTURE MODE NUIT SPAT ===== */
+/* Couverture homogène des composants qui conservent des classes Tailwind claires. */
+.theme-shell[data-theme="night"] {
+  color-scheme: dark;
+}
+.theme-shell[data-theme="night"] main :is(
+  .bg-white, .bg-slate-50, .bg-slate-100, .bg-slate-200, .bg-gray-50,
+  .bg-gray-100, .bg-gray-200, .bg-zinc-50, .bg-zinc-100, .bg-neutral-50,
+  .bg-neutral-100, .bg-stone-50, .bg-stone-100
+) {
+  background-color: var(--panel) !important;
+  color: var(--text-main) !important;
+}
+.theme-shell[data-theme="night"] main :is(
+  .text-black, .text-slate-950, .text-slate-900, .text-slate-800,
+  .text-slate-700, .text-slate-600, .text-gray-950, .text-gray-900,
+  .text-gray-800, .text-gray-700, .text-gray-600, .text-zinc-950,
+  .text-zinc-900, .text-zinc-800, .text-zinc-700, .text-neutral-900,
+  .text-neutral-800, .text-neutral-700, .text-stone-900, .text-stone-800
+) {
+  color: var(--text-main) !important;
+}
+.theme-shell[data-theme="night"] main :is(
+  .text-slate-500, .text-slate-400, .text-gray-500, .text-gray-400,
+  .text-zinc-500, .text-zinc-400, .text-neutral-500, .text-stone-500
+) {
+  color: var(--text-muted) !important;
+}
+.theme-shell[data-theme="night"] main :is(
+  .border-white, .border-slate-100, .border-slate-200, .border-slate-300,
+  .border-gray-100, .border-gray-200, .border-gray-300, .border-zinc-200,
+  .border-neutral-200, .border-stone-200
+) {
+  border-color: var(--border) !important;
+}
+.theme-shell[data-theme="night"] main :is(
+  .divide-slate-100 > :not(:last-child),
+  .divide-slate-200 > :not(:last-child),
+  .divide-gray-100 > :not(:last-child),
+  .divide-gray-200 > :not(:last-child)
+) {
+  border-color: var(--border) !important;
+}
+.theme-shell[data-theme="night"] main :is(
+  .dropdown-content, .menu, .popover, [role="menu"], [role="listbox"],
+  .select option
+) {
+  background-color: var(--panel) !important;
+  color: var(--text-main) !important;
+  border-color: var(--border) !important;
+}
+.theme-shell[data-theme="night"] main :is(
+  input, textarea, select, .input, .select, .textarea
+) {
+  background-color: var(--panel-soft) !important;
+  color: var(--text-main) !important;
+  border-color: var(--border) !important;
+}
+.theme-shell[data-theme="night"] main input:disabled,
+.theme-shell[data-theme="night"] main textarea:disabled,
+.theme-shell[data-theme="night"] main select:disabled {
+  background-color: var(--panel-alt) !important;
+  color: var(--text-muted) !important;
+  opacity: 1;
+}
+.theme-shell[data-theme="night"] main table,
+.theme-shell[data-theme="night"] main tbody,
+.theme-shell[data-theme="night"] main tr,
+.theme-shell[data-theme="night"] main td {
+  color: var(--text-main);
+  border-color: var(--border) !important;
+}
+.theme-shell[data-theme="night"] main thead,
+.theme-shell[data-theme="night"] main thead tr,
+.theme-shell[data-theme="night"] main thead th {
+  background-color: var(--panel-alt) !important;
+  color: var(--text-muted) !important;
+}
+.theme-shell[data-theme="night"] main .hover\:bg-slate-50:hover,
+.theme-shell[data-theme="night"] main .hover\:bg-gray-50:hover,
+.theme-shell[data-theme="night"] main .hover\:bg-white:hover {
+  background-color: var(--panel-alt) !important;
+}
+.theme-shell[data-theme="night"] main .bg-blue-50,
+.theme-shell[data-theme="night"] main .bg-indigo-50,
+.theme-shell[data-theme="night"] main .bg-cyan-50 {
+  background-color: #102b47 !important;
+}
+.theme-shell[data-theme="night"] main .bg-green-50,
+.theme-shell[data-theme="night"] main .bg-emerald-50 {
+  background-color: #10362f !important;
+}
+.theme-shell[data-theme="night"] main .bg-red-50,
+.theme-shell[data-theme="night"] main .bg-rose-50 {
+  background-color: #3b1d2a !important;
+}
+.theme-shell[data-theme="night"] main .bg-yellow-50,
+.theme-shell[data-theme="night"] main .bg-amber-50 {
+  background-color: #3b3017 !important;
+}
+/* Menus/notifications rendus hors du conteneur principal par certains composants. */
+html[data-theme="night"] body :is(
+  .modal-box, .dropdown-content, [role="dialog"], [role="menu"], [role="listbox"]
+) {
+  background-color: #101f31;
+  color: #edf4ff;
+  border-color: #263b52;
+}
+html[data-theme="night"] body :is(
+  .modal-box, .dropdown-content, [role="dialog"], [role="menu"], [role="listbox"]
+) :is(p, span, label, th, td, h1, h2, h3, h4) {
+  color: inherit;
+}
+html[data-theme="night"] body :is(input, textarea, select) {
+  color-scheme: dark;
+}

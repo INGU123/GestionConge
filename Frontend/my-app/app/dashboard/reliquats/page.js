@@ -239,6 +239,7 @@ export default function ReliquatsPage() {
             <button
               className="btn btn-primary w-fit"
               disabled={busy === dossier.id
+                || (!isEmployee && (value.days == null || value.days === ""))
                 || (isEmployee && (value.days == null || value.days === "" || !value.period?.trim() || !value.reference?.trim()))
                 || (annualCalculation && (!calcul || calcul.error))
                 || (ecartCalcul && !value.observation?.trim())}

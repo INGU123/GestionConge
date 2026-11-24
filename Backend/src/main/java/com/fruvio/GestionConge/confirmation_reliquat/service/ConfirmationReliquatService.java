@@ -250,17 +250,26 @@ public class ConfirmationReliquatService {
             return new CalculReliquat(plafond, consommes, restantApresDemandesValidees,
                     dejaReserve, disponible, "Année civile " + debut);
         }
-        List<Solde_conge> lignes = soldes.findByEmployeIdAndTypeCongeId(
-                employe.getId(), dossier.getTypeCongeId()).stream()
-                .filter(s -> s.getPeriode() >= debut && s.getPeriode() <= fin)
-                .toList();
-        if (lignes.isEmpty())
-            throw new IllegalStateException("Aucun solde RH n'est configuré en base pour ce type de congé sur "
-                    + debut + (fin == debut ? "" : "-" + fin)
-                    + ". La confirmation est bloquée : aucune durée ne sera inventée.");
-        int acquis = lignes.stream().mapToInt(Solde_conge::getSoldeAquisEnDemiJournees).sum() / 2;
-        int consommes = lignes.stream().mapToInt(Solde_conge::getSoldePrisEnDemiJournees).sum() / 2;
-        int restant = lignes.stream().mapToInt(Solde_conge::getSoldeRestantEnDemiJournees).sum() / 2;
+        int acquis = 0;
+        int consommes = 0;
+        int restant = 0;
+        for (int annee = debut; annee <= fin; annee++) {
+            Solde_conge soldeEnregistre = soldes.findByEmployeIdAndTypeCongeIdAndPeriode(
+                    employe.getId(), dossier.getTypeCongeId(), annee).orElse(null);
+            if (soldeEnregistre != null) {
+                acquis += soldeEnregistre.getSoldeAquisEnDemiJournees() / 2;
+                consommes += soldeEnregistre.getSoldePrisEnDemiJournees() / 2;
+                restant += soldeEnregistre.getSoldeRestantEnDemiJournees() / 2;
+                continue;
+            }
+            if (soldeService == null)
+                throw new IllegalStateException("Le calcul des droits configurés n'est pas disponible pour l'exercice " + annee + ".");
+            Solde_congeService.DroitsTypeConfigure droits = soldeService.calculerDroitsAnnuelsConfigures(
+                    employe.getId(), dossier.getTypeCongeId(), annee);
+            acquis += droits.plafond();
+            consommes += droits.consommes();
+            restant += droits.disponible();
+        }
         int reserves = confirmations.findByEmployeIdOrderByDateConfirmationDesc(employe.getId()).stream()
                 .filter(c -> !c.getCircuitDemandeCongeId().equals(dossier.getId()))
                 .filter(c -> {

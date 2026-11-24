@@ -193,7 +193,7 @@ public class Solde_congeService {
         }
 
         Set<String> permissionsFamiliales = Set.of(
-                "MAR_SAL", "MAR_ENF", "DEC_CONJ", "CIRC_ENF", "DEM_LOG", "SINISTRE", "URGENCE", "AUT_FAM");
+                "MAR_SAL", "MAR_ENF", "DEC_CONJ", "CIRC_ENF", "URGENCE", "AUT_FAM");
         List<Type_conge> typesFamiliaux = typeCongeRepository.findAll().stream()
                 .filter(t -> t.getCode() != null && permissionsFamiliales.contains(t.getCode().trim().toUpperCase()))
                 .toList();

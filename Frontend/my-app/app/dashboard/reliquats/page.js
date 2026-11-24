@@ -135,7 +135,7 @@ export default function ReliquatsPage() {
 
 
   return (
-    <section className="space-y-5">
+    <section className="reliquats-theme space-y-5">
       <header>
         <h1 className="text-2xl font-bold">Administration du personnel — Vérification des reliquats</h1>
         <p className="text-sm text-slate-500">

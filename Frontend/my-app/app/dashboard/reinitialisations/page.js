@@ -29,7 +29,10 @@ export default function ReinitialisationsPage() {
     }
   }, [isAdmin]);
 
-  useEffect(() => { loadRequests(true); }, [loadRequests]);
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    loadRequests(true);
+  }, [loadRequests]);
 
   const handleDecision = async (id, decision) => {
     setBusyIds((previous) => new Set(previous).add(id));
@@ -49,7 +52,7 @@ export default function ReinitialisationsPage() {
     }
   };
 
-  if (!isAdmin) return <div className="alert alert-error">Cette rubrique est réservée à l'administrateur.</div>;
+  if (!isAdmin) return <div className="alert alert-error">Cette rubrique est réservée à l&apos;administrateur.</div>;
 
   return (
     <div className="space-y-6">
@@ -62,7 +65,7 @@ export default function ReinitialisationsPage() {
         <section className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5 space-y-3">
           <div>
             <h2 className="font-bold text-emerald-900 text-lg">Mot de passe temporaire généré</h2>
-            <p className="text-sm text-emerald-800">Remettez ces informations directement à l'agent. Le mot de passe ne sera plus affiché après avoir quitté cette page ou actualisé l'écran.</p>
+            <p className="text-sm text-emerald-800">Remettez ces informations directement à l&apos;agent. Le mot de passe ne sera plus affiché après avoir quitté cette page ou actualisé l'écran.</p>
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="rounded-xl bg-white p-3 border border-emerald-100">

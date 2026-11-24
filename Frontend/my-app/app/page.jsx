@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { loginUser } from "@/lib/apiLogin.js";
@@ -82,6 +82,18 @@ export default function LoginPage() {
   const [erreur, setErreur] = useState("");
   const [chargement, setChargement] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [theme, setTheme] = useState("day");
+
+  useEffect(() => {
+    const savedTheme = localStorage.getItem("dashboard-theme");
+    if (savedTheme === "night") setTheme("night");
+  }, []);
+
+  const toggleTheme = () => {
+    const nextTheme = theme === "night" ? "day" : "night";
+    setTheme(nextTheme);
+    localStorage.setItem("dashboard-theme", nextTheme);
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -107,7 +119,15 @@ export default function LoginPage() {
   };
 
   return (
-    <main className="spat-auth-page">
+    <main className="spat-auth-page" data-auth-theme={theme}>
+    <button type="button" className="spat-auth-theme-toggle" onClick={toggleTheme} aria-label={theme === "night" ? "Activer le mode clair" : "Activer le mode sombre"} title={theme === "night" ? "Mode clair" : "Mode sombre"}>
+      {theme === "night" ? (
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4" /><path d="M12 2v2m0 16v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42" /></svg>
+      ) : (
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.5 15.5A8.5 8.5 0 0 1 8.5 3.5 8.5 8.5 0 1 0 20.5 15.5Z" /></svg>
+      )}
+      <span>{theme === "night" ? "Mode clair" : "Mode sombre"}</span>
+    </button>
     <section className="spat-auth-card">
     <div className="spat-auth-brand">
     <div className="spat-auth-welcome">Bienvenue sur</div>
@@ -239,6 +259,33 @@ export default function LoginPage() {
     </section>
     
 <style jsx global>{`
+
+.spat-auth-theme-toggle {
+  position: absolute; top: 22px; right: 26px; z-index: 20;
+  display: inline-flex; align-items: center; justify-content: center; gap: 9px;
+  min-height: 42px; padding: 0 15px; border: 1px solid rgba(7,74,135,.16);
+  border-radius: 999px; background: rgba(255,255,255,.94); color: #164675;
+  box-shadow: 0 5px 18px rgba(15,40,70,.10); font-size: 12px; font-weight: 650;
+  cursor: pointer; transition: background .2s ease,color .2s ease,border-color .2s ease,transform .2s ease;
+}
+.spat-auth-theme-toggle:hover { transform: translateY(-1px); }
+.spat-auth-theme-toggle svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.spat-auth-page[data-auth-theme="night"] { background: radial-gradient(ellipse at 15% 10%,#183957 0%,#0b1b2d 48%,#071321 100%); }
+.spat-auth-page[data-auth-theme="night"] .spat-auth-card { background: #101f31; box-shadow: 0 22px 55px rgba(0,0,0,.42); border: 1px solid #263b52; }
+.spat-auth-page[data-auth-theme="night"] .spat-auth-form-panel { background: #101f31; }
+.spat-auth-page[data-auth-theme="night"] .spat-auth-form-content h2,
+.spat-auth-page[data-auth-theme="night"] .spat-auth-field label { color: #edf4ff; }
+.spat-auth-page[data-auth-theme="night"] .spat-auth-intro,
+.spat-auth-page[data-auth-theme="night"] .spat-auth-security { color: #a9bdd5; }
+.spat-auth-page[data-auth-theme="night"] .spat-auth-input-icon input { color: #edf4ff; border-bottom-color: #385574; }
+.spat-auth-page[data-auth-theme="night"] .spat-auth-input-icon input::placeholder { color: #8198b2; }
+.spat-auth-page[data-auth-theme="night"] .spat-auth-input-icon input:focus { border-bottom-color: #60a5fa; }
+.spat-auth-page[data-auth-theme="night"] .spat-auth-eye,
+.spat-auth-page[data-auth-theme="night"] .spat-auth-forgot a { color: #7dbbff; }
+.spat-auth-page[data-auth-theme="night"] .spat-auth-error { background: #3b1d2a; color: #fecdd3; border: 1px solid #713047; }
+.spat-auth-page[data-auth-theme="night"] .spat-auth-theme-toggle { background: #142941; border-color: #385574; color: #e5f1ff; box-shadow: 0 5px 18px rgba(0,0,0,.22); }
+@media (max-width: 760px) { .spat-auth-theme-toggle { top: 12px; right: 12px; min-height: 38px; padding: 0 12px; font-size: 11px; } }
+
 .spat-auth-page {
   min-height: 100vh;
   width: 100%;

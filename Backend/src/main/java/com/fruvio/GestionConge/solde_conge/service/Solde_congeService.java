@@ -135,14 +135,8 @@ public class Solde_congeService {
         }
         if (demandeCongeRepository == null)
             throw new IllegalStateException("L'historique des congés est indisponible : calcul automatique refusé.");
-        boolean historiqueValideSansSolde = demandeCongeRepository
-                .findByEmployeIdAndTypeCongeId(employeId, typeCongeId).stream()
-                .anyMatch(d -> "VALIDEE".equalsIgnoreCase(d.getStatut())
-                        && d.getDateDebut() != null && d.getDateFin() != null
-                        && !d.getDateFin().isBefore(debutExercice)
-                        && !d.getDateDebut().isAfter(finExercice));
-        if (historiqueValideSansSolde)
-            throw new IllegalStateException("Des congés validés existent sur cet exercice sans solde RH correspondant. Vérification manuelle nécessaire pour éviter un reliquat erroné.");
+        // L'historique validé est la source des jours déjà consommés :
+        // aucun solde RH ne doit être saisi manuellement pour le reconstituer.
         LocalDate limite = LocalDate.now().isBefore(finExercice) ? LocalDate.now() : finExercice;
         int moisComplets = 0;
         int indexMois = 1;
@@ -153,18 +147,76 @@ public class Solde_congeService {
             prochaineEcheance = employe.getDateEmbauche().plusMonths(indexMois).minusDays(1);
         }
         int acquisDemiJournees = moisComplets * 5;
+        int joursPris = demandeCongeRepository.findByEmployeIdAndTypeCongeId(employeId, typeCongeId).stream()
+                .filter(d -> "VALIDEE".equalsIgnoreCase(d.getStatut()))
+                .filter(d -> d.getDateDebut() != null && d.getDateFin() != null && d.getNombreJours() != null)
+                .mapToInt(d -> joursConsommesPourExercice(d.getDateDebut(), d.getDateFin(),
+                        d.getNombreJours(), periode))
+                .sum();
+        int prisDemiJournees = Math.multiplyExact(joursPris, 2);
+        int restantDemiJournees = Math.max(0, acquisDemiJournees - prisDemiJournees);
         Solde_conge solde = new Solde_conge();
         solde.setEmployeId(employeId);
         solde.setTypeCongeId(typeCongeId);
         solde.setPeriode(periode);
         solde.setEnDemiJournees(true);
         solde.setSoldeAquis(acquisDemiJournees);
-        solde.setSoldePris(0);
-        solde.setSoldeRestant(acquisDemiJournees);
+        solde.setSoldePris(prisDemiJournees);
+        solde.setSoldeRestant(restantDemiJournees);
         solde.setDate_maj(new Timestamp(System.currentTimeMillis()));
         Solde_conge saved = soldeCongeRepository.save(solde);
         saved.exposerSoldesEmployeEnJours();
         return saved;
+    }
+
+    /**
+     * Permissions exceptionnelles pour événements familiaux : plafond légal global
+     * de 10 jours par année civile (Code du travail, loi 2024-014, art. 126).
+     * Le congé de paternité est traité séparément : 3 jours (art. 134).
+     * Seules les demandes VALIDEE consomment le plafond.
+     */
+    @Transactional(readOnly = true)
+    public int calculerPermissionFamilialeDisponible(Long employeId, Long typeCongeId, int annee) {
+        if (demandeCongeRepository == null)
+            throw new IllegalStateException("L'historique des congés est indisponible : calcul refusé.");
+        Type_conge typeCible = typeCongeRepository.findById(typeCongeId)
+                .orElseThrow(() -> new IllegalArgumentException("Type de congé introuvable."));
+        String codeCible = typeCible.getCode() == null ? "" : typeCible.getCode().trim().toUpperCase();
+
+        if ("NAISS_PAT".equals(codeCible)) {
+            int pris = demandeCongeRepository.findByEmployeIdAndTypeCongeId(employeId, typeCongeId).stream()
+                    .filter(d -> "VALIDEE".equalsIgnoreCase(d.getStatut()))
+                    .filter(d -> d.getDateDebut() != null && d.getDateFin() != null && d.getNombreJours() != null)
+                    .mapToInt(d -> joursConsommesPourExercice(d.getDateDebut(), d.getDateFin(), d.getNombreJours(), annee))
+                    .sum();
+            return Math.max(0, 3 - pris);
+        }
+
+        Set<String> permissionsFamiliales = Set.of(
+                "MAR_SAL", "MAR_ENF", "DEC_CONJ", "CIRC_ENF", "URGENCE", "AUT_FAM");
+        List<Type_conge> typesFamiliaux = typeCongeRepository.findAll().stream()
+                .filter(t -> t.getCode() != null && permissionsFamiliales.contains(t.getCode().trim().toUpperCase()))
+                .toList();
+        int consommes = typesFamiliaux.stream()
+                .flatMap(t -> demandeCongeRepository.findByEmployeIdAndTypeCongeId(employeId, t.getId()).stream())
+                .filter(d -> "VALIDEE".equalsIgnoreCase(d.getStatut()))
+                .filter(d -> d.getDateDebut() != null && d.getDateFin() != null && d.getNombreJours() != null)
+                .mapToInt(d -> joursConsommesPourExercice(d.getDateDebut(), d.getDateFin(), d.getNombreJours(), annee))
+                .sum();
+        return Math.max(0, 10 - consommes);
+    }
+
+    private int joursConsommesPourExercice(LocalDate debut, LocalDate fin, int nombreJours, int periode) {
+        LocalDate debutAnnee = LocalDate.of(periode, 1, 1);
+        LocalDate finAnnee = LocalDate.of(periode, 12, 31);
+        LocalDate debutSegment = debut.isAfter(debutAnnee) ? debut : debutAnnee;
+        LocalDate finSegment = fin.isBefore(finAnnee) ? fin : finAnnee;
+        if (finSegment.isBefore(debutSegment)) return 0;
+        long totalCalendrier = java.time.temporal.ChronoUnit.DAYS.between(debut, fin) + 1;
+        long joursCalendrierSegment = java.time.temporal.ChronoUnit.DAYS.between(debutSegment, finSegment) + 1;
+        if (totalCalendrier <= 0) return 0;
+        if (totalCalendrier == joursCalendrierSegment) return nombreJours;
+        return (int) Math.round((double) nombreJours * joursCalendrierSegment / totalCalendrier);
     }
 
     public List<Solde_conge> getAllSoldes(Utilisateur currentUser) {

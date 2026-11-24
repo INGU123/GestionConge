@@ -29,7 +29,10 @@ export default function ReinitialisationsPage() {
     }
   }, [isAdmin]);
 
-  useEffect(() => { loadRequests(true); }, [loadRequests]);
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    loadRequests(true);
+  }, [loadRequests]);
 
   const handleDecision = async (id, decision) => {
     setBusyIds((previous) => new Set(previous).add(id));
@@ -49,20 +52,20 @@ export default function ReinitialisationsPage() {
     }
   };
 
-  if (!isAdmin) return <div className="alert alert-error">Cette rubrique est réservée à l'administrateur.</div>;
+  if (!isAdmin) return <div className="alert alert-error">Cette rubrique est réservée à l&apos;administrateur.</div>;
 
   return (
     <div className="space-y-6">
       <div className="bg-slate-900 text-white rounded-2xl p-6 border-l-4 border-blue-600">
         <h1 className="text-2xl font-bold flex items-center gap-2"><ShieldCheck className="w-6 h-6 text-blue-400" /> Réinitialisations de mot de passe</h1>
-        <p className="text-slate-300 text-sm mt-2">Examinez les demandes des agents SPAT. Après acceptation, un mot de passe temporaire est généré. Vous pourrez le remettre directement à l'agent, même sans adresse e-mail.</p>
+        <p className="text-slate-300 text-sm mt-2">Examinez les demandes des agents SPAT. Après acceptation, un mot de passe temporaire est généré. Vous pourrez le remettre directement à l&apos;agent, même sans adresse e-mail.</p>
       </div>
       {message && <div className="alert alert-info"><span>{message}</span></div>}
       {approvedCredentials && (
         <section className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5 space-y-3">
           <div>
             <h2 className="font-bold text-emerald-900 text-lg">Mot de passe temporaire généré</h2>
-            <p className="text-sm text-emerald-800">Remettez ces informations directement à l'agent. Le mot de passe ne sera plus affiché après avoir quitté cette page ou actualisé l'écran.</p>
+            <p className="text-sm text-emerald-800">Remettez ces informations directement à l&apos;agent. Le mot de passe ne sera plus affiché après avoir quitté cette page ou actualisé l&apos;écran.</p>
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="rounded-xl bg-white p-3 border border-emerald-100">

@@ -7,7 +7,10 @@ const API="http://localhost:8080";
 export default function DirecteurPage(){
  const [rows,setRows]=useState([]),[typesConge,setTypesConge]=useState([]),[motifs,setMotifs]=useState({}),[busy,setBusy]=useState(null);const toast=useToast();
  const load=async()=>{const [r,typeData]=await Promise.all([authFetch(API+"/circuit-conge/directeur/en-attente"),getAllTypeConge()]);if(!r.ok)throw new Error("Chargement impossible");setRows(await r.json());setTypesConge(typeData);};
- useEffect(()=>{load().catch(e=>toast(e.message,"error"));},[]);
+ useEffect(()=>{
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  load().catch(e=>toast(e.message,"error"));
+ },[]);
  const getTypeLabel=d=>{const typeId=d.typeCongeId??d.typeConge?.id;const type=typesConge.find(item=>String(item.id)===String(typeId));return type?.libelle||d.typeConge?.libelle||type?.code||"Type de congé";};
  const downloadScan=async id=>{try{const r=await authFetch(API+"/circuit-conge/"+id+"/piece-jointe");if(!r.ok){const detail=await r.text();throw new Error(detail||"Scan indisponible pour ce dossier.");}const blob=await r.blob();const extension=blob.type.includes("pdf")?"pdf":blob.type.includes("png")?"png":blob.type.includes("jpeg")?"jpg":"bin";const url=URL.createObjectURL(blob);const link=document.createElement("a");link.href=url;link.download="scan-demande-conge-"+id+"."+extension;document.body.appendChild(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);}catch(e){toast(e.message,"error");}};
  const decide=async(id,decision)=>{if(decision==="REFUSEE"&&!motifs[id]?.trim()){toast("Le motif de refus est obligatoire.","warning");return;}setBusy(id);try{const r=await authFetch(API+`/circuit-conge/${id}/decision`,{method:"POST",body:JSON.stringify({decision,motif:motifs[id]||""})});const d=await r.json();if(!r.ok)throw new Error(d.message||"Décision impossible");toast(decision==="VALIDEE"?"Congé accordé.":"Congé refusé.","success");await load();}catch(e){toast(e.message,"error");}finally{setBusy(null);}};

@@ -37,6 +37,26 @@ class Solde_congeServiceTest {
 
     @InjectMocks Solde_congeService service;
 
+
+    @Test
+    void permissionFamilialeRespecteLePlafondLegalAnnuelDeDixJours() {
+        Type_conge mariage = Type_conge.builder().id(8L).code("MAR_SAL").libelle("Mariage du salarié").build();
+        when(typeCongeRepository.findById(8L)).thenReturn(Optional.of(mariage));
+        when(typeCongeRepository.findAll()).thenReturn(List.of(mariage));
+        when(demandeCongeRepository.findByEmployeIdAndTypeCongeId(5L, 8L)).thenReturn(List.of());
+
+        assertEquals(10, service.calculerPermissionFamilialeDisponible(5L, 8L, 2026));
+    }
+
+    @Test
+    void congePaterniteRespecteLePlafondLegalDeTroisJours() {
+        Type_conge paternite = Type_conge.builder().id(11L).code("NAISS_PAT").libelle("Naissance — père salarié").build();
+        when(typeCongeRepository.findById(11L)).thenReturn(Optional.of(paternite));
+        when(demandeCongeRepository.findByEmployeIdAndTypeCongeId(5L, 11L)).thenReturn(List.of());
+
+        assertEquals(3, service.calculerPermissionFamilialeDisponible(5L, 11L, 2026));
+    }
+
     @Test
     void consulterSoldesNeDoitPasCreerDeSoldes() {
         Utilisateur employe = new Utilisateur();

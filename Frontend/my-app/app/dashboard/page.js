@@ -41,6 +41,7 @@ export default function Dashboard() {
   const [user, setUser] = useState(null);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setUser(getCurrentUser());
   }, []);
 
@@ -92,7 +93,7 @@ export default function Dashboard() {
           </div>
         ) : (
           <p className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
-            Aucun espace n'est associé à ce rôle. Contactez l'administrateur.
+            Aucun espace n&apos;est associé à ce rôle. Contactez l&apos;administrateur.
           </p>
         )}
       </section>

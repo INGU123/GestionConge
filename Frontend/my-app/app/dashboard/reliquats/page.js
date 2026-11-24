@@ -55,10 +55,30 @@ export default function ReliquatsPage() {
     return () => clearTimeout(timer);
   }, [load, toast]);
 
-  const getTypeLabel = dossier => {
+  const getType = dossier => {
     const typeId = dossier.typeCongeId ?? dossier.typeConge?.id;
-    const type = typesConge.find(item => String(item.id) === String(typeId));
-    return type?.libelle || dossier.typeConge?.libelle || type?.code || "Type de congé";
+    return typesConge.find(item => String(item.id) === String(typeId)) || dossier.typeConge || null;
+  };
+
+  const getTypeLabel = dossier => {
+    const type = getType(dossier);
+    return type?.libelle || type?.code || "Type de congé";
+  };
+
+  const getCalculationExplanation = dossier => {
+    const type = getType(dossier);
+    const code = String(type?.code || "").trim().toUpperCase();
+    const libelle = String(type?.libelle || "").toUpperCase();
+    if (code.includes("ANNUEL") || libelle.includes("ANNUEL")) {
+      return "Le système calcule les droits annuels à partir de la date réelle d’embauche et des congés validés.";
+    }
+    if (code === "NAISS_PAT") {
+      return "Le calcul applique le plafond spécifique de paternité et déduit les jours déjà validés.";
+    }
+    if (["MAR_SAL", "MAR_ENF", "DEC_CONJ", "CIRC_ENF", "URGENCE", "AUT_FAM"].includes(code)) {
+      return "Le calcul applique le plafond légal commun des permissions familiales et déduit les jours déjà validés.";
+    }
+    return "Le solde RH enregistré est prioritaire. En son absence, le calcul utilise le plafond annuel configuré pour ce type et déduit les congés validés.";
   };
 
   const confirmAutomatically = async dossier => {
@@ -154,7 +174,7 @@ export default function ReliquatsPage() {
             <div className="rounded-xl border border-base-300 bg-base-200/50 p-4 space-y-3">
               {automaticCalculation ? <>
                 <div className="flex flex-wrap items-center justify-between gap-3">
-                  <p className="text-sm text-base-content/75">Le système calcule le reliquat à partir de la date réelle d’embauche, des droits acquis et des congés validés. Aucune recherche manuelle du solde n’est nécessaire.</p>
+                  <p className="text-sm text-base-content/75">{getCalculationExplanation(dossier)} Aucune durée n’est inventée.</p>
                 </div>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                   <div className="rounded-lg bg-base-100 border border-base-300 p-3">

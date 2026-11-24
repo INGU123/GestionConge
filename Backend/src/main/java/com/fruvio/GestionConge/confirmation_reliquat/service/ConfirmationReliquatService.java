@@ -225,6 +225,32 @@ public class ConfirmationReliquatService {
             CircuitDemandeConge dossier, Employe employe) {
         int debut = dossier.getDateDebut().getYear();
         int fin = dossier.getDateFin().getYear();
+        Type_conge type = typesConge.findById(dossier.getTypeCongeId())
+                .orElseThrow(() -> new IllegalStateException("Type de congé introuvable."));
+        String code = type.getCode() == null ? "" : type.getCode().trim().toUpperCase();
+        boolean paternite = "NAISS_PAT".equals(code);
+        boolean permissionFamiliale = List.of("MAR_SAL", "MAR_ENF", "DEC_CONJ", "CIRC_ENF",
+                "DEM_LOG", "SINISTRE", "URGENCE", "AUT_FAM").contains(code);
+        if (paternite || permissionFamiliale) {
+            if (soldeService == null)
+                throw new IllegalStateException("Le calcul légal des permissions n'est pas configuré.");
+            if (debut != fin)
+                throw new IllegalStateException("La confirmation d'une permission familiale doit rester dans une seule année civile.");
+            int plafond = paternite ? 3 : 10;
+            int restantApresDemandesValidees = soldeService.calculerPermissionFamilialeDisponible(
+                    employe.getId(), dossier.getTypeCongeId(), debut);
+            int dejaReserve = confirmations.findByEmployeIdOrderByDateConfirmationDesc(employe.getId()).stream()
+                    .filter(c -> !c.getCircuitDemandeCongeId().equals(dossier.getId()))
+                    .filter(c -> extraireAnneeReference(c.getPeriodeReference()) == debut)
+                    .filter(c -> circuits.findById(c.getCircuitDemandeCongeId())
+                            .map(x -> List.of("RELIQUAT_RETOURNE", "CHEF_EN_ATTENTE", "DIRECTEUR_EN_ATTENTE").contains(x.getStatut()))
+                            .orElse(false))
+                    .mapToInt(ConfirmationReliquat::getNombreJoursConfirme).sum();
+            int disponible = Math.max(0, restantApresDemandesValidees - dejaReserve);
+            int consommes = plafond - restantApresDemandesValidees;
+            return new CalculReliquat(plafond, consommes, restantApresDemandesValidees,
+                    dejaReserve, disponible, "Année civile " + debut);
+        }
         List<Solde_conge> lignes = soldes.findByEmployeIdAndTypeCongeId(
                 employe.getId(), dossier.getTypeCongeId()).stream()
                 .filter(s -> s.getPeriode() >= debut && s.getPeriode() <= fin)

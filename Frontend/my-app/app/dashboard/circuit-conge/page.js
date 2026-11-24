@@ -85,7 +85,7 @@ export default function CircuitCongePage() {
   };
   const submit=async id=>{try{const r=await authFetch(API+`/circuit-conge/${id}/soumettre-chef`,{method:"POST"});const d=await r.json();if(!r.ok)throw new Error(d.message||"Transmission impossible");toast("Dossier transmis au chef de département.","success");await load();}catch(e){toast(e.message,"error");}};
   const download=async id=>{try{const r=await authFetch(API+`/circuit-conge/${id}/pdf`);if(!r.ok)throw new Error("PDF indisponible");const blob=await r.blob();const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=`decision-conge-${id}.pdf`;a.click();URL.revokeObjectURL(url);}catch(e){toast(e.message,"error");}};
-  return <div className="space-y-6">
+  return <div className="circuit-conge-theme space-y-6">
     <header className="space-y-1">
       <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">Espace Assistant de direction</p>
       <h1 className="text-2xl font-bold tracking-tight">Circuit des congés</h1>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { authFetch, getCurrentUser } from "@/lib/apiClient";
 import { useToast } from "../../components/ToastProvider";
 import ConfirmDialog from "../../components/ConfirmDialog";
@@ -18,7 +18,14 @@ import {
   X,
   User
 } from "lucide-react";
-import { FaEdit, FaTrashAlt } from "react-icons/fa";
+import { 
+  FiMoreVertical, 
+  FiEye, 
+  FiEdit2, 
+  FiUserX, 
+  FiUserCheck, 
+  FiTrash2 
+} from "react-icons/fi";
 
 export default function UtilisateursPage() {
   const [currentUser] = useState(() => getCurrentUser());
@@ -31,6 +38,14 @@ export default function UtilisateursPage() {
   const [editingUser, setEditingUser] = useState(null);
   const [deletingUserId, setDeletingUserId] = useState(null);
   const [userToDelete, setUserToDelete] = useState(null);
+  
+  // État pour la modale de visualisation complète (Voir tout)
+  const [viewUserModal, setViewUserModal] = useState(null);
+
+  // État pour gérer l'ouverture du menu 3 points par ligne (ID utilisateur actif)
+  const [activeMenuId, setActiveMenuId] = useState(null);
+  const menuRef = useRef(null);
+
   const [newUser, setNewUser] = useState({
     matricule: "",
     nom: "",
@@ -50,6 +65,19 @@ export default function UtilisateursPage() {
     actif: true,
   });
   const showToast = useToast();
+
+  // Fermer le menu 3 points si on clique en dehors
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (menuRef.current && !menuRef.current.contains(event.target)) {
+        setActiveMenuId(null);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
 
   useEffect(() => {
     let isMounted = true;
@@ -197,6 +225,37 @@ export default function UtilisateursPage() {
     }
   };
 
+  // Basculer l'état actif / désactivé d'un utilisateur
+  const handleToggleActive = async (user) => {
+    setActiveMenuId(null);
+    try {
+      const updatedStatus = user.actif === false ? true : false;
+      const payload = {
+        ...user,
+        actif: updatedStatus,
+      };
+
+      const res = await authFetch(`http://localhost:8080/utilisateur/update`, {
+        method: "PUT",
+        body: JSON.stringify(payload),
+      });
+
+      if (res.ok) {
+        const responseData = await res.json();
+        const savedUser = responseData.utilisateur || responseData;
+        setUsers((prev) => prev.map((u) => u.id === savedUser.id ? savedUser : u));
+        showToast(
+          updatedStatus ? "Collaborateur activé avec succès." : "Collaborateur désactivé avec succès.", 
+          "success"
+        );
+      } else {
+        showToast("Erreur lors de la modification du statut.", "error");
+      }
+    } catch (err) {
+      showToast(`Erreur : ${err.message}`, "error");
+    }
+  };
+
   const startCreate = () => {
     setEditingUser(null);
     setNewUser({
@@ -209,6 +268,7 @@ export default function UtilisateursPage() {
   };
 
   const startEdit = (user) => {
+    setActiveMenuId(null);
     setEditingUser(user);
     setNewUser({
       ...user,
@@ -224,6 +284,11 @@ export default function UtilisateursPage() {
       date_embauche: user.date_embauche || "",
     });
     setShowModal(true);
+  };
+
+  const handleViewDetails = (user) => {
+    setActiveMenuId(null);
+    setViewUserModal(user);
   };
 
   const isAdmin = currentUser?.role?.toUpperCase() === "ADMIN";
@@ -280,6 +345,12 @@ export default function UtilisateursPage() {
     }
   };
 
+  const getServiceName = (serviceId) => {
+    if (!serviceId) return "-";
+    const found = services.find((s) => s.id === Number(serviceId));
+    return found ? found.nom : `Service #${serviceId}`;
+  };
+
   return (
     <div className="space-y-6">
       {/* Banner Institutionnelle SPAT */}
@@ -334,7 +405,7 @@ export default function UtilisateursPage() {
             <p className="font-semibold text-slate-600">Aucun utilisateur trouvé.</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto min-h-[300px]">
             <table className="table w-full">
               <thead>
                 <tr className="bg-slate-50 text-slate-600 text-xs uppercase tracking-wider border-b border-slate-200">
@@ -348,79 +419,208 @@ export default function UtilisateursPage() {
                 </tr>
               </thead>
               <tbody>
-                {filteredUsers.map((u) => (
-                  <tr key={u.id} className="hover:bg-slate-50/80 transition-colors border-b border-slate-100">
-                    <td className="py-3.5">
-                      <span className="font-mono text-xs font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded border border-blue-100">
-                        {u.matricule || `-`}
-                      </span>
-                    </td>
-                    <td className="py-3.5">
-                      <div className="flex items-center gap-2.5">
-                        <div className="w-8 h-8 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center font-bold text-xs border border-slate-200">
-                          {u.prenom ? u.prenom[0].toUpperCase() : "U"}
+                {filteredUsers.map((u) => {
+                  const isMenuOpen = activeMenuId === u.id;
+                  const isSelf = u.id === currentUser?.id;
+
+                  return (
+                    <tr key={u.id} className="hover:bg-slate-50/80 transition-colors border-b border-slate-100">
+                      <td className="py-3.5">
+                        <span className="font-mono text-xs font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded border border-blue-100">
+                          {u.matricule || `-`}
+                        </span>
+                      </td>
+                      <td className="py-3.5">
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-8 h-8 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center font-bold text-xs border border-slate-200">
+                            {u.prenom ? u.prenom[0].toUpperCase() : "U"}
+                          </div>
+                          <span className="font-bold text-slate-800 text-sm">
+                            {u.prenom} {u.nom}
+                          </span>
                         </div>
-                        <span className="font-bold text-slate-800 text-sm">
-                          {u.prenom} {u.nom}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="py-3.5 text-xs text-slate-600 font-medium">
-                      <div className="flex items-center gap-1.5">
-                        <Mail className="w-3.5 h-3.5 text-slate-400" />
-                        {u.email}
-                      </div>
-                    </td>
-                    <td className="py-3.5">{getRoleBadge(u.role)}</td>
-                    <td className="py-3.5 text-xs text-slate-600">
-                      <div className="flex items-center gap-1.5 font-medium">
-                        <Calendar className="w-3.5 h-3.5 text-slate-400" />
-                        {u.date_embauche || "-"}
-                      </div>
-                    </td>
-                    <td className="py-3.5">
-                      {u.actif !== false ? (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                          <CheckCircle2 className="w-3 h-3" />
-                          Actif
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-bold bg-rose-50 text-rose-700 border border-rose-200">
-                          <UserX className="w-3 h-3" />
-                          Inactif
-                        </span>
-                      )}
-                    </td>
-                    <td className="py-3.5">
-                      <div className="flex justify-end gap-2">
-                        <button
-                          type="button"
-                          onClick={() => startEdit(u)}
-                          className="btn btn-ghost btn-sm btn-square text-blue-700"
-                          title="Modifier le collaborateur"
-                          aria-label={`Modifier ${u.prenom} ${u.nom}`}
-                        >
-                          <FaEdit />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setUserToDelete(u)}
-                          disabled={deletingUserId === u.id || u.id === currentUser?.id}
-                          className="btn btn-ghost btn-sm btn-square text-rose-700"
-                          title={u.id === currentUser?.id ? "Impossible de supprimer votre compte" : "Supprimer le collaborateur"}
-                          aria-label={`Supprimer ${u.prenom} ${u.nom}`}
-                        >
-                          <FaTrashAlt />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                      <td className="py-3.5 text-xs text-slate-600 font-medium">
+                        <div className="flex items-center gap-1.5">
+                          <Mail className="w-3.5 h-3.5 text-slate-400" />
+                          {u.email}
+                        </div>
+                      </td>
+                      <td className="py-3.5">{getRoleBadge(u.role)}</td>
+                      <td className="py-3.5 text-xs text-slate-600">
+                        <div className="flex items-center gap-1.5 font-medium">
+                          <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                          {u.date_embauche || "-"}
+                        </div>
+                      </td>
+                      <td className="py-3.5">
+                        {u.actif !== false ? (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                            <CheckCircle2 className="w-3 h-3" />
+                            Actif
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-bold bg-rose-50 text-rose-700 border border-rose-200">
+                            <UserX className="w-3 h-3" />
+                            Inactif
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-3.5 text-right relative">
+                        <div className="inline-block text-left" ref={isMenuOpen ? menuRef : null}>
+                          <button
+                            type="button"
+                            onClick={() => setActiveMenuId(isMenuOpen ? null : u.id)}
+                            className="btn btn-ghost btn-sm btn-circle text-slate-600 hover:bg-slate-100 focus:outline-hidden"
+                            title="Actions"
+                            aria-label={`Actions pour ${u.prenom} ${u.nom}`}
+                          >
+                            <FiMoreVertical className="w-4 h-4" />
+                          </button>
+
+                          {isMenuOpen && (
+                            <div className="absolute right-0 mt-1 w-44 bg-white rounded-xl shadow-lg border border-slate-200 py-1.5 z-30 text-xs text-slate-700 font-medium">
+                              <button
+                                type="button"
+                                onClick={() => handleViewDetails(u)}
+                                className="w-full text-left px-4 py-2 hover:bg-slate-50 flex items-center gap-2.5 text-slate-700 transition-colors"
+                              >
+                                <FiEye className="w-3.5 h-3.5 text-blue-600" />
+                                Voir tout
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => startEdit(u)}
+                                className="w-full text-left px-4 py-2 hover:bg-slate-50 flex items-center gap-2.5 text-slate-700 transition-colors"
+                              >
+                                <FiEdit2 className="w-3.5 h-3.5 text-amber-600" />
+                                Modifier
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => handleToggleActive(u)}
+                                className="w-full text-left px-4 py-2 hover:bg-slate-50 flex items-center gap-2.5 text-slate-700 transition-colors"
+                              >
+                                {u.actif !== false ? (
+                                  <>
+                                    <FiUserX className="w-3.5 h-3.5 text-orange-600" />
+                                    Désactiver
+                                  </>
+                                ) : (
+                                  <>
+                                    <FiUserCheck className="w-3.5 h-3.5 text-emerald-600" />
+                                    Activer
+                                  </>
+                                )}
+                              </button>
+
+                              <div className="my-1 border-t border-slate-100"></div>
+
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setActiveMenuId(null);
+                                  setUserToDelete(u);
+                                }}
+                                disabled={isSelf}
+                                className={`w-full text-left px-4 py-2 flex items-center gap-2.5 transition-colors ${
+                                  isSelf ? "opacity-40 cursor-not-allowed text-slate-400" : "hover:bg-rose-50 text-rose-600"
+                                }`}
+                                title={isSelf ? "Impossible de supprimer votre propre compte" : ""}
+                              >
+                                <FiTrash2 className="w-3.5 h-3.5" />
+                                Supprimer
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
         )}
       </div>
+
+      {/* MODALE DE VISUALISATION (VOIR TOUT) */}
+      {viewUserModal && (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-xl max-w-lg w-full p-6 space-y-4 text-slate-800 border border-slate-100">
+            <div className="flex justify-between items-center pb-3 border-b border-slate-100">
+              <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                <Users className="w-5 h-5 text-blue-600" />
+                Fiche Collaborateur — {viewUserModal.prenom} {viewUserModal.nom}
+              </h3>
+              <button
+                onClick={() => setViewUserModal(null)}
+                className="text-slate-400 hover:text-slate-600 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4 text-xs">
+              <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                <span className="text-slate-400 block font-bold uppercase mb-1">Matricule</span>
+                <span className="font-mono font-bold text-slate-800 text-sm">{viewUserModal.matricule || "-"}</span>
+              </div>
+              <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                <span className="text-slate-400 block font-bold uppercase mb-1">Rôle & Privilèges</span>
+                <div>{getRoleBadge(viewUserModal.role)}</div>
+              </div>
+              <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                <span className="text-slate-400 block font-bold uppercase mb-1">Email Institutionnel</span>
+                <span className="font-medium text-slate-800">{viewUserModal.email || "-"}</span>
+              </div>
+              <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                <span className="text-slate-400 block font-bold uppercase mb-1">Téléphone</span>
+                <span className="font-medium text-slate-800">{viewUserModal.telephone || "-"}</span>
+              </div>
+              <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                <span className="text-slate-400 block font-bold uppercase mb-1">Numéro CIN</span>
+                <span className="font-medium text-slate-800">{viewUserModal.numero_cin || "-"}</span>
+              </div>
+              <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                <span className="text-slate-400 block font-bold uppercase mb-1">Date de naissance</span>
+                <span className="font-medium text-slate-800">{viewUserModal.date_naissance || "-"}</span>
+              </div>
+              <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                <span className="text-slate-400 block font-bold uppercase mb-1">Fonction / Poste</span>
+                <span className="font-medium text-slate-800">{viewUserModal.fonction || "-"}</span>
+              </div>
+              <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                <span className="text-slate-400 block font-bold uppercase mb-1">Type de contrat</span>
+                <span className="font-medium text-slate-800">{viewUserModal.type_contrat || "-"}</span>
+              </div>
+              <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                <span className="text-slate-400 block font-bold uppercase mb-1">Service</span>
+                <span className="font-medium text-slate-800">{getServiceName(viewUserModal.service_id)}</span>
+              </div>
+              <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                <span className="text-slate-400 block font-bold uppercase mb-1">{`Date d'embauche`}</span>
+                <span className="font-medium text-slate-800">{viewUserModal.date_embauche || "-"}</span>
+              </div>
+              <div className="col-span-2 bg-slate-50 p-3 rounded-xl border border-slate-100">
+                <span className="text-slate-400 block font-bold uppercase mb-1">Adresse</span>
+                <span className="font-medium text-slate-800">{viewUserModal.adresse || "-"}</span>
+              </div>
+            </div>
+
+            <div className="flex justify-end pt-2 border-t border-slate-100">
+              <button
+                onClick={() => setViewUserModal(null)}
+                className="btn btn-primary btn-sm font-semibold"
+              >
+                Fermer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Formulaire partagé de création et modification */}
       {showModal && (
@@ -447,7 +647,7 @@ export default function UtilisateursPage() {
                 <input
                   type="text"
                   required
-                  placeholder="Ex: MTR-001"
+                  placeholder="Ex : 2026123"
                   value={newUser.matricule}
                   onChange={(e) => setNewUser({ ...newUser, matricule: e.target.value })}
                   className="input input-bordered input-sm w-full bg-white text-slate-800 focus:outline-hidden"
@@ -575,7 +775,7 @@ export default function UtilisateursPage() {
                 </div>
               </div>
 
-                            <div>
+              <div>
                 <label className="block text-xs font-bold uppercase text-slate-600 mb-1">
                   {`Date d'embauche`}
                 </label>
@@ -674,6 +874,7 @@ export default function UtilisateursPage() {
           </div>
         </div>
       )}
+
       {userToDelete && (
         <ConfirmDialog
           title="Supprimer ce collaborateur ?"

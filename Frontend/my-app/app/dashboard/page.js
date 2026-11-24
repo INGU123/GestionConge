@@ -172,68 +172,70 @@ export default function Dashboard() {
       </div>
 
       {/* Tables section : Recent Demandes & Solde Summary */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Recent Demandes */}
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
-          <div className="flex justify-between items-center mb-4 pb-2 border-b border-slate-100">
-            <h2 className="text-base font-bold text-slate-800 flex items-center gap-2">
-              <FileText className="w-5 h-5 text-blue-600" />
-              Dernières Demandes
-            </h2>
-            <Link
-              href="/dashboard/demande"
-              className="text-xs font-semibold text-blue-700 hover:text-blue-900"
-            >
-              {`Voir tout l'historique`} →
-            </Link>
-          </div>
-
-          {demandes.length === 0 ? (
-            <div className="text-center py-8 text-slate-400 text-sm">
-              {`Aucune demande enregistrée dans l'historique.`}
+      <div className={`grid grid-cols-1 ${isAdmin ? "" : "lg:grid-cols-2"} gap-6`}>
+        {/* Recent Demandes - Masqué pour les Administrateurs */}
+        {!isAdmin && (
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
+            <div className="flex justify-between items-center mb-4 pb-2 border-b border-slate-100">
+              <h2 className="text-base font-bold text-slate-800 flex items-center gap-2">
+                <FileText className="w-5 h-5 text-blue-600" />
+                Dernières Demandes
+              </h2>
+              <Link
+                href="/dashboard/demande"
+                className="text-xs font-semibold text-blue-700 hover:text-blue-900"
+              >
+                {`Voir tout l'historique`} →
+              </Link>
             </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="table table-sm w-full">
-                <thead>
-                  <tr className="text-slate-500 border-b text-xs">
-                    <th>Type de congé</th>
-                    <th>Période</th>
-                    <th>Statut</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {demandes.slice(-5).reverse().map((d) => (
-                    <tr key={d.id} className="hover:bg-slate-50/80 border-b border-slate-100">
-                      <td className="font-medium text-slate-800">
-                        {getTypeLabel(d.typeCongeId)}
-                      </td>
-                      <td className="text-xs text-slate-600">
-                        {d.dateDebut} → {d.dateFin}
-                      </td>
-                      <td>
-                        <span
-                          className={`badge badge-sm font-semibold ${d.statut === "VALIDEE"
-                              ? "badge-success text-white"
-                              : d.statut === "REFUSEE"
-                                ? "badge-error text-white"
-                                : d.statut === "ANNULEE"
-                                  ? "badge-ghost text-slate-600"
-                                  : "badge-warning text-slate-800"
-                            }`}
-                        >
-                          {d.statut === "EN_ATTENTE" ? "En attente" : d.statut}
-                        </span>
-                      </td>
+
+            {demandes.length === 0 ? (
+              <div className="text-center py-8 text-slate-400 text-sm">
+                {`Aucune demande enregistrée dans l'historique.`}
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="table table-sm w-full">
+                  <thead>
+                    <tr className="text-slate-500 border-b text-xs">
+                      <th>Type de congé</th>
+                      <th>Période</th>
+                      <th>Statut</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
+                  </thead>
+                  <tbody>
+                    {demandes.slice(-5).reverse().map((d) => (
+                      <tr key={d.id} className="hover:bg-slate-50/80 border-b border-slate-100">
+                        <td className="font-medium text-slate-800">
+                          {getTypeLabel(d.typeCongeId)}
+                        </td>
+                        <td className="text-xs text-slate-600">
+                          {d.dateDebut} → {d.dateFin}
+                        </td>
+                        <td>
+                          <span
+                            className={`badge badge-sm font-semibold ${d.statut === "VALIDEE"
+                                ? "badge-success text-white"
+                                : d.statut === "REFUSEE"
+                                  ? "badge-error text-white"
+                                  : d.statut === "ANNULEE"
+                                    ? "badge-ghost text-slate-600"
+                                    : "badge-warning text-slate-800"
+                              }`}
+                          >
+                            {d.statut === "EN_ATTENTE" ? "En attente" : d.statut}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
 
-        {/* Soldes breakdown */}
+        {/* Soldes breakdown - Prend toute la largeur si Admin */}
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
           <div className="flex justify-between items-center mb-4 pb-2 border-b border-slate-100">
             <h2 className="text-base font-bold text-slate-800 flex items-center gap-2">

@@ -169,6 +169,43 @@ public class Solde_congeService {
         return saved;
     }
 
+    /**
+     * Permissions exceptionnelles pour événements familiaux : plafond légal global
+     * de 10 jours par année civile (Code du travail, loi 2024-014, art. 126).
+     * Le congé de paternité est traité séparément : 3 jours (art. 134).
+     * Seules les demandes VALIDEE consomment le plafond.
+     */
+    @Transactional(readOnly = true)
+    public int calculerPermissionFamilialeDisponible(Long employeId, Long typeCongeId, int annee) {
+        if (demandeCongeRepository == null)
+            throw new IllegalStateException("L'historique des congés est indisponible : calcul refusé.");
+        Type_conge typeCible = typeCongeRepository.findById(typeCongeId)
+                .orElseThrow(() -> new IllegalArgumentException("Type de congé introuvable."));
+        String codeCible = typeCible.getCode() == null ? "" : typeCible.getCode().trim().toUpperCase();
+
+        if ("NAISS_PAT".equals(codeCible)) {
+            int pris = demandeCongeRepository.findByEmployeIdAndTypeCongeId(employeId, typeCongeId).stream()
+                    .filter(d -> "VALIDEE".equalsIgnoreCase(d.getStatut()))
+                    .filter(d -> d.getDateDebut() != null && d.getDateFin() != null && d.getNombreJours() != null)
+                    .mapToInt(d -> joursConsommesPourExercice(d.getDateDebut(), d.getDateFin(), d.getNombreJours(), annee))
+                    .sum();
+            return Math.max(0, 3 - pris);
+        }
+
+        Set<String> permissionsFamiliales = Set.of(
+                "MAR_SAL", "MAR_ENF", "DEC_CONJ", "CIRC_ENF", "DEM_LOG", "SINISTRE", "URGENCE", "AUT_FAM");
+        List<Type_conge> typesFamiliaux = typeCongeRepository.findAll().stream()
+                .filter(t -> t.getCode() != null && permissionsFamiliales.contains(t.getCode().trim().toUpperCase()))
+                .toList();
+        int consommes = typesFamiliaux.stream()
+                .flatMap(t -> demandeCongeRepository.findByEmployeIdAndTypeCongeId(employeId, t.getId()).stream())
+                .filter(d -> "VALIDEE".equalsIgnoreCase(d.getStatut()))
+                .filter(d -> d.getDateDebut() != null && d.getDateFin() != null && d.getNombreJours() != null)
+                .mapToInt(d -> joursConsommesPourExercice(d.getDateDebut(), d.getDateFin(), d.getNombreJours(), annee))
+                .sum();
+        return Math.max(0, 10 - consommes);
+    }
+
     private int joursConsommesPourExercice(LocalDate debut, LocalDate fin, int nombreJours, int periode) {
         LocalDate debutAnnee = LocalDate.of(periode, 1, 1);
         LocalDate finAnnee = LocalDate.of(periode, 12, 31);

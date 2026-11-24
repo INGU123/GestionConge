@@ -85,8 +85,8 @@ public class ConfirmationReliquatService {
         int anneeDebut = dossier.getDateDebut().getYear();
         int anneeFin = dossier.getDateFin().getYear();
         int anneeReference = extraireAnneeReference(periode);
-        if (anneeReference >= anneeDebut)
-            throw new IllegalArgumentException("La période de référence du reliquat doit précéder l'exercice du congé demandé.");
+        if (estCongeAnnuel(dossier.getTypeCongeId()) && anneeReference >= anneeDebut)
+            throw new IllegalArgumentException("La période de référence du reliquat annuel doit précéder l'exercice du congé demandé.");
 
         if (estCongeAnnuel(dossier.getTypeCongeId())) {
             boolean referenceEligible = employe.getDateEmbauche() != null
@@ -125,8 +125,12 @@ public class ConfirmationReliquatService {
             if (besoinCourant > disponibleCourant)
                 throw new IllegalArgumentException("Couverture insuffisante : " + jours + " j de reliquat + "
                         + disponibleCourant + " j disponibles sur les exercices du congé, pour " + dossier.getNombreJours() + " j demandés.");
+        } else {
+            CalculReliquat calcul = calculerReliquat(dossierId, acteur);
+            if (jours != calcul.reliquatDisponible())
+                throw new IllegalArgumentException("Le nombre confirmé doit correspondre au solde calculé en base : "
+                        + calcul.reliquatDisponible() + " jour(s).");
         }
-
 
         ConfirmationReliquat confirmation = confirmations.save(ConfirmationReliquat.builder()
                 .circuitDemandeCongeId(dossier.getId())
@@ -167,7 +171,7 @@ public class ConfirmationReliquatService {
         if (!"RELIQUAT_EN_ATTENTE".equals(dossier.getStatut()))
             throw new IllegalStateException("Ce dossier n'attend pas une confirmation de reliquat.");
         if (!estCongeAnnuel(dossier.getTypeCongeId()))
-            throw new IllegalStateException("Le calcul automatique du reliquat est réservé au congé annuel.");
+            return calculerReliquatDepuisSoldesEnregistres(dossier, employe);
         if (soldeService == null)
             throw new IllegalStateException("Le calcul automatique des soldes n'est pas configuré.");
         Employe employe = employes.findById(dossier.getEmployeId()).filter(Employe::isActif)
@@ -212,6 +216,45 @@ public class ConfirmationReliquatService {
                 reliquatDisponible, periodeReference);
     }
 
+
+    /**
+     * Congés non annuels : lecture exclusive des soldes RH persistés.
+     * Aucune durée légale n'est déduite d'un libellé ni inventée.
+     */
+    private CalculReliquat calculerReliquatDepuisSoldesEnregistres(
+            CircuitDemandeConge dossier, Employe employe) {
+        int debut = dossier.getDateDebut().getYear();
+        int fin = dossier.getDateFin().getYear();
+        List<Solde_conge> lignes = soldes.findByEmployeIdAndTypeCongeId(
+                employe.getId(), dossier.getTypeCongeId()).stream()
+                .filter(s -> s.getPeriode() >= debut && s.getPeriode() <= fin)
+                .toList();
+        if (lignes.isEmpty())
+            throw new IllegalStateException("Aucun solde RH n'est configuré en base pour ce type de congé sur "
+                    + debut + (fin == debut ? "" : "-" + fin)
+                    + ". La confirmation est bloquée : aucune durée ne sera inventée.");
+        int acquis = lignes.stream().mapToInt(Solde_conge::getSoldeAquisEnDemiJournees).sum() / 2;
+        int consommes = lignes.stream().mapToInt(Solde_conge::getSoldePrisEnDemiJournees).sum() / 2;
+        int restant = lignes.stream().mapToInt(Solde_conge::getSoldeRestantEnDemiJournees).sum() / 2;
+        int reserves = confirmations.findByEmployeIdOrderByDateConfirmationDesc(employe.getId()).stream()
+                .filter(c -> !c.getCircuitDemandeCongeId().equals(dossier.getId()))
+                .filter(c -> {
+                    try {
+                        int annee = extraireAnneeReference(c.getPeriodeReference());
+                        return annee >= debut && annee <= fin;
+                    } catch (RuntimeException ignored) {
+                        return false;
+                    }
+                })
+                .filter(c -> circuits.findById(c.getCircuitDemandeCongeId())
+                        .map(x -> List.of("RELIQUAT_RETOURNE", "CHEF_EN_ATTENTE", "DIRECTEUR_EN_ATTENTE").contains(x.getStatut()))
+                        .orElse(false))
+                .mapToInt(ConfirmationReliquat::getNombreJoursConfirme).sum();
+        String periode = debut == fin ? "Exercice " + debut : "Exercices " + debut + "-" + fin;
+        return new CalculReliquat(acquis, consommes, restant, reserves,
+                Math.max(0, restant - reserves), periode);
+    }
+
     /**
      * Confirme automatiquement le reliquat annuel à partir des soldes calculés
      * depuis la date d'embauche et de l'historique des congés validés.
@@ -219,7 +262,7 @@ public class ConfirmationReliquatService {
     @Transactional
     public ConfirmationReliquat confirmerAutomatiquement(Long dossierId, String observation, Utilisateur acteur) {
         CalculReliquat calcul = calculerReliquat(dossierId, acteur);
-        String reference = "AUTO-RH-" + dossierId + "-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+        String reference = "AUTO-RH-" + dossierId;
         return confirmer(dossierId, calcul.reliquatDisponible(), calcul.periodeReference(), reference,
                 null, observation, acteur);
     }

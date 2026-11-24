@@ -1230,3 +1230,23 @@ body {
 .spat-auth-eye:hover {
   color: #064d91;
 }
+
+/* Correctif ciblé : couleurs DaisyUI des deux écrans en mode nuit.
+   Le thème global du tableau de bord utilise "night", alors que DaisyUI
+   attend ses propres variables sémantiques. Les variables sont limitées
+   à ces deux pages et ne changent ni la structure ni les autres écrans. */
+.theme-shell[data-theme="night"] main .reliquats-theme,
+.theme-shell[data-theme="night"] main .circuit-conge-theme {
+  --color-base-100: #101f31;
+  --color-base-200: #142941;
+  --color-base-300: #263b52;
+  --color-base-content: #edf4ff;
+  --color-primary: #60a5fa;
+  --color-primary-content: #071321;
+  --color-warning: #fbbf24;
+  --color-warning-content: #1f2937;
+  --color-success: #34d399;
+  --color-success-content: #062b25;
+  --color-error: #fb7185;
+  --color-error-content: #3b0a16;
+}

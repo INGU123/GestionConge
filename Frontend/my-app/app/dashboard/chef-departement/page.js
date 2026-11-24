@@ -7,7 +7,10 @@ const API="http://localhost:8080";
 export default function ChefDepartementPage(){
  const [rows,setRows]=useState([]),[typesConge,setTypesConge]=useState([]),[busy,setBusy]=useState(null);const toast=useToast();
  const load=async()=>{const [r,typeData]=await Promise.all([authFetch(API+"/circuit-conge/chef/en-attente"),getAllTypeConge()]);if(!r.ok)throw new Error("Chargement impossible");setRows(await r.json());setTypesConge(typeData);};
- useEffect(()=>{load().catch(e=>toast(e.message,"error"));},[]);
+ useEffect(()=>{
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  load().catch(e=>toast(e.message,"error"));
+ },[]);
  const getTypeLabel=d=>{const typeId=d.typeCongeId??d.typeConge?.id;const type=typesConge.find(item=>String(item.id)===String(typeId));return type?.libelle||d.typeConge?.libelle||type?.code||"Type de congé";};
  const downloadScan=async id=>{try{const r=await authFetch(API+"/circuit-conge/"+id+"/piece-jointe");if(!r.ok){const detail=await r.text();throw new Error(detail||"Scan indisponible pour ce dossier.");}const blob=await r.blob();const extension=blob.type.includes("pdf")?"pdf":blob.type.includes("png")?"png":blob.type.includes("jpeg")?"jpg":"bin";const url=URL.createObjectURL(blob);const link=document.createElement("a");link.href=url;link.download="scan-demande-conge-"+id+"."+extension;document.body.appendChild(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);}catch(e){toast(e.message,"error");}};
  const forward=async id=>{setBusy(id);try{const r=await authFetch(API+`/circuit-conge/${id}/transmettre-directeur`,{method:"POST"});const d=await r.json();if(!r.ok)throw new Error(d.message||"Transmission impossible");toast("Dossier transmis au directeur.","success");await load();}catch(e){toast(e.message,"error");}finally{setBusy(null);}};

@@ -126,38 +126,7 @@ export default function ReliquatsPage() {
     }));
   };
 
-  const confirm = async dossier => {
-    const id = dossier.id;
-    setBusy(id);
-    try {
-      const value = values[id] || {};
-      const isEmployee = Boolean(dossier.employeId);
-      const endpoint = isEmployee
-        ? API + "/reliquats/dossier/" + id + "/confirmer"
-        : API + "/circuit-conge/" + id + "/reliquat";
-      const body = isEmployee
-        ? {
-            nombreJoursConfirme: Number(value.days),
-            periodeReference: value.period?.trim(),
-            referenceConfirmation: value.reference?.trim(),
-            justificatif: value.justificatif?.trim() || "",
-            observation: value.observation?.trim() || ""
-          }
-        : { reliquatJours: Number(value.days), commentaire: value.observation?.trim() || "" };
-      const response = await authFetch(endpoint, {
-        method: "POST",
-        body: JSON.stringify(body)
-      });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.message || "Confirmation impossible");
-      toast("Reliquat confirmé et enregistré dans l'historique.", "success");
-      await load();
-    } catch (error) {
-      toast(error.message, "error");
-    } finally {
-      setBusy(null);
-    }
-  };
+
 
   return (
     <section className="space-y-5">
@@ -173,9 +142,6 @@ export default function ReliquatsPage() {
         const isEmployee = Boolean(dossier.employeId);
         const annualCalculation = isEmployee && isAnnualType(dossier);
         const calcul = calculs[dossier.id];
-        const ecartCalcul = annualCalculation && calcul && !calcul.error
-          && Number(value.days) !== Number(calcul.reliquatDisponible);
-
         return (
           <article key={dossier.id} className="card bg-base-100 border p-5 space-y-3">
             <header className="space-y-2">
@@ -230,42 +196,65 @@ export default function ReliquatsPage() {
               </p>}
             </div>
 
-            <section className="space-y-3">
-              <h3 className="font-semibold text-base">Confirmation administrative</h3>
-              <div className="grid md:grid-cols-2 gap-3">
-              <label className="form-control">
-                <span className="label-text font-semibold">{annualCalculation ? "Ajustement manuel du reliquat (jours)" : "Reliquat confirmé (jours) *"}</span>
-                <input type="number" min="0" step="1" className="input input-bordered"
-                  value={value.days ?? ""}
-                  onChange={event => update(dossier.id, "days", event.target.value)} />
-                <span className="text-xs text-base-content/60">{annualCalculation ? "À utiliser uniquement pour corriger exceptionnellement le calcul automatique ; une observation justifiant l’écart sera obligatoire." : "Valeur retenue officiellement après vérification."}</span>
-              </label>
-              {isEmployee && <>
-                <label className="form-control">
-                  <span className="label-text font-semibold">Période de référence *</span>
-                  <input className={`input input-bordered ${annualCalculation ? "bg-base-200 text-base-content/70" : ""}`}
-                    placeholder="Ex. Exercice 2025" value={value.period ?? ""}
-                    readOnly={annualCalculation} aria-readonly={annualCalculation}
-                    onChange={event => update(dossier.id, "period", event.target.value)} />
-                  <span className="text-xs text-base-content/60">
-                    {annualCalculation ? "Exercice déterminé automatiquement à partir de l’année précédant le congé." : "Exercice auquel se rapporte le reliquat historique."}
-                  </span>
-                </label>
-                <label className="form-control">
-                  <span className="label-text font-semibold">Référence de confirmation RH *</span>
-                  <input className="input input-bordered" placeholder="Référence du document ou de la décision RH"
-                    value={value.reference ?? ""}
-                    onChange={event => update(dossier.id, "reference", event.target.value)} />
-                </label>
-                <label className="form-control">
-                  <span className="label-text">Justificatif (facultatif)</span>
-                  <input className="input input-bordered" placeholder="Nom ou référence du justificatif"
-                    value={value.justificatif ?? ""}
-                    onChange={event => update(dossier.id, "justificatif", event.target.value)} />
-                </label>
-              </>}
-              </div>
-            </section>
+            {annualCalculation ? (
+              <section className="rounded-xl border border-primary/20 bg-primary/5 p-4 space-y-2">
+                <h3 className="font-semibold text-base">Confirmation automatique du reliquat</h3>
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-sm text-base-content/70">Reliquat confirmé depuis les données RH</span>
+                  <strong className="text-2xl text-primary">
+                    {calcul && !calcul.error ? calcul.reliquatDisponible : "—"} jour(s)
+                  </strong>
+                </div>
+                <p className="text-xs text-base-content/60">
+                  Le nombre de jours, l’exercice de référence et la référence RH sont générés automatiquement à partir de la date d’embauche, des soldes et des congés validés en base de données.
+                </p>
+                <button type="button" className="btn btn-primary"
+                  disabled={busy === dossier.id || !calcul || Boolean(calcul.error)}
+                  onClick={() => confirmAutomatically(dossier)}>
+                  {busy === dossier.id ? "Confirmation…" : "Confirmer automatiquement"}
+                </button>
+              </section>
+            ) : (
+              <section className="space-y-3">
+                <h3 className="font-semibold text-base">Confirmation administrative</h3>
+                <div className="grid md:grid-cols-2 gap-3">
+                  <label className="form-control">
+                    <span className="label-text font-semibold">Reliquat confirmé (jours) *</span>
+                    <input type="number" min="0" step="1" className="input input-bordered"
+                      value={value.days ?? ""}
+                      onChange={event => update(dossier.id, "days", event.target.value)} />
+                    <span className="text-xs text-base-content/60">Valeur retenue officiellement après vérification.</span>
+                  </label>
+                  {isEmployee && <>
+                    <label className="form-control">
+                      <span className="label-text font-semibold">Période de référence *</span>
+                      <input className="input input-bordered" placeholder="Ex. Exercice 2025"
+                        value={value.period ?? ""}
+                        onChange={event => update(dossier.id, "period", event.target.value)} />
+                    </label>
+                    <label className="form-control">
+                      <span className="label-text font-semibold">Référence de confirmation RH *</span>
+                      <input className="input input-bordered" placeholder="Référence du document ou de la décision RH"
+                        value={value.reference ?? ""}
+                        onChange={event => update(dossier.id, "reference", event.target.value)} />
+                    </label>
+                    <label className="form-control">
+                      <span className="label-text">Justificatif (facultatif)</span>
+                      <input className="input input-bordered" placeholder="Nom ou référence du justificatif"
+                        value={value.justificatif ?? ""}
+                        onChange={event => update(dossier.id, "justificatif", event.target.value)} />
+                    </label>
+                  </>}
+                </div>
+                <button className="btn btn-primary w-fit"
+                  disabled={busy === dossier.id
+                    || (!isEmployee && (value.days == null || value.days === ""))
+                    || (isEmployee && (value.days == null || value.days === "" || !value.period?.trim() || !value.reference?.trim()))}
+                  onClick={() => confirm(dossier)}>
+                  {busy === dossier.id ? "Enregistrement…" : isEmployee ? "Confirmer le reliquat" : "Valider et transmettre"}
+                </button>
+              </section>
+            )}
 
             <div className="grid md:grid-cols-2 gap-3">
               <label className="form-control md:col-span-2">
@@ -275,21 +264,6 @@ export default function ReliquatsPage() {
                   onChange={event => update(dossier.id, "observation", event.target.value)} />
               </label>
             </div>
-
-            {ecartCalcul && (
-              <p className="text-sm text-warning">Le nombre confirmé diffère du calcul automatique : une observation est obligatoire pour justifier cet écart.</p>
-            )}
-            <button
-              className="btn btn-primary w-fit"
-              disabled={busy === dossier.id
-                || (!isEmployee && (value.days == null || value.days === ""))
-                || (isEmployee && (value.days == null || value.days === "" || !value.period?.trim() || !value.reference?.trim()))
-                || (annualCalculation && (!calcul || calcul.error))
-                || (ecartCalcul && !value.observation?.trim())}
-              onClick={() => confirm(dossier)}
-            >
-              {busy === dossier.id ? "Enregistrement…" : annualCalculation ? "Enregistrer l’ajustement manuel" : isEmployee ? "Confirmer le reliquat" : "Valider et transmettre"}
-            </button>
           </article>
         );
       })}

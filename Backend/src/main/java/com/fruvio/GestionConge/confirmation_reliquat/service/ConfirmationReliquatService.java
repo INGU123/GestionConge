@@ -1,5 +1,6 @@
 package com.fruvio.GestionConge.confirmation_reliquat.service;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.regex.Matcher;
@@ -88,24 +89,31 @@ public class ConfirmationReliquatService {
             throw new IllegalArgumentException("La période de référence du reliquat doit précéder l'exercice du congé demandé.");
 
         if (estCongeAnnuel(dossier.getTypeCongeId())) {
-            Solde_conge soldeReference = soldes.findByEmployeIdAndTypeCongeIdAndPeriode(
-                    employe.getId(), dossier.getTypeCongeId(), anneeReference)
-                    .orElseThrow(() -> new IllegalStateException("Aucun solde RH enregistré pour l'exercice de référence " + anneeReference + "."));
-            int disponibleReference = disponible(soldeReference);
-            int dejaReserve = confirmations.findByEmployeIdOrderByDateConfirmationDesc(employe.getId()).stream()
-                    .filter(c -> !c.getCircuitDemandeCongeId().equals(dossier.getId()))
-                    .filter(c -> extraireAnneeReference(c.getPeriodeReference()) == anneeReference)
-                    .filter(c -> circuits.findById(c.getCircuitDemandeCongeId())
-                            .map(x -> List.of("RELIQUAT_RETOURNE", "CHEF_EN_ATTENTE", "DIRECTEUR_EN_ATTENTE").contains(x.getStatut()))
-                            .orElse(false))
-                    .mapToInt(ConfirmationReliquat::getNombreJoursConfirme).sum();
-            int disponibleReferenceNonReserve = Math.max(0, disponibleReference - dejaReserve);
+            boolean referenceEligible = employe.getDateEmbauche() != null
+                    && !employe.getDateEmbauche().isAfter(LocalDate.of(anneeReference, 12, 31));
+            int disponibleReferenceNonReserve = 0;
+            if (referenceEligible) {
+                Solde_conge soldeReference = soldes.findByEmployeIdAndTypeCongeIdAndPeriode(
+                        employe.getId(), dossier.getTypeCongeId(), anneeReference)
+                        .orElseThrow(() -> new IllegalStateException("Aucun solde RH enregistré pour l'exercice de référence " + anneeReference + "."));
+                int disponibleReference = disponible(soldeReference);
+                int dejaReserve = confirmations.findByEmployeIdOrderByDateConfirmationDesc(employe.getId()).stream()
+                        .filter(c -> !c.getCircuitDemandeCongeId().equals(dossier.getId()))
+                        .filter(c -> extraireAnneeReference(c.getPeriodeReference()) == anneeReference)
+                        .filter(c -> circuits.findById(c.getCircuitDemandeCongeId())
+                                .map(x -> List.of("RELIQUAT_RETOURNE", "CHEF_EN_ATTENTE", "DIRECTEUR_EN_ATTENTE").contains(x.getStatut()))
+                                .orElse(false))
+                        .mapToInt(ConfirmationReliquat::getNombreJoursConfirme).sum();
+                disponibleReferenceNonReserve = Math.max(0, disponibleReference - dejaReserve);
+            }
+            if (!referenceEligible && jours > 0)
+                throw new IllegalArgumentException("Aucun reliquat antérieur ne peut être attribué : l'employé a été recruté après l'exercice " + anneeReference + ".");
             if (jours > disponibleReferenceNonReserve)
                 throw new IllegalArgumentException("Le reliquat confirmé (" + jours + " j) dépasse le reliquat disponible de l'exercice "
                         + anneeReference + " (" + disponibleReferenceNonReserve + " j après réservations).");
             if (jours != disponibleReferenceNonReserve && (observation == null || observation.isBlank()))
                 throw new IllegalArgumentException("Une observation est obligatoire lorsque le reliquat confirmé diffère du calcul automatique.");
-    
+
             List<Solde_conge> soldesConges = soldes.findByEmployeIdAndTypeCongeId(
                     employe.getId(), dossier.getTypeCongeId()).stream()
                     .filter(s -> s.getPeriode() >= anneeDebut && s.getPeriode() <= anneeFin)
@@ -168,25 +176,35 @@ public class ConfirmationReliquatService {
         int anneeDebut = dossier.getDateDebut().getYear();
         int anneeFin = dossier.getDateFin().getYear();
         int anneeReference = anneeDebut - 1;
-        soldeService.calculerSoldeAnnuelEmploye(employe.getId(), dossier.getTypeCongeId(), anneeReference, acteur);
+        boolean referenceEligible = employe.getDateEmbauche() != null
+                && !employe.getDateEmbauche().isAfter(LocalDate.of(anneeReference, 12, 31));
+        if (referenceEligible) {
+            soldeService.calculerSoldeAnnuelEmploye(employe.getId(), dossier.getTypeCongeId(), anneeReference, acteur);
+        }
         for (int annee = anneeDebut; annee <= anneeFin; annee++) {
             soldeService.calculerSoldeAnnuelEmploye(employe.getId(), dossier.getTypeCongeId(), annee, acteur);
         }
 
-        Solde_conge soldeReference = soldes.findByEmployeIdAndTypeCongeIdAndPeriode(
-                employe.getId(), dossier.getTypeCongeId(), anneeReference)
-                .orElseThrow(() -> new IllegalStateException("Le solde de référence n'a pas pu être calculé."));
-        int dejaReserve = confirmations.findByEmployeIdOrderByDateConfirmationDesc(employe.getId()).stream()
-                .filter(c -> !c.getCircuitDemandeCongeId().equals(dossier.getId()))
-                .filter(c -> extraireAnneeReference(c.getPeriodeReference()) == anneeReference)
-                .filter(c -> circuits.findById(c.getCircuitDemandeCongeId())
-                        .map(x -> List.of("RELIQUAT_RETOURNE", "CHEF_EN_ATTENTE", "DIRECTEUR_EN_ATTENTE").contains(x.getStatut()))
-                        .orElse(false))
-                .mapToInt(ConfirmationReliquat::getNombreJoursConfirme).sum();
-        int reliquatBrut = disponible(soldeReference);
+        int reliquatBrut = 0;
+        int dejaReserve = 0;
+        int droitsAcquis = 0;
+        int joursConsommes = 0;
+        if (referenceEligible) {
+            Solde_conge soldeReference = soldes.findByEmployeIdAndTypeCongeIdAndPeriode(
+                    employe.getId(), dossier.getTypeCongeId(), anneeReference)
+                    .orElseThrow(() -> new IllegalStateException("Le solde de référence n'a pas pu être calculé."));
+            reliquatBrut = disponible(soldeReference);
+            droitsAcquis = soldeReference.getSoldeAquisEnDemiJournees() / 2;
+            joursConsommes = soldeReference.getSoldePrisEnDemiJournees() / 2;
+            dejaReserve = confirmations.findByEmployeIdOrderByDateConfirmationDesc(employe.getId()).stream()
+                    .filter(c -> !c.getCircuitDemandeCongeId().equals(dossier.getId()))
+                    .filter(c -> extraireAnneeReference(c.getPeriodeReference()) == anneeReference)
+                    .filter(c -> circuits.findById(c.getCircuitDemandeCongeId())
+                            .map(x -> List.of("RELIQUAT_RETOURNE", "CHEF_EN_ATTENTE", "DIRECTEUR_EN_ATTENTE").contains(x.getStatut()))
+                            .orElse(false))
+                    .mapToInt(ConfirmationReliquat::getNombreJoursConfirme).sum();
+        }
         int reliquatDisponible = Math.max(0, reliquatBrut - dejaReserve);
-        int droitsAcquis = soldeReference.getSoldeAquisEnDemiJournees() / 2;
-        int joursConsommes = soldeReference.getSoldePrisEnDemiJournees() / 2;
         return new CalculReliquat(droitsAcquis, joursConsommes, reliquatBrut, dejaReserve,
                 reliquatDisponible, "Exercice " + anneeReference);
     }

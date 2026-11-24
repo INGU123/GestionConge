@@ -36,6 +36,12 @@ public class ConfirmationReliquatController {
             @Size(max = 500) String justificatif,
             @Size(max = 1500) String observation) {}
 
+    @PostMapping("/dossier/{dossierId}/calculer")
+    @PreAuthorize("hasAnyRole('ADMIN', 'ADMINISTRATION_PERSONNEL')")
+    public ConfirmationReliquatService.CalculReliquat calculer(@PathVariable Long dossierId) {
+        return service.calculerReliquat(dossierId, currentUser());
+    }
+
     @PostMapping("/dossier/{dossierId}/confirmer-automatiquement")
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("hasAnyRole('ADMIN', 'ADMINISTRATION_PERSONNEL')")

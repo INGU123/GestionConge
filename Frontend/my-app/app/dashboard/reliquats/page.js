@@ -3,11 +3,13 @@
 import { useCallback, useEffect, useState } from "react";
 import { authFetch } from "@/lib/apiClient";
 import { useToast } from "../../Components/ToastProvider";
+import { getAllTypeConge } from "../../api/typeConge/typeConge";
 
 const API = "http://localhost:8080";
 
 export default function ReliquatsPage() {
   const [rows, setRows] = useState([]);
+  const [typesConge, setTypesConge] = useState([]);
   const [values, setValues] = useState({});
   const [calculs, setCalculs] = useState({});
   const [busy, setBusy] = useState(null);
@@ -18,6 +20,8 @@ export default function ReliquatsPage() {
     if (!response.ok) throw new Error("Chargement impossible");
     const data = await response.json();
     setRows(data);
+    const loadedTypes = await getAllTypeConge();
+    setTypesConge(loadedTypes);
     const dossiersAvecEmploye = data.filter(dossier => Boolean(dossier.employeId));
     const previews = await Promise.all(dossiersAvecEmploye.map(async dossier => {
       try {

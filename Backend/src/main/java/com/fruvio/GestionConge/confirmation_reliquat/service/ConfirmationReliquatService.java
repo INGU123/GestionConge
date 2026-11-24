@@ -229,8 +229,7 @@ public class ConfirmationReliquatService {
                 .orElseThrow(() -> new IllegalStateException("Type de congé introuvable."));
         String code = type.getCode() == null ? "" : type.getCode().trim().toUpperCase();
         boolean paternite = "NAISS_PAT".equals(code);
-        boolean permissionFamiliale = List.of("MAR_SAL", "MAR_ENF", "DEC_CONJ", "CIRC_ENF",
-                "DEM_LOG", "SINISTRE", "URGENCE", "AUT_FAM").contains(code);
+        boolean permissionFamiliale = List.of("MAR_SAL", "MAR_ENF", "DEC_CONJ", "CIRC_ENF", "URGENCE", "AUT_FAM").contains(code);
         if (paternite || permissionFamiliale) {
             if (soldeService == null)
                 throw new IllegalStateException("Le calcul légal des permissions n'est pas configuré.");

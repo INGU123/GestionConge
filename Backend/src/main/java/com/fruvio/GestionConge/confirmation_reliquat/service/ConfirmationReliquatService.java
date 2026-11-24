@@ -170,12 +170,12 @@ public class ConfirmationReliquatService {
             throw new IllegalStateException("Ce dossier historique doit suivre son circuit habituel.");
         if (!"RELIQUAT_EN_ATTENTE".equals(dossier.getStatut()))
             throw new IllegalStateException("Ce dossier n'attend pas une confirmation de reliquat.");
+        Employe employe = employes.findById(dossier.getEmployeId()).filter(Employe::isActif)
+                .orElseThrow(() -> new IllegalStateException("Employé actif introuvable."));
         if (!estCongeAnnuel(dossier.getTypeCongeId()))
             return calculerReliquatDepuisSoldesEnregistres(dossier, employe);
         if (soldeService == null)
             throw new IllegalStateException("Le calcul automatique des soldes n'est pas configuré.");
-        Employe employe = employes.findById(dossier.getEmployeId()).filter(Employe::isActif)
-                .orElseThrow(() -> new IllegalStateException("Employé actif introuvable."));
 
         int anneeDebut = dossier.getDateDebut().getYear();
         int anneeFin = dossier.getDateFin().getYear();

@@ -288,7 +288,7 @@ export default function ReliquatsPage() {
                 || (ecartCalcul && !value.observation?.trim())}
               onClick={() => confirm(dossier)}
             >
-              {busy === dossier.id ? "Enregistrement…" : isEmployee ? "Confirmer le reliquat" : "Valider et transmettre"}
+              {busy === dossier.id ? "Enregistrement…" : annualCalculation ? "Enregistrer l’ajustement manuel" : isEmployee ? "Confirmer le reliquat" : "Valider et transmettre"}
             </button>
           </article>
         );

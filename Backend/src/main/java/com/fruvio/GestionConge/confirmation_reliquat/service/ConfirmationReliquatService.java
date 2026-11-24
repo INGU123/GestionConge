@@ -20,6 +20,8 @@ import com.fruvio.GestionConge.notifications_conge.service.Notification_congeSer
 import com.fruvio.GestionConge.solde_conge.entity.Solde_conge;
 import com.fruvio.GestionConge.solde_conge.repository.Solde_congeRepository;
 import com.fruvio.GestionConge.solde_conge.service.Solde_congeService;
+import com.fruvio.GestionConge.type_conge.entity.Type_conge;
+import com.fruvio.GestionConge.type_conge.repository.Type_congeRepository;
 import com.fruvio.GestionConge.utilisateur.entity.Role;
 import com.fruvio.GestionConge.utilisateur.entity.Utilisateur;
 
@@ -31,24 +33,33 @@ public class ConfirmationReliquatService {
     private final Notification_congeService notifications;
     private final Solde_congeRepository soldes;
     private final Solde_congeService soldeService;
+    private final Type_congeRepository typesConge;
 
     @org.springframework.beans.factory.annotation.Autowired
     public ConfirmationReliquatService(ConfirmationReliquatRepository confirmations,
             CircuitDemandeCongeRepository circuits, EmployeRepository employes,
             Notification_congeService notifications, Solde_congeRepository soldes,
-            Solde_congeService soldeService) {
+            Solde_congeService soldeService, Type_congeRepository typesConge) {
         this.confirmations = confirmations;
         this.circuits = circuits;
         this.employes = employes;
         this.notifications = notifications;
         this.soldes = soldes;
         this.soldeService = soldeService;
+        this.typesConge = typesConge;
+    }
+
+    public ConfirmationReliquatService(ConfirmationReliquatRepository confirmations,
+            CircuitDemandeCongeRepository circuits, EmployeRepository employes,
+            Notification_congeService notifications, Solde_congeRepository soldes,
+            Solde_congeService soldeService) {
+        this(confirmations, circuits, employes, notifications, soldes, soldeService, null);
     }
 
     public ConfirmationReliquatService(ConfirmationReliquatRepository confirmations,
             CircuitDemandeCongeRepository circuits, EmployeRepository employes,
             Notification_congeService notifications, Solde_congeRepository soldes) {
-        this(confirmations, circuits, employes, notifications, soldes, null);
+        this(confirmations, circuits, employes, notifications, soldes, null, null);
     }
 
     @Transactional
@@ -76,35 +87,38 @@ public class ConfirmationReliquatService {
         if (anneeReference >= anneeDebut)
             throw new IllegalArgumentException("La période de référence du reliquat doit précéder l'exercice du congé demandé.");
 
-        Solde_conge soldeReference = soldes.findByEmployeIdAndTypeCongeIdAndPeriode(
-                employe.getId(), dossier.getTypeCongeId(), anneeReference)
-                .orElseThrow(() -> new IllegalStateException("Aucun solde RH enregistré pour l'exercice de référence " + anneeReference + "."));
-        int disponibleReference = disponible(soldeReference);
-        int dejaReserve = confirmations.findByEmployeIdOrderByDateConfirmationDesc(employe.getId()).stream()
-                .filter(c -> !c.getCircuitDemandeCongeId().equals(dossier.getId()))
-                .filter(c -> extraireAnneeReference(c.getPeriodeReference()) == anneeReference)
-                .filter(c -> circuits.findById(c.getCircuitDemandeCongeId())
-                        .map(x -> List.of("RELIQUAT_RETOURNE", "CHEF_EN_ATTENTE", "DIRECTEUR_EN_ATTENTE").contains(x.getStatut()))
-                        .orElse(false))
-                .mapToInt(ConfirmationReliquat::getNombreJoursConfirme).sum();
-        int disponibleReferenceNonReserve = Math.max(0, disponibleReference - dejaReserve);
-        if (jours > disponibleReferenceNonReserve)
-            throw new IllegalArgumentException("Le reliquat confirmé (" + jours + " j) dépasse le reliquat disponible de l'exercice "
-                    + anneeReference + " (" + disponibleReferenceNonReserve + " j après réservations).");
-        if (jours != disponibleReferenceNonReserve && (observation == null || observation.isBlank()))
-            throw new IllegalArgumentException("Une observation est obligatoire lorsque le reliquat confirmé diffère du calcul automatique.");
+        if (estCongeAnnuel(dossier.getTypeCongeId())) {
+            Solde_conge soldeReference = soldes.findByEmployeIdAndTypeCongeIdAndPeriode(
+                    employe.getId(), dossier.getTypeCongeId(), anneeReference)
+                    .orElseThrow(() -> new IllegalStateException("Aucun solde RH enregistré pour l'exercice de référence " + anneeReference + "."));
+            int disponibleReference = disponible(soldeReference);
+            int dejaReserve = confirmations.findByEmployeIdOrderByDateConfirmationDesc(employe.getId()).stream()
+                    .filter(c -> !c.getCircuitDemandeCongeId().equals(dossier.getId()))
+                    .filter(c -> extraireAnneeReference(c.getPeriodeReference()) == anneeReference)
+                    .filter(c -> circuits.findById(c.getCircuitDemandeCongeId())
+                            .map(x -> List.of("RELIQUAT_RETOURNE", "CHEF_EN_ATTENTE", "DIRECTEUR_EN_ATTENTE").contains(x.getStatut()))
+                            .orElse(false))
+                    .mapToInt(ConfirmationReliquat::getNombreJoursConfirme).sum();
+            int disponibleReferenceNonReserve = Math.max(0, disponibleReference - dejaReserve);
+            if (jours > disponibleReferenceNonReserve)
+                throw new IllegalArgumentException("Le reliquat confirmé (" + jours + " j) dépasse le reliquat disponible de l'exercice "
+                        + anneeReference + " (" + disponibleReferenceNonReserve + " j après réservations).");
+            if (jours != disponibleReferenceNonReserve && (observation == null || observation.isBlank()))
+                throw new IllegalArgumentException("Une observation est obligatoire lorsque le reliquat confirmé diffère du calcul automatique.");
+    
+            List<Solde_conge> soldesConges = soldes.findByEmployeIdAndTypeCongeId(
+                    employe.getId(), dossier.getTypeCongeId()).stream()
+                    .filter(s -> s.getPeriode() >= anneeDebut && s.getPeriode() <= anneeFin)
+                    .toList();
+            if (soldesConges.size() != anneeFin - anneeDebut + 1)
+                throw new IllegalStateException("Les soldes RH de tous les exercices du congé doivent être enregistrés.");
+            int besoinCourant = Math.max(0, dossier.getNombreJours() - jours);
+            int disponibleCourant = soldesConges.stream().mapToInt(this::disponible).sum();
+            if (besoinCourant > disponibleCourant)
+                throw new IllegalArgumentException("Couverture insuffisante : " + jours + " j de reliquat + "
+                        + disponibleCourant + " j disponibles sur les exercices du congé, pour " + dossier.getNombreJours() + " j demandés.");
+        }
 
-        List<Solde_conge> soldesConges = soldes.findByEmployeIdAndTypeCongeId(
-                employe.getId(), dossier.getTypeCongeId()).stream()
-                .filter(s -> s.getPeriode() >= anneeDebut && s.getPeriode() <= anneeFin)
-                .toList();
-        if (soldesConges.size() != anneeFin - anneeDebut + 1)
-            throw new IllegalStateException("Les soldes RH de tous les exercices du congé doivent être enregistrés.");
-        int besoinCourant = Math.max(0, dossier.getNombreJours() - jours);
-        int disponibleCourant = soldesConges.stream().mapToInt(this::disponible).sum();
-        if (besoinCourant > disponibleCourant)
-            throw new IllegalArgumentException("Couverture insuffisante : " + jours + " j de reliquat + "
-                    + disponibleCourant + " j disponibles sur les exercices du congé, pour " + dossier.getNombreJours() + " j demandés.");
 
         ConfirmationReliquat confirmation = confirmations.save(ConfirmationReliquat.builder()
                 .circuitDemandeCongeId(dossier.getId())
@@ -144,6 +158,8 @@ public class ConfirmationReliquatService {
             throw new IllegalStateException("Ce dossier historique doit suivre son circuit habituel.");
         if (!"RELIQUAT_EN_ATTENTE".equals(dossier.getStatut()))
             throw new IllegalStateException("Ce dossier n'attend pas une confirmation de reliquat.");
+        if (!estCongeAnnuel(dossier.getTypeCongeId()))
+            throw new IllegalStateException("Le calcul automatique du reliquat est réservé au congé annuel.");
         if (soldeService == null)
             throw new IllegalStateException("Le calcul automatique des soldes n'est pas configuré.");
         Employe employe = employes.findById(dossier.getEmployeId()).filter(Employe::isActif)
@@ -185,6 +201,16 @@ public class ConfirmationReliquatService {
         String reference = "AUTO-RH-" + dossierId + "-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
         return confirmer(dossierId, calcul.reliquatDisponible(), calcul.periodeReference(), reference,
                 null, observation, acteur);
+    }
+
+    private boolean estCongeAnnuel(Long typeCongeId) {
+        if (typesConge == null || typeCongeId == null)
+            throw new IllegalStateException("Le référentiel des types de congé n'est pas configuré.");
+        Type_conge type = typesConge.findById(typeCongeId)
+                .orElseThrow(() -> new IllegalStateException("Type de congé introuvable."));
+        String code = type.getCode() == null ? "" : type.getCode().toUpperCase();
+        String libelle = type.getLibelle() == null ? "" : type.getLibelle().toUpperCase();
+        return code.contains("ANNUEL") || libelle.contains("ANNUEL");
     }
 
     private int disponible(Solde_conge solde) {

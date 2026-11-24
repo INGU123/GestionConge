@@ -205,8 +205,11 @@ public class ConfirmationReliquatService {
                     .mapToInt(ConfirmationReliquat::getNombreJoursConfirme).sum();
         }
         int reliquatDisponible = Math.max(0, reliquatBrut - dejaReserve);
+        String periodeReference = referenceEligible
+                ? "Exercice " + anneeReference
+                : "Exercice " + anneeReference + " — embauche postérieure, aucun reliquat antérieur";
         return new CalculReliquat(droitsAcquis, joursConsommes, reliquatBrut, dejaReserve,
-                reliquatDisponible, "Exercice " + anneeReference);
+                reliquatDisponible, periodeReference);
     }
 
     /**

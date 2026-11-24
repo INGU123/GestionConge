@@ -38,6 +38,7 @@ export default function HistoriquePage() {
   useEffect(() => {
     const user = getCurrentUser();
     if (!user) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setLoading(false);
       return;
     }

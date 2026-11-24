@@ -75,6 +75,26 @@ export default function ReliquatsPage() {
       .toLowerCase().includes("annuel");
   };
 
+  const confirmAutomatically = async dossier => {
+    const id = dossier.id;
+    setBusy(id);
+    try {
+      const value = values[id] || {};
+      const response = await authFetch(API + "/reliquats/dossier/" + id + "/confirmer-automatiquement", {
+        method: "POST",
+        body: JSON.stringify({ observation: value.observation?.trim() || "" })
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || "Confirmation automatique impossible.");
+      toast("Reliquat calculé et confirmé automatiquement.", "success");
+      await load();
+    } catch (error) {
+      toast(error.message, "error");
+    } finally {
+      setBusy(null);
+    }
+  };
+
   const downloadScan = async id => {
     try {
       const response = await authFetch(API + "/circuit-conge/" + id + "/piece-jointe");
@@ -176,16 +196,35 @@ export default function ReliquatsPage() {
 
             <div className="rounded-xl border border-base-300 bg-base-200/50 p-4 space-y-3">
               {annualCalculation ? <>
-                <p className="text-sm text-base-content/75">Les droits et le reliquat sont calculés automatiquement à partir de la date d’embauche et de l’historique des congés.</p>
-                <label className="form-control max-w-sm">
-                  <span className="label-text font-semibold">Reliquat calculé automatiquement (jours)</span>
-                  <input type="number" className="input input-bordered bg-base-200 text-base-content/70 font-semibold"
-                    value={calcul && !calcul.error ? calcul.reliquatDisponible : ""} readOnly aria-readonly="true"
-                    placeholder={calcul?.error ? "Calcul indisponible" : "Calcul en cours…"} />
-                  <span className="text-xs text-base-content/60">
-                    {calcul?.error || (calcul ? `${calcul.droitsAcquis} jour(s) acquis · ${calcul.joursConsommes} jour(s) consommés · ${calcul.joursDejaReserves} jour(s) déjà réservés` : "Valeur calculée par le système, non modifiable.")}
-                  </span>
-                </label>
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <p className="text-sm text-base-content/75">Le système calcule le reliquat à partir de la date réelle d’embauche, des droits acquis et des congés validés. Aucune recherche manuelle du solde n’est nécessaire.</p>
+                  <button type="button" className="btn btn-primary btn-sm"
+                    disabled={busy === dossier.id || !calcul || Boolean(calcul.error)}
+                    onClick={() => confirmAutomatically(dossier)}>
+                    {busy === dossier.id ? "Confirmation…" : `Confirmer automatiquement · ${calcul && !calcul.error ? calcul.reliquatDisponible : "—"} j`}
+                  </button>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <div className="rounded-lg bg-base-100 border border-base-300 p-3">
+                    <p className="text-xs text-base-content/60">Droits acquis</p>
+                    <p className="text-xl font-bold">{calcul && !calcul.error ? calcul.droitsAcquis : "—"} j</p>
+                  </div>
+                  <div className="rounded-lg bg-base-100 border border-base-300 p-3">
+                    <p className="text-xs text-base-content/60">Jours consommés</p>
+                    <p className="text-xl font-bold">{calcul && !calcul.error ? calcul.joursConsommes : "—"} j</p>
+                  </div>
+                  <div className="rounded-lg bg-base-100 border border-base-300 p-3">
+                    <p className="text-xs text-base-content/60">Déjà réservés</p>
+                    <p className="text-xl font-bold">{calcul && !calcul.error ? calcul.joursDejaReserves : "—"} j</p>
+                  </div>
+                  <div className="rounded-lg bg-primary/10 border border-primary/20 p-3">
+                    <p className="text-xs text-base-content/70">Reliquat disponible</p>
+                    <p className="text-xl font-bold text-primary">{calcul && !calcul.error ? calcul.reliquatDisponible : "—"} j</p>
+                  </div>
+                </div>
+                <p className="text-xs text-base-content/60">
+                  {calcul?.error || (calcul ? `${calcul.periodeReference} · Reliquat brut : ${calcul.reliquatBrut} j` : "Calcul en cours…")}
+                </p>
               </> : <p className="text-sm text-base-content/75">
                 {isEmployee ? "Le reliquat de ce type de congé doit être vérifié selon les règles qui lui sont applicables." : "Vérifiez le reliquat historique associé à ce dossier."}
               </p>}
@@ -195,11 +234,11 @@ export default function ReliquatsPage() {
               <h3 className="font-semibold text-base">Confirmation administrative</h3>
               <div className="grid md:grid-cols-2 gap-3">
               <label className="form-control">
-                <span className="label-text font-semibold">Reliquat confirmé (jours) *</span>
+                <span className="label-text font-semibold">{annualCalculation ? "Ajustement manuel du reliquat (jours)" : "Reliquat confirmé (jours) *"}</span>
                 <input type="number" min="0" step="1" className="input input-bordered"
                   value={value.days ?? ""}
                   onChange={event => update(dossier.id, "days", event.target.value)} />
-                <span className="text-xs text-base-content/60">Valeur retenue officiellement après vérification.</span>
+                <span className="text-xs text-base-content/60">{annualCalculation ? "À utiliser uniquement pour corriger exceptionnellement le calcul automatique ; une observation justifiant l’écart sera obligatoire." : "Valeur retenue officiellement après vérification."}</span>
               </label>
               {isEmployee && <>
                 <label className="form-control">

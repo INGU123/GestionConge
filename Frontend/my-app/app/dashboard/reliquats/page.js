@@ -119,6 +119,39 @@ export default function ReliquatsPage() {
     }
   };
 
+  const confirm = async dossier => {
+    const id = dossier.id;
+    setBusy(id);
+    try {
+      const value = values[id] || {};
+      const isEmployee = Boolean(dossier.employeId);
+      const endpoint = isEmployee
+        ? API + "/reliquats/dossier/" + id + "/confirmer"
+        : API + "/circuit-conge/" + id + "/reliquat";
+      const body = isEmployee
+        ? {
+            nombreJoursConfirme: Number(value.days),
+            periodeReference: value.period?.trim(),
+            referenceConfirmation: value.reference?.trim(),
+            justificatif: value.justificatif?.trim() || "",
+            observation: value.observation?.trim() || ""
+          }
+        : { reliquatJours: Number(value.days), commentaire: value.observation?.trim() || "" };
+      const response = await authFetch(endpoint, {
+        method: "POST",
+        body: JSON.stringify(body)
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || "Confirmation impossible");
+      toast("Reliquat confirmé et enregistré dans l'historique.", "success");
+      await load();
+    } catch (error) {
+      toast(error.message, "error");
+    } finally {
+      setBusy(null);
+    }
+  };
+
   const update = (id, key, value) => {
     setValues(previous => ({
       ...previous,
@@ -164,11 +197,6 @@ export default function ReliquatsPage() {
               {annualCalculation ? <>
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <p className="text-sm text-base-content/75">Le système calcule le reliquat à partir de la date réelle d’embauche, des droits acquis et des congés validés. Aucune recherche manuelle du solde n’est nécessaire.</p>
-                  <button type="button" className="btn btn-primary btn-sm"
-                    disabled={busy === dossier.id || !calcul || Boolean(calcul.error)}
-                    onClick={() => confirmAutomatically(dossier)}>
-                    {busy === dossier.id ? "Confirmation…" : `Confirmer automatiquement · ${calcul && !calcul.error ? calcul.reliquatDisponible : "—"} j`}
-                  </button>
                 </div>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                   <div className="rounded-lg bg-base-100 border border-base-300 p-3">

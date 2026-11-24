@@ -206,6 +206,28 @@ public class Solde_congeService {
         return Math.max(0, 10 - consommes);
     }
 
+    /**
+     * Reconstitue le plafond annuel défini dans le référentiel du type de congé.
+     * Les soldes RH persistés restent prioritaires et sont traités par l'appelant.
+     * Seules les demandes VALIDEE consomment le plafond.
+     */
+    public record DroitsTypeConfigure(int plafond, int consommes, int disponible) {}
+
+    @Transactional(readOnly = true)
+    public DroitsTypeConfigure calculerDroitsAnnuelsConfigures(Long employeId, Long typeCongeId, int annee) {
+        if (demandeCongeRepository == null)
+            throw new IllegalStateException("L'historique des congés est indisponible : calcul refusé.");
+        Type_conge type = typeCongeRepository.findById(typeCongeId)
+                .orElseThrow(() -> new IllegalArgumentException("Type de congé introuvable."));
+        int plafond = Math.max(0, type.getNombreJoursParAn() == null ? 0 : type.getNombreJoursParAn());
+        int consommes = demandeCongeRepository.findByEmployeIdAndTypeCongeId(employeId, typeCongeId).stream()
+                .filter(d -> "VALIDEE".equalsIgnoreCase(d.getStatut()))
+                .filter(d -> d.getDateDebut() != null && d.getDateFin() != null && d.getNombreJours() != null)
+                .mapToInt(d -> joursConsommesPourExercice(d.getDateDebut(), d.getDateFin(), d.getNombreJours(), annee))
+                .sum();
+        return new DroitsTypeConfigure(plafond, consommes, Math.max(0, plafond - consommes));
+    }
+
     private int joursConsommesPourExercice(LocalDate debut, LocalDate fin, int nombreJours, int periode) {
         LocalDate debutAnnee = LocalDate.of(periode, 1, 1);
         LocalDate finAnnee = LocalDate.of(periode, 12, 31);

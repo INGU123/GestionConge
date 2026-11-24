@@ -3,13 +3,11 @@
 import { useCallback, useEffect, useState } from "react";
 import { authFetch } from "@/lib/apiClient";
 import { useToast } from "../../Components/ToastProvider";
-import { getAllTypeConge } from "../../api/typeConge/typeConge";
 
 const API = "http://localhost:8080";
 
 export default function ReliquatsPage() {
   const [rows, setRows] = useState([]);
-  const [typesConge, setTypesConge] = useState([]);
   const [values, setValues] = useState({});
   const [calculs, setCalculs] = useState({});
   const [busy, setBusy] = useState(null);
@@ -20,17 +18,8 @@ export default function ReliquatsPage() {
     if (!response.ok) throw new Error("Chargement impossible");
     const data = await response.json();
     setRows(data);
-    const loadedTypes = await getAllTypeConge();
-    setTypesConge(loadedTypes);
-
-    const annualDossiers = data.filter(dossier => {
-      if (!dossier.employeId) return false;
-      const typeId = dossier.typeCongeId ?? dossier.typeConge?.id;
-      const type = loadedTypes.find(item => String(item.id) === String(typeId));
-      return `${type?.code || ""} ${type?.libelle || dossier.typeConge?.libelle || ""}`
-        .toLowerCase().includes("annuel");
-    });
-    const previews = await Promise.all(annualDossiers.map(async dossier => {
+    const dossiersAvecEmploye = data.filter(dossier => Boolean(dossier.employeId));
+    const previews = await Promise.all(dossiersAvecEmploye.map(async dossier => {
       try {
         const response = await authFetch(API + "/reliquats/dossier/" + dossier.id + "/calculer", { method: "POST" });
         const result = await response.json();
@@ -66,13 +55,6 @@ export default function ReliquatsPage() {
     const typeId = dossier.typeCongeId ?? dossier.typeConge?.id;
     const type = typesConge.find(item => String(item.id) === String(typeId));
     return type?.libelle || dossier.typeConge?.libelle || type?.code || "Type de congé";
-  };
-
-  const isAnnualType = dossier => {
-    const typeId = dossier.typeCongeId ?? dossier.typeConge?.id;
-    const type = typesConge.find(item => String(item.id) === String(typeId));
-    return `${type?.code || ""} ${type?.libelle || dossier.typeConge?.libelle || ""}`
-      .toLowerCase().includes("annuel");
   };
 
   const confirmAutomatically = async dossier => {
@@ -119,39 +101,6 @@ export default function ReliquatsPage() {
     }
   };
 
-  const confirm = async dossier => {
-    const id = dossier.id;
-    setBusy(id);
-    try {
-      const value = values[id] || {};
-      const isEmployee = Boolean(dossier.employeId);
-      const endpoint = isEmployee
-        ? API + "/reliquats/dossier/" + id + "/confirmer"
-        : API + "/circuit-conge/" + id + "/reliquat";
-      const body = isEmployee
-        ? {
-            nombreJoursConfirme: Number(value.days),
-            periodeReference: value.period?.trim(),
-            referenceConfirmation: value.reference?.trim(),
-            justificatif: value.justificatif?.trim() || "",
-            observation: value.observation?.trim() || ""
-          }
-        : { reliquatJours: Number(value.days), commentaire: value.observation?.trim() || "" };
-      const response = await authFetch(endpoint, {
-        method: "POST",
-        body: JSON.stringify(body)
-      });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.message || "Confirmation impossible");
-      toast("Reliquat confirmé et enregistré dans l'historique.", "success");
-      await load();
-    } catch (error) {
-      toast(error.message, "error");
-    } finally {
-      setBusy(null);
-    }
-  };
-
   const update = (id, key, value) => {
     setValues(previous => ({
       ...previous,
@@ -166,14 +115,14 @@ export default function ReliquatsPage() {
       <header>
         <h1 className="text-2xl font-bold">Administration du personnel — Vérification des reliquats</h1>
         <p className="text-sm text-slate-500">
-          Les droits annuels et le reliquat sont calculés automatiquement. Les autres types conservent leur validation spécifique.
+          Tous les soldes sont lus depuis les données RH enregistrées. Aucun nombre de jours ni référence n'est saisi manuellement.
         </p>
       </header>
 
       {rows.map(dossier => {
         const value = values[dossier.id] || {};
         const isEmployee = Boolean(dossier.employeId);
-        const annualCalculation = isEmployee && isAnnualType(dossier);
+        const automaticCalculation = isEmployee;
         const calcul = calculs[dossier.id];
         return (
           <article key={dossier.id} className="card bg-base-100 border p-5 space-y-3">
@@ -182,10 +131,15 @@ export default function ReliquatsPage() {
               <h2 className="text-lg font-bold">{dossier.utilisateurPrenom} {dossier.utilisateurNom}</h2>
               <p className="text-sm text-base-content/70">Matricule : {dossier.utilisateurMatricule}</p>
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <p className="text-sm">
-                  <span className="font-medium">{getTypeLabel(dossier)}</span>
-                  <span> · {dossier.dateDebut} → {dossier.dateFin} · {dossier.nombreJours} jour(s) demandés</span>
-                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 flex-1">
+                  <label className="form-control"><span className="label-text text-xs">Type de congé</span>
+                    <input readOnly aria-readonly="true" className="input input-bordered input-sm bg-base-200" value={getTypeLabel(dossier)} />
+                  </label>
+                  <label className="form-control"><span className="label-text text-xs">Nombre de jours demandés</span>
+                    <input readOnly aria-readonly="true" className="input input-bordered input-sm bg-base-200" value={`${dossier.nombreJours} jour(s)`} />
+                  </label>
+                </div>
+                <p className="text-xs text-base-content/60">{dossier.dateDebut} → {dossier.dateFin}</p>
                 <button type="button" className="btn btn-sm btn-outline"
                   onClick={() => downloadScan(dossier.id)}>
                   Télécharger le scan
@@ -194,37 +148,33 @@ export default function ReliquatsPage() {
             </header>
 
             <div className="rounded-xl border border-base-300 bg-base-200/50 p-4 space-y-3">
-              {annualCalculation ? <>
+              {automaticCalculation ? <>
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <p className="text-sm text-base-content/75">Le système calcule le reliquat à partir de la date réelle d’embauche, des droits acquis et des congés validés. Aucune recherche manuelle du solde n’est nécessaire.</p>
                 </div>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                   <div className="rounded-lg bg-base-100 border border-base-300 p-3">
-                    <p className="text-xs text-base-content/60">Droits acquis</p>
-                    <p className="text-xl font-bold">{calcul && !calcul.error ? calcul.droitsAcquis : "—"} j</p>
+                    <label className="form-control"><span className="label-text text-xs">Droits acquis</span><input readOnly aria-readonly="true" className="input input-bordered bg-base-200" value={calcul && !calcul.error ? calcul.droitsAcquis + " j" : "Indisponible"} /></label>
                   </div>
                   <div className="rounded-lg bg-base-100 border border-base-300 p-3">
-                    <p className="text-xs text-base-content/60">Jours consommés</p>
-                    <p className="text-xl font-bold">{calcul && !calcul.error ? calcul.joursConsommes : "—"} j</p>
+                    <label className="form-control"><span className="label-text text-xs">Jours consommés</span><input readOnly aria-readonly="true" className="input input-bordered bg-base-200" value={calcul && !calcul.error ? calcul.joursConsommes + " j" : "Indisponible"} /></label>
                   </div>
                   <div className="rounded-lg bg-base-100 border border-base-300 p-3">
-                    <p className="text-xs text-base-content/60">Déjà réservés</p>
-                    <p className="text-xl font-bold">{calcul && !calcul.error ? calcul.joursDejaReserves : "—"} j</p>
+                    <label className="form-control"><span className="label-text text-xs">Jours déjà réservés</span><input readOnly aria-readonly="true" className="input input-bordered bg-base-200" value={calcul && !calcul.error ? calcul.joursDejaReserves + " j" : "Indisponible"} /></label>
                   </div>
                   <div className="rounded-lg bg-primary/10 border border-primary/20 p-3">
-                    <p className="text-xs text-base-content/70">Reliquat disponible</p>
-                    <p className="text-xl font-bold text-primary">{calcul && !calcul.error ? calcul.reliquatDisponible : "—"} j</p>
+                    <label className="form-control"><span className="label-text text-xs">Reliquat calculé</span><input readOnly aria-readonly="true" className="input input-bordered bg-base-200 font-bold" value={calcul && !calcul.error ? calcul.reliquatDisponible + " j" : "Indisponible"} /></label>
                   </div>
                 </div>
                 <p className="text-xs text-base-content/60">
                   {calcul?.error || (calcul ? `${calcul.periodeReference} · Reliquat brut : ${calcul.reliquatBrut} j` : "Calcul en cours…")}
                 </p>
-              </> : <p className="text-sm text-base-content/75">
-                {isEmployee ? "Le reliquat de ce type de congé doit être vérifié selon les règles qui lui sont applicables." : "Vérifiez le reliquat historique associé à ce dossier."}
+              </> : <p className="text-sm text-warning">
+                Ce dossier historique n'est pas rattaché à une fiche employé disposant de soldes RH. La confirmation automatique est bloquée.
               </p>}
             </div>
 
-            {annualCalculation ? (
+            {automaticCalculation ? (
               <section className="rounded-xl border border-primary/20 bg-primary/5 p-4 space-y-2">
                 <h3 className="font-semibold text-base">Confirmation automatique du reliquat</h3>
                 <div className="flex items-center justify-between gap-3">
@@ -233,8 +183,16 @@ export default function ReliquatsPage() {
                     {calcul && !calcul.error ? calcul.reliquatDisponible : "—"} jour(s)
                   </strong>
                 </div>
+                <div className="grid md:grid-cols-2 gap-3">
+                  <label className="form-control"><span className="label-text text-xs">Période de référence</span>
+                    <input readOnly aria-readonly="true" className="input input-bordered bg-base-200" value={calcul && !calcul.error ? calcul.periodeReference : "Indisponible"} />
+                  </label>
+                  <label className="form-control"><span className="label-text text-xs">Référence RH</span>
+                    <input readOnly aria-readonly="true" className="input input-bordered bg-base-200" value={"AUTO-RH-" + dossier.id} />
+                  </label>
+                </div>
                 <p className="text-xs text-base-content/60">
-                  Le nombre de jours, l’exercice de référence et la référence RH sont générés automatiquement à partir de la date d’embauche, des soldes et des congés validés en base de données.
+                  Le justificatif est consultable dans le scan du dossier. Seule l'observation reste modifiable.
                 </p>
                 <button type="button" className="btn btn-primary"
                   disabled={busy === dossier.id || !calcul || Boolean(calcul.error)}
@@ -243,45 +201,9 @@ export default function ReliquatsPage() {
                 </button>
               </section>
             ) : (
-              <section className="space-y-3">
-                <h3 className="font-semibold text-base">Confirmation administrative</h3>
-                <div className="grid md:grid-cols-2 gap-3">
-                  <label className="form-control">
-                    <span className="label-text font-semibold">Reliquat confirmé (jours) *</span>
-                    <input type="number" min="0" step="1" className="input input-bordered"
-                      value={value.days ?? ""}
-                      onChange={event => update(dossier.id, "days", event.target.value)} />
-                    <span className="text-xs text-base-content/60">Valeur retenue officiellement après vérification.</span>
-                  </label>
-                  {isEmployee && <>
-                    <label className="form-control">
-                      <span className="label-text font-semibold">Période de référence *</span>
-                      <input className="input input-bordered" placeholder="Ex. Exercice 2025"
-                        value={value.period ?? ""}
-                        onChange={event => update(dossier.id, "period", event.target.value)} />
-                    </label>
-                    <label className="form-control">
-                      <span className="label-text font-semibold">Référence de confirmation RH *</span>
-                      <input className="input input-bordered" placeholder="Référence du document ou de la décision RH"
-                        value={value.reference ?? ""}
-                        onChange={event => update(dossier.id, "reference", event.target.value)} />
-                    </label>
-                    <label className="form-control">
-                      <span className="label-text">Justificatif (facultatif)</span>
-                      <input className="input input-bordered" placeholder="Nom ou référence du justificatif"
-                        value={value.justificatif ?? ""}
-                        onChange={event => update(dossier.id, "justificatif", event.target.value)} />
-                    </label>
-                  </>}
-                </div>
-                <button className="btn btn-primary w-fit"
-                  disabled={busy === dossier.id
-                    || (!isEmployee && (value.days == null || value.days === ""))
-                    || (isEmployee && (value.days == null || value.days === "" || !value.period?.trim() || !value.reference?.trim()))}
-                  onClick={() => confirm(dossier)}>
-                  {busy === dossier.id ? "Enregistrement…" : isEmployee ? "Confirmer le reliquat" : "Valider et transmettre"}
-                </button>
-              </section>
+              <p className="text-sm text-warning">
+                Confirmation indisponible sans fiche employé et soldes RH enregistrés. Aucun reliquat ne peut être saisi manuellement.
+              </p>
             )}
 
             <div className="grid md:grid-cols-2 gap-3">

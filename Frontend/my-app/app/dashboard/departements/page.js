@@ -7,7 +7,10 @@ export default function DepartementsPage(){
  const [departements,setDepartements]=useState([]),[users,setUsers]=useState([]),[services,setServices]=useState([]);
  const [form,setForm]=useState({nom:"",chefId:"",directeurId:""}),[serviceLinks,setServiceLinks]=useState({}),[busy,setBusy]=useState(false);const toast=useToast();
  const load=async()=>{const [d,u,s]=await Promise.all([authFetch(API+"/departements"),authFetch(API+"/utilisateur/all"),authFetch(API+"/services")]);if(!d.ok||!u.ok||!s.ok)throw new Error("Chargement des données impossible");setDepartements(await d.json());setUsers(await u.json());setServices(await s.json());};
- useEffect(()=>{load().catch(e=>toast(e.message,"error"));},[]);
+ useEffect(()=>{
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  load().catch(e=>toast(e.message,"error"));
+ },[]);
  const create=async e=>{e.preventDefault();setBusy(true);try{const r=await authFetch(API+"/departements",{method:"POST",body:JSON.stringify({...form,chefId:Number(form.chefId),directeurId:Number(form.directeurId)})});const d=await r.json();if(!r.ok)throw new Error(d.message||"Création impossible");toast("Département créé.","success");setForm({nom:"",chefId:"",directeurId:""});await load();}catch(e){toast(e.message,"error");}finally{setBusy(false);}};
  const link=async serviceId=>{try{const dep=serviceLinks[serviceId];if(!dep)throw new Error("Choisissez un département.");const r=await authFetch(API+`/services/${serviceId}/departement/${dep}`,{method:"PUT"});if(!r.ok)throw new Error("Rattachement impossible");toast("Service rattaché.","success");await load();}catch(e){toast(e.message,"error");}};
  const chefs=users.filter(u=>u.role==="CHEF_DEPARTEMENT"),directeurs=users.filter(u=>u.role==="DIRECTEUR");

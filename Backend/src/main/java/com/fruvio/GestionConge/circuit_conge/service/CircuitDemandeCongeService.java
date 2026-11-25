@@ -251,6 +251,8 @@ public class CircuitDemandeCongeService {
         exiger(assistant, Role.ASSISTANT_DIRECTION);
         Utilisateur cible=utilisateurs.findById(utilisateurId).filter(Utilisateur::isEnabled)
                 .orElseThrow(() -> new IllegalArgumentException("Collaborateur actif introuvable."));
+        if (cible.getId().equals(assistant.getId()))
+            throw new IllegalArgumentException("L’Assistant de direction ne peut pas enregistrer sa propre demande. Elle doit être remise à un autre Assistant de direction habilité.");
         if(cible.getRole()==null||cible.getRole()==Role.DIRECTEUR)
             throw new IllegalArgumentException("Le directeur ne peut pas être sélectionné pour une demande de congé.");
         Departement dep;

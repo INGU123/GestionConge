@@ -15,7 +15,6 @@ public interface CircuitDemandeCongeRepository extends JpaRepository<CircuitDema
     Optional<CircuitDemandeConge> findByIdForUpdate(@Param("id") Long id);
     List<CircuitDemandeConge> findByAssistantIdOrderByDateCreationDesc(Long assistantId);
     List<CircuitDemandeConge> findByUtilisateurId(Long utilisateurId);
-    List<CircuitDemandeConge> findByUtilisateurIdAndAssistantId(Long utilisateurId, Long assistantId);
     List<CircuitDemandeConge> findByEmployeId(Long employeId);
     List<CircuitDemandeConge> findByStatutOrderByDateCreationAsc(String statut);
     List<CircuitDemandeConge> findByChefIdAndStatutOrderByDateCreationAsc(Long chefId, String statut);

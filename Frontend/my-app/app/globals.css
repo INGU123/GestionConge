@@ -127,8 +127,7 @@ body { margin: 0; font-family: Arial, Helvetica, sans-serif; }
 }
 
 
-/* =========================================================
-   IDENTITÉ VISUELLE SPAT — CONNEXION & ESPACE DE GESTION
+/* ==================================================   IDENTITÉ VISUELLE SPAT — CONNEXION & ESPACE DE GESTION
    La couche ci-dessous harmonise les pages sans modifier leurs
    traitements, leurs routes ni les composants fonctionnels.
    ========================================================= */
@@ -1405,10 +1404,9 @@ html[data-theme="night"] body :is(input, textarea, select) {
 .theme-shell[data-theme="night"] main :is(.reliquats-theme, .circuit-conge-theme) .text-slate-500,
 .theme-shell[data-theme="night"] main :is(.reliquats-theme, .circuit-conge-theme) .text-slate-400,
 .theme-shell[data-theme="night"] main :is(.reliquats-theme, .circuit-conge-theme) .text-gray-500 {
-<<<<<<< HEAD
   color: #a9bdd5 !important;}
-=======
   color: #a9bdd5 !important;
+}
 
 /* ===== CORRECTION COUVERTURE MODE NUIT SPAT ===== */
 /* Couverture homogène des composants qui conservent des classes Tailwind claires. */
@@ -1526,4 +1524,3 @@ html[data-theme="night"] body :is(
 html[data-theme="night"] body :is(input, textarea, select) {
   color-scheme: dark;
 }
->>>>>>> 41ba7fe (fix(frontend): compléter la couverture du mode sombre)

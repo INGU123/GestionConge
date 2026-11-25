@@ -65,7 +65,7 @@ public class CircuitDemandeCongeController {
             @Size(max=1500) String commentaire) {}
 
     @PostMapping("/personnelle")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("denyAll()")
     public ResponseEntity<CircuitDemandeConge> creerDemandePersonnelle(
             @Valid @RequestBody CreationPersonnelleRequest body) {
         return ResponseEntity.status(201).body(service.creerDemandePersonnelle(
@@ -79,7 +79,7 @@ public class CircuitDemandeCongeController {
     }
 
     @PostMapping("/{id}/soumettre-personnelle")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("denyAll()")
     public CircuitDemandeConge soumettreDemandePersonnelle(@PathVariable Long id) {
         return service.soumettreDemandePersonnelle(id, currentUser());
     }

@@ -89,6 +89,120 @@ public class CircuitDemandeCongeService {
         this.soldes = null; this.mouvements = null; this.confirmations = null;
     }
 
+    /**
+     * Demande personnelle d'un utilisateur interne. Le circuit des demandes
+     * d'employés déposées par l'assistant reste séparé et inchangé.
+     */
+    @Transactional
+    public CircuitDemandeConge creerDemandePersonnelle(Long typeId, LocalDate debut,
+            LocalDate fin, String commentaire, Utilisateur demandeur) {
+        if (demandeur == null || demandeur.getId() == null || !demandeur.isEnabled())
+            throw new AccessDeniedException("Utilisateur authentifié requis.");
+        if (demandeur.getRole() == null || !List.of(Role.ASSISTANT_DIRECTION,
+                Role.ADMINISTRATION_PERSONNEL, Role.CHEF_DEPARTEMENT, Role.ADMIN).contains(demandeur.getRole()))
+            throw new AccessDeniedException("Ce rôle ne peut pas déposer une demande personnelle de congé.");
+        if (typeId == null) throw new IllegalArgumentException("Le type de congé est obligatoire.");
+        if (debut == null || fin == null || fin.isBefore(debut))
+            throw new IllegalArgumentException("Période de congé invalide.");
+        var type = typesConge.findById(typeId).filter(t -> Boolean.TRUE.equals(t.getActif()))
+                .orElseThrow(() -> new IllegalArgumentException("Type de congé indisponible."));
+        int nombre = joursFeries.compterJoursCalendaires(debut, fin);
+        if (nombre <= 0) throw new IllegalArgumentException("La période ne contient aucun jour ouvré.");
+
+        Departement dep;
+        if (demandeur.getRole() == Role.CHEF_DEPARTEMENT) {
+            dep = departements.findByChefIdAndActifTrue(demandeur.getId())
+                    .orElseThrow(() -> new IllegalStateException("Aucun département actif n'est rattaché à ce chef."));
+        } else {
+            if (demandeur.getService_id() == null)
+                throw new IllegalStateException("Aucun service n'est associé à votre compte. L'administration doit compléter votre rattachement.");
+            Services service = services.findById(demandeur.getService_id())
+                    .orElseThrow(() -> new IllegalStateException("Votre service est introuvable."));
+            if (service.getDepartementId() == null)
+                throw new IllegalStateException("Votre service n'est rattaché à aucun département.");
+            dep = departements.findById(service.getDepartementId())
+                    .orElseThrow(() -> new IllegalStateException("Département introuvable."));
+        }
+        if (!Boolean.TRUE.equals(dep.getActif()) || dep.getChefId() == null || dep.getDirecteurId() == null)
+            throw new IllegalStateException("Le département doit être actif et avoir un chef et un directeur.");
+        if (demandeur.getId().equals(dep.getDirecteurId()))
+            throw new IllegalStateException("Le directeur ne peut pas déposer une demande personnelle dans ce circuit.");
+        verifierChevauchementCircuit(demandeur.getId(), debut, fin, null);
+
+        CircuitDemandeConge saved = circuits.save(CircuitDemandeConge.builder()
+                .utilisateurId(demandeur.getId())
+                // assistant_id est encore NOT NULL dans le schéma historique :
+                // il conserve ici l'identifiant du créateur, sans lui donner un droit d'approbation.
+                .assistantId(demandeur.getId()).typeCongeId(typeId).departementId(dep.getId())
+                .dateDebut(debut).dateFin(fin).nombreJours(nombre).commentaire(commentaire)
+                .statut("RELIQUAT_EN_ATTENTE").dateCreation(LocalDateTime.now()).build());
+        for (Utilisateur agent : utilisateurs.findByRoleAndActifTrue(Role.ADMINISTRATION_PERSONNEL)) {
+            if (!agent.getId().equals(demandeur.getId()))
+                notifications.creerNotification(agent.getId(),
+                        "Nouvelle demande personnelle de congé (dossier #" + saved.getId() + ").",
+                        "CIRCUIT_CONGE", "/dashboard/reliquats");
+        }
+        return enrichir(saved);
+    }
+
+    @Transactional(readOnly = true)
+    public List<CircuitDemandeConge> mesDemandesPersonnelles(Utilisateur demandeur) {
+        if (demandeur == null || demandeur.getId() == null || !demandeur.isEnabled()
+                || demandeur.getRole() == Role.DIRECTEUR)
+            throw new AccessDeniedException("Consultation non autorisée.");
+        return circuits.findByUtilisateurId(demandeur.getId()).stream()
+                .filter(d -> d.getEmployeId() == null && demandeur.getId().equals(d.getAssistantId()))
+                .sorted(java.util.Comparator.comparing(CircuitDemandeConge::getDateCreation).reversed())
+                .map(this::enrichir).toList();
+    }
+
+    @Transactional
+    public CircuitDemandeConge soumettreDemandePersonnelle(Long id, Utilisateur demandeur) {
+        if (demandeur == null || demandeur.getId() == null || demandeur.getRole() == Role.DIRECTEUR
+                || !demandeur.isEnabled())
+            throw new AccessDeniedException("Soumission non autorisée.");
+        CircuitDemandeConge d = dossierVerrouille(id);
+        if (d.getEmployeId() != null || !demandeur.getId().equals(d.getUtilisateurId())
+                || !demandeur.getId().equals(d.getAssistantId()))
+            throw new AccessDeniedException("Ce dossier n'est pas votre demande personnelle.");
+        if (!"RELIQUAT_RETOURNE".equals(d.getStatut()))
+            throw new IllegalStateException("Le reliquat doit d'abord être vérifié par l'administration.");
+        if (d.getReliquatJours() == null || d.getReliquatJours() < d.getNombreJours())
+            throw new IllegalStateException("Reliquat insuffisant pour couvrir la période demandée.");
+        verifierChevauchementCircuit(d.getUtilisateurId(), d.getDateDebut(), d.getDateFin(), d.getId());
+        int joursVerifies = demandesHistoriques.verifierEligibiliteWorkflow(
+                d.getUtilisateurId(), d.getTypeCongeId(), d.getDateDebut(), d.getDateFin());
+        if (joursVerifies != d.getNombreJours())
+            throw new IllegalStateException("Le nombre de jours a changé. Recréez le dossier après vérification.");
+        utilisateurActif(d.getUtilisateurId());
+        Departement dep = departements.findById(d.getDepartementId())
+                .filter(Departement::getActif)
+                .orElseThrow(() -> new IllegalStateException("Département inactif ou introuvable."));
+        if (dep.getChefId() == null || dep.getDirecteurId() == null)
+            throw new IllegalStateException("Le département doit avoir un chef et un directeur.");
+        if (demandeur.getId().equals(dep.getDirecteurId()))
+            throw new IllegalStateException("Un demandeur ne peut jamais être son propre décideur final.");
+
+        d.setChefId(dep.getChefId());
+        d.setDirecteurId(dep.getDirecteurId());
+        d.setDateSoumissionChef(LocalDateTime.now());
+        if (demandeur.getId().equals(dep.getChefId())) {
+            d.setDateTransmissionDirecteur(LocalDateTime.now());
+            d.setStatut("DIRECTEUR_EN_ATTENTE");
+            CircuitDemandeConge saved = circuits.save(d);
+            notifications.creerNotification(dep.getDirecteurId(),
+                    "Une demande personnelle (#" + d.getId() + ") attend votre décision.",
+                    "CIRCUIT_CONGE", "/dashboard/directeur");
+            return saved;
+        }
+        d.setStatut("CHEF_EN_ATTENTE");
+        CircuitDemandeConge saved = circuits.save(d);
+        notifications.creerNotification(dep.getChefId(),
+                "Une demande personnelle (#" + d.getId() + ") attend votre examen.",
+                "CIRCUIT_CONGE", "/dashboard/chef-departement");
+        return saved;
+    }
+
     @Transactional
     public CircuitDemandeConge creerPourEmploye(Long employeId, Long typeId,
             java.time.LocalDate debut, java.time.LocalDate fin, String commentaire, Utilisateur assistant) {
@@ -188,19 +302,25 @@ public class CircuitDemandeCongeService {
     @Transactional(readOnly = true)
     public List<CircuitDemandeConge> enAttenteAdministration(Utilisateur user) {
         exiger(user, Role.ADMINISTRATION_PERSONNEL);
-        return circuits.findByStatutOrderByDateCreationAsc("RELIQUAT_EN_ATTENTE").stream().map(this::enrichir).toList();
+        return circuits.findByStatutOrderByDateCreationAsc("RELIQUAT_EN_ATTENTE").stream()
+                .filter(d -> !user.getId().equals(d.getUtilisateurId()))
+                .map(this::enrichir).toList();
     }
 
     @Transactional(readOnly = true)
     public List<CircuitDemandeConge> enAttenteChef(Utilisateur user) {
         exiger(user, Role.CHEF_DEPARTEMENT);
-        return circuits.findByChefIdAndStatutOrderByDateCreationAsc(user.getId(), "CHEF_EN_ATTENTE").stream().map(this::enrichir).toList();
+        return circuits.findByChefIdAndStatutOrderByDateCreationAsc(user.getId(), "CHEF_EN_ATTENTE").stream()
+                .filter(d -> !user.getId().equals(d.getUtilisateurId()))
+                .map(this::enrichir).toList();
     }
 
     @Transactional(readOnly = true)
     public List<CircuitDemandeConge> enAttenteDirecteur(Utilisateur user) {
         exiger(user, Role.DIRECTEUR);
-        return circuits.findByDirecteurIdAndStatutOrderByDateCreationAsc(user.getId(), "DIRECTEUR_EN_ATTENTE").stream().map(this::enrichir).toList();
+        return circuits.findByDirecteurIdAndStatutOrderByDateCreationAsc(user.getId(), "DIRECTEUR_EN_ATTENTE").stream()
+                .filter(d -> !user.getId().equals(d.getUtilisateurId()))
+                .map(this::enrichir).toList();
     }
 
     @Transactional
@@ -208,6 +328,8 @@ public class CircuitDemandeCongeService {
         exiger(actor, Role.ADMINISTRATION_PERSONNEL);
         if (reliquat == null || reliquat < 0) throw new IllegalArgumentException("Le reliquat doit être positif ou nul.");
         CircuitDemandeConge d = dossierVerrouille(id);
+        if (d.getUtilisateurId() != null && actor.getId().equals(d.getUtilisateurId()))
+            throw new AccessDeniedException("Vous ne pouvez pas vérifier le reliquat de votre propre demande.");
         if (d.getEmployeId() != null)
             throw new IllegalStateException("Utilisez la confirmation RH avec période et référence pour un employé du référentiel.");
         if (d.getEmployeId() == null) {
@@ -272,6 +394,8 @@ public class CircuitDemandeCongeService {
         exiger(chef, Role.CHEF_DEPARTEMENT);
         CircuitDemandeConge d = dossierVerrouille(id);
         if (!chef.getId().equals(d.getChefId())) throw new AccessDeniedException("Ce dossier ne relève pas de votre département.");
+        if (chef.getId().equals(d.getUtilisateurId()))
+            throw new AccessDeniedException("Vous ne pouvez pas examiner votre propre demande.");
         if (!"CHEF_EN_ATTENTE".equals(d.getStatut())) throw new IllegalStateException("Ce dossier n'attend pas l'avis du chef.");
         d.setDateTransmissionDirecteur(LocalDateTime.now()); d.setStatut("DIRECTEUR_EN_ATTENTE");
         CircuitDemandeConge saved = circuits.save(d);
@@ -284,6 +408,8 @@ public class CircuitDemandeCongeService {
         exiger(directeur, Role.DIRECTEUR);
         CircuitDemandeConge d = dossierVerrouille(id);
         if (!directeur.getId().equals(d.getDirecteurId())) throw new AccessDeniedException("Ce dossier ne relève pas de votre département.");
+        if (directeur.getId().equals(d.getUtilisateurId()))
+            throw new AccessDeniedException("Vous ne pouvez pas décider de votre propre demande.");
         if (!"DIRECTEUR_EN_ATTENTE".equals(d.getStatut())) throw new IllegalStateException("Ce dossier n'attend pas la décision du directeur.");
         String choix = decision == null ? "" : decision.trim().toUpperCase();
         if (!List.of("VALIDEE", "REFUSEE").contains(choix)) throw new IllegalArgumentException("Décision attendue : VALIDEE ou REFUSEE.");

@@ -11,6 +11,7 @@ import { getCurrentUser } from "@/lib/apiClient";
 const roleLinks = {
   ADMIN: [
     { href: "/dashboard/consultation-demandes", label: "Consultation des demandes", description: "Suivre les demandes et les décisions.", icon: ClipboardList },
+    { href: "/dashboard/demande-personnelle", label: "Ma demande de congé", description: "Déposer et suivre votre propre demande.", icon: CalendarDays },
     { href: "/dashboard/historique", label: "Mon historique", description: "Retrouver les mouvements liés à vos congés.", icon: History },
     { href: "/dashboard/utilisateurs", label: "Collaborateurs", description: "Gérer les comptes, les rôles et les affectations.", icon: Users },
     { href: "/dashboard/reinitialisations", label: "Réinitialisations", description: "Examiner et traiter les demandes de réinitialisation des comptes.", icon: ShieldCheck },
@@ -24,13 +25,16 @@ const roleLinks = {
     { href: "/dashboard/historique", label: "Mon historique", description: "Retrouver les mouvements liés à vos congés.", icon: History },
   ],
   ASSISTANT_DIRECTION: [
-    { href: "/dashboard/circuit-conge", label: "Circuit des congés", description: "Enregistrer les demandes verbales et suivre les dossiers.", icon: GitBranch },
+    { href: "/dashboard/circuit-conge", label: "Circuit des congés", description: "Enregistrer les demandes des collaborateurs et suivre les dossiers.", icon: GitBranch },
+    { href: "/dashboard/demande-personnelle", label: "Ma demande de congé", description: "Déposer et suivre votre propre demande sans traiter votre dossier.", icon: CalendarDays },
   ],
   ADMINISTRATION_PERSONNEL: [
     { href: "/dashboard/reliquats", label: "Vérification des reliquats", description: "Contrôler et retourner les reliquats des dossiers.", icon: ShieldCheck },
+    { href: "/dashboard/demande-personnelle", label: "Ma demande de congé", description: "Déposer et suivre votre propre demande.", icon: CalendarDays },
   ],
   CHEF_DEPARTEMENT: [
     { href: "/dashboard/chef-departement", label: "Examen du chef", description: "Examiner les dossiers de votre département.", icon: FileCheck2 },
+    { href: "/dashboard/demande-personnelle", label: "Ma demande de congé", description: "Déposer une demande personnelle ; votre étape d’examen sera ignorée.", icon: CalendarDays },
   ],
   DIRECTEUR: [
     { href: "/dashboard/directeur", label: "Décisions du directeur", description: "Consulter les dossiers et rendre une décision.", icon: ShieldCheck },

@@ -303,7 +303,7 @@ public class CircuitDemandeCongeService {
     public List<CircuitDemandeConge> enAttenteAdministration(Utilisateur user) {
         exiger(user, Role.ADMINISTRATION_PERSONNEL);
         return circuits.findByStatutOrderByDateCreationAsc("RELIQUAT_EN_ATTENTE").stream()
-                .filter(d -> !user.getId().equals(d.getUtilisateurId()))
+                .filter(d -> !(estDemandePersonnelle(d) && user.getId().equals(d.getUtilisateurId())))
                 .map(this::enrichir).toList();
     }
 
@@ -328,7 +328,7 @@ public class CircuitDemandeCongeService {
         exiger(actor, Role.ADMINISTRATION_PERSONNEL);
         if (reliquat == null || reliquat < 0) throw new IllegalArgumentException("Le reliquat doit être positif ou nul.");
         CircuitDemandeConge d = dossierVerrouille(id);
-        if (d.getUtilisateurId() != null && actor.getId().equals(d.getUtilisateurId()))
+        if (estDemandePersonnelle(d) && actor.getId().equals(d.getUtilisateurId()))
             throw new AccessDeniedException("Vous ne pouvez pas vérifier le reliquat de votre propre demande.");
         if (d.getEmployeId() != null)
             throw new IllegalStateException("Utilisez la confirmation RH avec période et référence pour un employé du référentiel.");
@@ -394,7 +394,7 @@ public class CircuitDemandeCongeService {
         exiger(chef, Role.CHEF_DEPARTEMENT);
         CircuitDemandeConge d = dossierVerrouille(id);
         if (!chef.getId().equals(d.getChefId())) throw new AccessDeniedException("Ce dossier ne relève pas de votre département.");
-        if (chef.getId().equals(d.getUtilisateurId()))
+        if (estDemandePersonnelle(d) && chef.getId().equals(d.getUtilisateurId()))
             throw new AccessDeniedException("Vous ne pouvez pas examiner votre propre demande.");
         if (!"CHEF_EN_ATTENTE".equals(d.getStatut())) throw new IllegalStateException("Ce dossier n'attend pas l'avis du chef.");
         d.setDateTransmissionDirecteur(LocalDateTime.now()); d.setStatut("DIRECTEUR_EN_ATTENTE");
@@ -408,7 +408,7 @@ public class CircuitDemandeCongeService {
         exiger(directeur, Role.DIRECTEUR);
         CircuitDemandeConge d = dossierVerrouille(id);
         if (!directeur.getId().equals(d.getDirecteurId())) throw new AccessDeniedException("Ce dossier ne relève pas de votre département.");
-        if (directeur.getId().equals(d.getUtilisateurId()))
+        if (estDemandePersonnelle(d) && directeur.getId().equals(d.getUtilisateurId()))
             throw new AccessDeniedException("Vous ne pouvez pas décider de votre propre demande.");
         if (!"DIRECTEUR_EN_ATTENTE".equals(d.getStatut())) throw new IllegalStateException("Ce dossier n'attend pas la décision du directeur.");
         String choix = decision == null ? "" : decision.trim().toUpperCase();
@@ -608,6 +608,11 @@ public class CircuitDemandeCongeService {
                 throw new IllegalStateException("Cette période chevauche un autre dossier de congé déjà enregistré.");
             }
         }
+    }
+
+    private boolean estDemandePersonnelle(CircuitDemandeConge d) {
+        return d.getEmployeId() == null && d.getUtilisateurId() != null
+                && d.getUtilisateurId().equals(d.getAssistantId());
     }
 
     private CircuitDemandeConge dossierVerrouille(Long id) {

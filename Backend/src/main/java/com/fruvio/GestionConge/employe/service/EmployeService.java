@@ -1,8 +1,6 @@
 package com.fruvio.GestionConge.employe.service;
-
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
 import com.fruvio.GestionConge.employe.dto.EmployeLookupResponse;
 import com.fruvio.GestionConge.employe.entity.Employe;
 import com.fruvio.GestionConge.employe.repository.EmployeRepository;
@@ -10,45 +8,48 @@ import com.fruvio.GestionConge.service_conge.entity.Services;
 import com.fruvio.GestionConge.service_conge.repository.Service_congeRepository;
 import com.fruvio.GestionConge.departement.entity.Departement;
 import com.fruvio.GestionConge.departement.repository.DepartementRepository;
-
+import com.fruvio.GestionConge.utilisateur.entity.Role;
+import com.fruvio.GestionConge.utilisateur.entity.Utilisateur;
+import com.fruvio.GestionConge.utilisateur.repository.UtilisateurRepository;
 @Service
 public class EmployeService {
     private final EmployeRepository employes;
+    private final UtilisateurRepository utilisateurs;
     private final Service_congeRepository services;
     private final DepartementRepository departements;
-
-    public EmployeService(EmployeRepository employes, Service_congeRepository services,
-            DepartementRepository departements) {
-        this.employes = employes;
-        this.services = services;
-        this.departements = departements;
+    public EmployeService(EmployeRepository employes, UtilisateurRepository utilisateurs,
+            Service_congeRepository services, DepartementRepository departements) {
+        this.employes=employes; this.utilisateurs=utilisateurs; this.services=services; this.departements=departements;
     }
-
-    @Transactional(readOnly = true)
+    @Transactional(readOnly=true)
     public EmployeLookupResponse rechercherPourAssistant(String matriculeSaisi) {
-        String matricule = normaliserMatricule(matriculeSaisi);
-        Employe employe = employes.findByMatricule(matricule)
-                .filter(Employe::isActif)
-                .orElseThrow(() -> new IllegalArgumentException("Aucun employé actif trouvé pour ce matricule."));
-        Services service = services.findById(employe.getServiceId())
-                .orElseThrow(() -> new IllegalStateException("Le service associé à cet employé est introuvable."));
-        if (service.getDepartementId() == null)
-            throw new IllegalStateException("Le service de cet employé n'est associé à aucun département.");
-        Departement departement = departements.findById(service.getDepartementId())
-                .orElseThrow(() -> new IllegalStateException("Le département associé à cet employé est introuvable."));
-        return EmployeLookupResponse.depuis(employe, service.getNom(), departement.getId(), departement.getNom());
-    }
-
-    private String normaliserMatricule(String value) {
-        if (value == null || value.isBlank()) {
-            throw new IllegalArgumentException("Le matricule est obligatoire.");
+        String matricule=normaliserMatricule(matriculeSaisi);
+        Employe e=employes.findByMatricule(matricule).filter(Employe::isActif).orElse(null);
+        if(e!=null) {
+            Services s=services.findById(e.getServiceId()).orElseThrow(() -> new IllegalStateException("Le service associé à cet employé est introuvable."));
+            if(s.getDepartementId()==null) throw new IllegalStateException("Le service de cet employé n'est associé à aucun département.");
+            Departement d=departements.findById(s.getDepartementId()).orElseThrow(() -> new IllegalStateException("Le département associé à cet employé est introuvable."));
+            return EmployeLookupResponse.depuis(e,s.getNom(),d.getId(),d.getNom());
         }
-        String matricule = value.trim();
-        if (!matricule.matches("[0-9]+")) throw new IllegalArgumentException("Le matricule doit contenir uniquement des chiffres.");
-        return matricule;
+        Utilisateur u=utilisateurs.findByMatricule(matricule).filter(Utilisateur::isEnabled)
+                .filter(x -> x.getRole()!=Role.DIRECTEUR)
+                .orElseThrow(() -> new IllegalArgumentException("Aucun employé ou collaborateur actif trouvé pour ce matricule."));
+        Departement d;
+        if(u.getRole()==Role.CHEF_DEPARTEMENT) {
+            d=departements.findByChefIdAndActifTrue(u.getId()).orElseThrow(() -> new IllegalStateException("Aucun département actif n'est rattaché à ce chef."));
+        } else {
+            if(u.getService_id()==null) throw new IllegalStateException("Aucun service n'est associé à ce collaborateur.");
+            Services s=services.findById(u.getService_id()).orElseThrow(() -> new IllegalStateException("Le service associé à ce collaborateur est introuvable."));
+            if(s.getDepartementId()==null) throw new IllegalStateException("Le service de ce collaborateur n'est associé à aucun département.");
+            d=departements.findById(s.getDepartementId()).orElseThrow(() -> new IllegalStateException("Le département associé à ce collaborateur est introuvable."));
+        }
+        String serviceNom=u.getService_id()==null?null:services.findById(u.getService_id()).map(Services::getNom).orElse(null);
+        return EmployeLookupResponse.depuis(u,serviceNom,d.getId(),d.getNom());
     }
-
-    private String texteOuNull(String value) {
-        return value == null || value.isBlank() ? null : value.trim();
+    private String normaliserMatricule(String value) {
+        if(value==null||value.isBlank()) throw new IllegalArgumentException("Le matricule est obligatoire.");
+        String m=value.trim();
+        if(!m.matches("[0-9]+")) throw new IllegalArgumentException("Le matricule doit contenir uniquement des chiffres.");
+        return m;
     }
 }

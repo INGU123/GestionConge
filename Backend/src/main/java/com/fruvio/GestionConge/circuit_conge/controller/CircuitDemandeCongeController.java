@@ -56,6 +56,30 @@ public class CircuitDemandeCongeController {
                 body.dateDebut(), body.dateFin(), body.commentaire(), currentUser()));
     }
 
+    public record CreationPersonnelleRequest(@NotNull Long typeCongeId,
+            @NotNull java.time.LocalDate dateDebut, @NotNull java.time.LocalDate dateFin,
+            @Size(max=1500) String commentaire) {}
+
+    @PostMapping("/personnelle")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<CircuitDemandeConge> creerDemandePersonnelle(
+            @Valid @RequestBody CreationPersonnelleRequest body) {
+        return ResponseEntity.status(201).body(service.creerDemandePersonnelle(
+                body.typeCongeId(), body.dateDebut(), body.dateFin(), body.commentaire(), currentUser()));
+    }
+
+    @GetMapping("/mes-demandes-personnelles")
+    @PreAuthorize("isAuthenticated()")
+    public List<CircuitDemandeConge> mesDemandesPersonnelles() {
+        return service.mesDemandesPersonnelles(currentUser());
+    }
+
+    @PostMapping("/{id}/soumettre-personnelle")
+    @PreAuthorize("isAuthenticated()")
+    public CircuitDemandeConge soumettreDemandePersonnelle(@PathVariable Long id) {
+        return service.soumettreDemandePersonnelle(id, currentUser());
+    }
+
     @GetMapping("/assistant/mes-dossiers")
     @PreAuthorize("hasRole('ASSISTANT_DIRECTION')")
     public List<CircuitDemandeConge> mesDossiers() { return service.dossiersAssistant(currentUser()); }

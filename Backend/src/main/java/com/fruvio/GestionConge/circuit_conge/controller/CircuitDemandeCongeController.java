@@ -43,7 +43,7 @@ public class CircuitDemandeCongeController {
         this(service, pdf, utilisateurs, typesConge, null);
     }
 
-    public record CreationRequest(@NotNull Long employeId, @NotNull Long typeCongeId,
+    public record CreationRequest(Long employeId, Long utilisateurId, @NotNull Long typeCongeId,
             @NotNull java.time.LocalDate dateDebut, @NotNull java.time.LocalDate dateFin,
             @Size(max=1500) String commentaire) {}
     public record ReliquatRequest(@NotNull @Min(0) Integer reliquatJours, @Size(max=1500) String commentaire) {}
@@ -52,8 +52,12 @@ public class CircuitDemandeCongeController {
     @PostMapping
     @PreAuthorize("hasRole('ASSISTANT_DIRECTION')")
     public ResponseEntity<CircuitDemandeConge> creer(@Valid @RequestBody CreationRequest body) {
-        return ResponseEntity.status(201).body(service.creerPourEmploye(body.employeId(), body.typeCongeId(),
-                body.dateDebut(), body.dateFin(), body.commentaire(), currentUser()));
+        if ((body.employeId() == null) == (body.utilisateurId() == null))
+            throw new IllegalArgumentException("Sélectionnez un seul employé ou collaborateur.");
+        CircuitDemandeConge dossier = body.employeId() != null
+                ? service.creerPourEmploye(body.employeId(), body.typeCongeId(), body.dateDebut(), body.dateFin(), body.commentaire(), currentUser())
+                : service.creerPourUtilisateur(body.utilisateurId(), body.typeCongeId(), body.dateDebut(), body.dateFin(), body.commentaire(), currentUser());
+        return ResponseEntity.status(201).body(dossier);
     }
 
     public record CreationPersonnelleRequest(@NotNull Long typeCongeId,

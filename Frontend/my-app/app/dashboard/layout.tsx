@@ -303,6 +303,7 @@ export default function DashboardLayout({
     { href: "/dashboard/reliquats", label: "Vérification des reliquats", icon: <span>✓</span>, show: isPersonnel },
     { href: "/dashboard/chef-departement", label: "Examen du chef", icon: <span>▣</span>, show: isChef },
     { href: "/dashboard/directeur", label: "Décisions du directeur", icon: <span>⚖</span>, show: isDirecteur },
+    { href: "/dashboard/demande-personnelle", label: "Ma demande de congé", icon: <span>＋</span>, show: isAdmin || isAssistant || isPersonnel || isChef },
   );
 
   const visibleNavItems = navItems.filter((item) => item.show);

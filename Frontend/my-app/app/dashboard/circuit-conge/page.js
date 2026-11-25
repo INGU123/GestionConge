@@ -6,7 +6,7 @@ import { useToast } from "../../Components/ToastProvider";
 const API = "http://localhost:8080";
 export default function CircuitCongePage() {
   const [employe,setEmploye]=useState(null), [matricule,setMatricule]=useState(""), [lookupBusy,setLookupBusy]=useState(false), [types,setTypes]=useState([]), [dossiers,setDossiers]=useState([]);
-  const [form,setForm]=useState({employeId:"",typeCongeId:"",dateDebut:"",dateFin:"",commentaire:""});
+  const [form,setForm]=useState({employeId:"",utilisateurId:"",typeCongeId:"",dateDebut:"",dateFin:"",commentaire:""});
   const [busy,setBusy]=useState(false); const [scan,setScan]=useState(null); const [pendingScan,setPendingScan]=useState(null); const toast=useToast();
   const load=async()=>{const [t,d]=await Promise.all([
     authFetch(API+"/type-conge/all").then(r=>r.ok?r.json():[]),
@@ -17,19 +17,19 @@ export default function CircuitCongePage() {
     const code=matricule.trim();
     if(!code || !/^[0-9]+$/.test(code)){
       setEmploye(null);
-      setForm(v=>({...v,employeId:""}));
+      setForm(v=>({...v,employeId:"",utilisateurId:""}));
       toast("Saisissez un matricule composé uniquement de chiffres.","warning");
       return;
     }
     setLookupBusy(true);
     setEmploye(null);
-    setForm(v=>({...v,employeId:""}));
+    setForm(v=>({...v,employeId:"",utilisateurId:""}));
     try{
       const r=await authFetch(API+"/employes/recherche-matricule?matricule="+encodeURIComponent(code));
       const d=await r.json();
       if(!r.ok)throw new Error(d.message||"Matricule introuvable");
       setEmploye(d);
-      setForm(v=>({...v,employeId:String(d.id)}));
+      setForm(v=>({...v,employeId:d.typeCible==="EMPLOYE"?String(d.id):"",utilisateurId:d.typeCible==="COLLABORATEUR"?String(d.id):""}));
     }catch(error){
       toast(error.message,"error");
     }finally{
@@ -62,13 +62,15 @@ export default function CircuitCongePage() {
     if(scan.size>10*1024*1024){toast("Le scan dépasse 10 Mo.","error");return;}
     setBusy(true);
     try{
-      const r=await authFetch(API+"/circuit-conge",{method:"POST",body:JSON.stringify({...form,employeId:Number(form.employeId),typeCongeId:Number(form.typeCongeId)})});
+      const r=await authFetch(API+"/circuit-conge",{method:"POST",body:JSON.stringify({...form,
+        employeId:form.employeId?Number(form.employeId):null,
+        utilisateurId:form.utilisateurId?Number(form.utilisateurId):null,typeCongeId:Number(form.typeCongeId)})});
       const data=await r.json();
       if(!r.ok)throw new Error(data.message||"Création impossible");
       if(!data.id)throw new Error("Identifiant du dossier absent de la réponse.");
       setEmploye(null);
       setMatricule("");
-      setForm({employeId:"",typeCongeId:"",dateDebut:"",dateFin:"",commentaire:""});
+      setForm({employeId:"",utilisateurId:"",typeCongeId:"",dateDebut:"",dateFin:"",commentaire:""});
       try{
         await uploadScan(data.id,scan);
         setScan(null);
@@ -122,9 +124,9 @@ export default function CircuitCongePage() {
             </div>
             <div className="rounded-lg bg-base-200/70 p-3 md:col-span-2">
               {employe ? <>
-                <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-success"><span className="h-2 w-2 rounded-full bg-success"></span>Collaborateur identifié</div>
+                <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-success"><span className="h-2 w-2 rounded-full bg-success"></span>{employe.typeCible==="EMPLOYE"?"Employé identifié":"Collaborateur identifié"}</div>
                 <p className="mt-1 text-base font-bold">{employe.prenom} {employe.nom}</p>
-                <p className="text-xs text-base-content/60">{employe.matricule}{employe.fonction ? " · "+employe.fonction : ""}</p>
+                <p className="text-xs text-base-content/60">{employe.matricule}{employe.fonction ? " · "+employe.fonction : ""}{employe.role ? " · "+employe.role : ""}</p>
               </> : <div className="flex min-h-[62px] items-center text-sm text-base-content/55">{lookupBusy?"Vérification en cours…":"Le nom et les affectations apparaîtront ici après identification."}</div>}
             </div>
             <div className="rounded-lg border border-base-300 p-3">
@@ -194,7 +196,7 @@ export default function CircuitCongePage() {
 
         <div className="flex flex-col-reverse gap-3 border-t border-base-300 pt-5 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-xs text-base-content/50">Vérifiez les informations avant la création du dossier.</p>
-          <button disabled={busy||lookupBusy||!form.employeId||!form.typeCongeId||!scan} className="btn btn-primary min-w-56">
+          <button disabled={busy||lookupBusy||(!form.employeId&&!form.utilisateurId)||!form.typeCongeId||!scan} className="btn btn-primary min-w-56">
             {busy?"Enregistrement…":"Créer la demande et joindre le scan"}
           </button>
         </div>

@@ -4,9 +4,11 @@ on:
   push:
     branches:
       - feat/circuit-conge-hierarchique
+      - fix/reliquats-tous-types-configures
   pull_request:
     branches:
       - feat/circuit-conge-hierarchique
+      - fix/reliquats-tous-types-configures
 
 permissions:
   contents: read

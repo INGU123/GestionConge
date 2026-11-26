@@ -143,12 +143,12 @@ class DemandeCongeServiceTest {
                                                 .periode(2026).soldeAquis(3).soldePris(3).soldeRestant(0).build()));
 
                 assertThrows(IllegalStateException.class,
-                                () -> demandeCongeService.traiterDemande(15L, 9L, "VALIDEE", null, manager));
+                                () -> demandeCongeService.traiterDemande(15L, 9L, "VALIDEE", null, admin));
         }
 
         @Test
         void traiterDemandeValidatesAndDebitsRealWorkingDays() {
-                Utilisateur manager = Utilisateur.builder().id(9L).role(Role.MANAGER).build();
+                Utilisateur admin = Utilisateur.builder().id(9L).role(Role.ADMIN).build();
                 DemandeConge demande = DemandeConge.builder().id(15L).utilisateurId(7L).typeCongeId(1L)
                                 .dateDebut(LocalDate.of(2026, 12, 24)).dateFin(LocalDate.of(2026, 12, 28))
                                 .statut("EN_ATTENTE").build();
@@ -157,7 +157,7 @@ class DemandeCongeServiceTest {
 
                 when(demandeRepo.findByIdForUpdate(15L)).thenReturn(Optional.of(demande));
                 when(utilisateurRepo.findById(7L))
-                                .thenReturn(Optional.of(Utilisateur.builder().id(7L).manager_id(9L).build()));
+                                .thenReturn(Optional.of(Utilisateur.builder().id(7L).build()));
                 when(jourFerieService.compterJoursOuvres(LocalDate.of(2026, 12, 24), LocalDate.of(2026, 12, 28)))
                                 .thenReturn(2);
                 when(soldeRepo.findByUtilisateurIdAndTypeCongeIdAndPeriode(7L, 1L, 2026))

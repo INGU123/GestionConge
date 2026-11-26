@@ -70,7 +70,7 @@ public class Demande_CongeController {
     }
 
     // Liste des demandes d'un collaborateur
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'EMPLOYE')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYE')")
     @GetMapping("/mes-demandes/{utilisateurId}")
     public ResponseEntity<List<DemandeConge>> getMesDemandes(@PathVariable Long utilisateurId) {
         Utilisateur currentUser = getCurrentAuthenticatedUser();
@@ -86,7 +86,7 @@ public class Demande_CongeController {
     }
 
     // Liste de toutes les demandes (selon périmètre)
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    @PreAuthorize("hasAnyRole('ADMIN')")
     @GetMapping("/all")
     public ResponseEntity<List<DemandeConge>> getAllDemandes() {
         Utilisateur currentUser = getCurrentAuthenticatedUser();

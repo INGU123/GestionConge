@@ -96,6 +96,7 @@ public class CircuitDemandeCongeService {
         exiger(actor, Role.ADMINISTRATION_PERSONNEL);
         if (reliquat == null || reliquat < 0) throw new IllegalArgumentException("Le reliquat doit être positif ou nul.");
         CircuitDemandeConge d = dossierVerrouille(id);
+        exigerDemandeurRenseigne(d);
         int disponible = demandesHistoriques.calculerReliquatDisponible(d.getUtilisateurId(), d.getTypeCongeId(), d.getDateDebut(), d.getDateFin());
         if (reliquat > disponible) throw new IllegalArgumentException("Le reliquat saisi (" + reliquat + " j) dépasse le solde disponible enregistré (" + disponible + " j).");
         if (!"RELIQUAT_EN_ATTENTE".equals(d.getStatut())) throw new IllegalStateException("Ce dossier n'attend pas le reliquat.");
@@ -111,6 +112,7 @@ public class CircuitDemandeCongeService {
     public CircuitDemandeConge soumettreAuChef(Long id, Utilisateur assistant) {
         exiger(assistant, Role.ASSISTANT_DIRECTION);
         CircuitDemandeConge d = dossierVerrouille(id);
+        exigerDemandeurRenseigne(d);
         verifierAssistantProprietaire(d, assistant);
         if (!"RELIQUAT_RETOURNE".equals(d.getStatut())) throw new IllegalStateException("Le reliquat doit d'abord être retourné.");
         verifierChevauchementCircuit(d.getUtilisateurId(), d.getDateDebut(), d.getDateFin(), d.getId());
@@ -148,6 +150,7 @@ public class CircuitDemandeCongeService {
     public CircuitDemandeConge decider(Long id, String decision, String motif, Utilisateur directeur) {
         exiger(directeur, Role.DIRECTEUR);
         CircuitDemandeConge d = dossierVerrouille(id);
+        exigerDemandeurRenseigne(d);
         if (!directeur.getId().equals(d.getDirecteurId())) throw new AccessDeniedException("Ce dossier ne relève pas de votre département.");
         if (!"DIRECTEUR_EN_ATTENTE".equals(d.getStatut())) throw new IllegalStateException("Ce dossier n'attend pas la décision du directeur.");
         String choix = decision == null ? "" : decision.trim().toUpperCase();
@@ -196,12 +199,25 @@ public class CircuitDemandeCongeService {
     }
 
     private CircuitDemandeConge enrichir(CircuitDemandeConge dossier) {
+        // Les anciens dossiers incomplets doivent rester consultables sans provoquer findById(null).
+        if (dossier.getUtilisateurId() == null) {
+            dossier.setUtilisateurNom("Demandeur non renseigné");
+            dossier.setUtilisateurPrenom("");
+            dossier.setUtilisateurMatricule("");
+            return dossier;
+        }
         utilisateurs.findById(dossier.getUtilisateurId()).ifPresent(u -> {
             dossier.setUtilisateurNom(u.getNom());
             dossier.setUtilisateurPrenom(u.getPrenom());
             dossier.setUtilisateurMatricule(u.getMatricule());
         });
         return dossier;
+    }
+
+    private void exigerDemandeurRenseigne(CircuitDemandeConge dossier) {
+        if (dossier.getUtilisateurId() == null) {
+            throw new IllegalStateException("Dossier incomplet : aucun collaborateur n'est associé. Faites corriger le dossier avant de le traiter.");
+        }
     }
 
     private void verifierChevauchementCircuit(Long employeId, java.time.LocalDate debut,

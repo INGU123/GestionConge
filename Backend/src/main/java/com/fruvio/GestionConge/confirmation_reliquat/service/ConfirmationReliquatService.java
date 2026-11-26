@@ -96,8 +96,8 @@ public class ConfirmationReliquatService {
         int anneeDebut = dossier.getDateDebut().getYear();
         int anneeFin = dossier.getDateFin().getYear();
         int anneeReference = extraireAnneeReference(periode);
-        if (estCongeAnnuel(dossier.getTypeCongeId()) && anneeReference >= anneeDebut)
-            throw new IllegalArgumentException("La période de référence du reliquat annuel doit précéder l'exercice du congé demandé.");
+        if (estCongeAnnuel(dossier.getTypeCongeId()) && anneeReference != anneeDebut - 1)
+            throw new IllegalArgumentException("La période de référence du reliquat annuel doit correspondre à l'exercice précédent (" + (anneeDebut - 1) + ").");
 
         if (estCongeAnnuel(dossier.getTypeCongeId())) {
             boolean referenceEligible = employe.getDateEmbauche() != null
@@ -249,8 +249,8 @@ public class ConfirmationReliquatService {
         CalculReliquat calcul = calculerReliquatCompteUtilisateur(dossier);
         if (estCongeAnnuel(dossier.getTypeCongeId())) {
             int anneeReference = extraireAnneeReference(periode);
-            if (anneeReference >= dossier.getDateDebut().getYear())
-                throw new IllegalArgumentException("La période de référence du reliquat annuel doit précéder l'exercice du congé demandé.");
+            if (anneeReference != dossier.getDateDebut().getYear() - 1)
+                throw new IllegalArgumentException("La période de référence du reliquat annuel doit correspondre à l'exercice précédent (" + (dossier.getDateDebut().getYear() - 1) + ").");
             if (jours > calcul.reliquatDisponible())
                 throw new IllegalArgumentException("Le reliquat confirmé (" + jours + " j) dépasse le reliquat disponible (" + calcul.reliquatDisponible() + " j après réservations).");
             if (jours != calcul.reliquatDisponible() && (observation == null || observation.isBlank()))

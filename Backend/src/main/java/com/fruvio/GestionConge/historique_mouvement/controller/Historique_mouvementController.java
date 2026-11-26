@@ -74,7 +74,7 @@ public class Historique_mouvementController {
         return ResponseEntity.ok(historiqueService.getMouvementsParEmploye(employeId, currentUser));
     }
 
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'EMPLOYE')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYE')")
     @GetMapping(value = "/export/pdf", produces = MediaType.APPLICATION_PDF_VALUE)
     public ResponseEntity<byte[]> exporterPdf(@RequestParam(defaultValue = "all") String scope) {
         Utilisateur currentUser = getCurrentAuthenticatedUser();

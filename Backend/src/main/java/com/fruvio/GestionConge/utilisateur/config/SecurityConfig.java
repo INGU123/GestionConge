@@ -79,12 +79,12 @@ public class SecurityConfig {
                         .hasAnyRole("ADMIN", "EMPLOYE")
                         .requestMatchers(HttpMethod.GET, "/solde/utilisateur/**")
                         .hasAnyRole("ADMIN", "EMPLOYE", "ADMINISTRATION_PERSONNEL").requestMatchers(HttpMethod.GET, "/type-conge/**")
-                        .hasAnyRole("ADMIN", "MANAGER", "EMPLOYE", "ASSISTANT_DIRECTION", "ADMINISTRATION_PERSONNEL", "CHEF_DEPARTEMENT", "DIRECTEUR").requestMatchers(HttpMethod.GET, "/services/**")
-                        .hasAnyRole("ADMIN","MANAGER", "EMPLOYE", "ASSISTANT_DIRECTION", "ADMINISTRATION_PERSONNEL", "CHEF_DEPARTEMENT", "DIRECTEUR").requestMatchers("/jours-feries/**")
+                        .hasAnyRole("ADMIN", "EMPLOYE", "ASSISTANT_DIRECTION", "ADMINISTRATION_PERSONNEL", "CHEF_DEPARTEMENT", "DIRECTEUR").requestMatchers(HttpMethod.GET, "/services/**")
+                        .hasAnyRole("ADMIN","EMPLOYE", "ASSISTANT_DIRECTION", "ADMINISTRATION_PERSONNEL", "CHEF_DEPARTEMENT", "DIRECTEUR").requestMatchers("/jours-feries/**")
                         .hasAnyRole("ADMIN", "EMPLOYE").requestMatchers("/notification/**")
-                        .hasAnyRole("ADMIN","MANAGER", "EMPLOYE", "ASSISTANT_DIRECTION", "ADMINISTRATION_PERSONNEL", "CHEF_DEPARTEMENT", "DIRECTEUR")
+                        .hasAnyRole("ADMIN","EMPLOYE", "ASSISTANT_DIRECTION", "ADMINISTRATION_PERSONNEL", "CHEF_DEPARTEMENT", "DIRECTEUR")
                         .requestMatchers(HttpMethod.GET, "/historiques/utilisateur/**")
-                        .hasAnyRole("ADMIN","MANAGER", "EMPLOYE")
+                        .hasAnyRole("ADMIN","EMPLOYE")
 
                         // Toute autre requête nécessite une authentification
                         .anyRequest().authenticated())

@@ -22,5 +22,6 @@ public class RoleObsoleteMigration implements ApplicationRunner {
     public void run(ApplicationArguments args) {
         jdbcTemplate.update(
                 "UPDATE utilisateur SET role = 'EMPLOYE' WHERE UPPER(role) IN ('MANAGER', 'ROLE_MANAGER')");
+        jdbcTemplate.execute("ALTER TABLE utilisateur DROP COLUMN IF EXISTS manager_id");
     }
 }

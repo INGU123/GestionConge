@@ -30,9 +30,6 @@ public interface UtilisateurRepository extends JpaRepository<Utilisateur, Long> 
 
     List<Utilisateur> findByRoleAndActifTrue(Role role);
 
-    @Query("SELECT u FROM Utilisateur u WHERE u.manager_id = :managerId")
-    List<Utilisateur> findByManagerId(@Param("managerId") Long managerId);
-
     @Query("SELECT u FROM Utilisateur u WHERE u.service_id = :serviceId")
     List<Utilisateur> findByServiceId(@Param("serviceId") Long serviceId);
 }

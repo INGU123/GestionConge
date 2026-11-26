@@ -66,7 +66,6 @@ export default function UtilisateursPage() {
     mot_de_pass: "",
     role: "ASSISTANT_DIRECTION",
     service_id: "",
-    manager_id: "",
     date_embauche: new Date().toISOString().split("T")[0],
     actif: true,
   });
@@ -168,7 +167,6 @@ export default function UtilisateursPage() {
         fonction: newUser.fonction?.trim() || "",
         type_contrat: newUser.type_contrat || "",
         service_id: newUser.service_id ? Number(newUser.service_id) : null,
-        manager_id: newUser.manager_id ? Number(newUser.manager_id) : null,
         role: newUser.role,
         actif: editingUser ? newUser.actif : true,
         ...(newUser.date_embauche ? { date_embauche: newUser.date_embauche } : {}),
@@ -195,7 +193,7 @@ export default function UtilisateursPage() {
         setNewUser({
           matricule: "", nom: "", prenom: "", numero_cin: "", date_naissance: "",
           telephone: "", adresse: "", fonction: "", type_contrat: "", email: "",
-          mot_de_pass: "", role: "ASSISTANT_DIRECTION", service_id: "", manager_id: "",
+          mot_de_pass: "", role: "ASSISTANT_DIRECTION", service_id: "",
           date_embauche: new Date().toISOString().split("T")[0], actif: true,
         });
 
@@ -338,7 +336,7 @@ export default function UtilisateursPage() {
     setNewUser({
       matricule: "", nom: "", prenom: "", numero_cin: "", date_naissance: "",
       telephone: "", adresse: "", fonction: "", type_contrat: "", email: "", mot_de_pass: "",
-      role: "ASSISTANT_DIRECTION", service_id: "", manager_id: "",
+      role: "ASSISTANT_DIRECTION", service_id: "",
       date_embauche: new Date().toISOString().split("T")[0], actif: true,
     });
     setShowModal(true);
@@ -356,7 +354,6 @@ export default function UtilisateursPage() {
       fonction: user.fonction || "",
       type_contrat: user.type_contrat || "",
       service_id: user.service_id == null ? "" : String(user.service_id),
-      manager_id: user.manager_id == null ? "" : String(user.manager_id),
       mot_de_pass: "",
       date_embauche: user.date_embauche || "",
     });

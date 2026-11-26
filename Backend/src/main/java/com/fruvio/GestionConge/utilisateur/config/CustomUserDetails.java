@@ -34,10 +34,6 @@ public class CustomUserDetails implements UserDetails {
         return utilisateur != null ? utilisateur.getService_id() : null;
     }
 
-    public Long getManagerId() {
-        return utilisateur != null ? utilisateur.getManager_id() : null;
-    }
-
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         if (utilisateur == null || utilisateur.getRole() == null) {

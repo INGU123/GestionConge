@@ -128,14 +128,14 @@ class DemandeCongeServiceTest {
 
         @Test
         void traiterDemandeRejectsInsufficientBalance() {
-                Utilisateur manager = Utilisateur.builder().id(9L).role(Role.MANAGER).build();
+                Utilisateur admin = Utilisateur.builder().id(9L).role(Role.ADMIN).build();
                 DemandeConge demande = DemandeConge.builder().id(15L).utilisateurId(7L).typeCongeId(1L)
                                 .dateDebut(LocalDate.of(2026, 12, 1)).dateFin(LocalDate.of(2026, 12, 4))
                                 .statut("EN_ATTENTE").build();
 
                 when(demandeRepo.findByIdForUpdate(15L)).thenReturn(Optional.of(demande));
                 when(utilisateurRepo.findById(7L))
-                                .thenReturn(Optional.of(Utilisateur.builder().id(7L).manager_id(9L).build()));
+                                .thenReturn(Optional.of(Utilisateur.builder().id(7L).build()));
                 when(jourFerieService.compterJoursOuvres(LocalDate.of(2026, 12, 1), LocalDate.of(2026, 12, 4)))
                                 .thenReturn(3);
                 when(soldeRepo.findByUtilisateurIdAndTypeCongeIdAndPeriode(7L, 1L, 2026))
@@ -143,12 +143,12 @@ class DemandeCongeServiceTest {
                                                 .periode(2026).soldeAquis(3).soldePris(3).soldeRestant(0).build()));
 
                 assertThrows(IllegalStateException.class,
-                                () -> demandeCongeService.traiterDemande(15L, 9L, "VALIDEE", null, manager));
+                                () -> demandeCongeService.traiterDemande(15L, 9L, "VALIDEE", null, admin));
         }
 
         @Test
         void traiterDemandeValidatesAndDebitsRealWorkingDays() {
-                Utilisateur manager = Utilisateur.builder().id(9L).role(Role.MANAGER).build();
+                Utilisateur admin = Utilisateur.builder().id(9L).role(Role.ADMIN).build();
                 DemandeConge demande = DemandeConge.builder().id(15L).utilisateurId(7L).typeCongeId(1L)
                                 .dateDebut(LocalDate.of(2026, 12, 24)).dateFin(LocalDate.of(2026, 12, 28))
                                 .statut("EN_ATTENTE").build();
@@ -157,13 +157,13 @@ class DemandeCongeServiceTest {
 
                 when(demandeRepo.findByIdForUpdate(15L)).thenReturn(Optional.of(demande));
                 when(utilisateurRepo.findById(7L))
-                                .thenReturn(Optional.of(Utilisateur.builder().id(7L).manager_id(9L).build()));
+                                .thenReturn(Optional.of(Utilisateur.builder().id(7L).build()));
                 when(jourFerieService.compterJoursOuvres(LocalDate.of(2026, 12, 24), LocalDate.of(2026, 12, 28)))
                                 .thenReturn(2);
                 when(soldeRepo.findByUtilisateurIdAndTypeCongeIdAndPeriode(7L, 1L, 2026))
                                 .thenReturn(Optional.of(solde));
 
-                DemandeConge result = demandeCongeService.traiterDemande(15L, 9L, "VALIDEE", null, manager);
+                DemandeConge result = demandeCongeService.traiterDemande(15L, 9L, "VALIDEE", null, admin);
 
                 assertEquals(2, result.getNombreJours());
                 verify(soldeRepo).save(any(Solde_conge.class));
@@ -241,20 +241,6 @@ class DemandeCongeServiceTest {
         }
 
         @Test
-        void traiterDemandeRejectsManagerOwnRequest() {
-                Utilisateur manager = Utilisateur.builder().id(9L).role(Role.MANAGER).build();
-                DemandeConge request = DemandeConge.builder().id(31L).utilisateurId(9L)
-                                .statut("EN_ATTENTE").build();
-                when(demandeRepo.findByIdForUpdate(31L)).thenReturn(Optional.of(request));
-                when(utilisateurRepo.findById(9L)).thenReturn(Optional.of(
-                                Utilisateur.builder().id(9L).manager_id(3L).build()));
-
-                assertThrows(org.springframework.security.access.AccessDeniedException.class,
-                                () -> demandeCongeService.traiterDemande(31L, 9L, "VALIDEE", null, manager));
-                verify(demandeRepo, never()).save(any(DemandeConge.class));
-        }
-
-        @Test
         void traiterDemandeDoesNotAllowCancellationThroughDecisionEndpoint() {
                 Utilisateur admin = Utilisateur.builder().id(1L).role(Role.ADMIN).build();
                 when(demandeRepo.findByIdForUpdate(99L)).thenReturn(Optional.of(
@@ -299,7 +285,7 @@ class DemandeCongeServiceTest {
 
         @Test
         void traiterDemandeDebitsEachCalendarYearForMultiYearLeave() {
-                Utilisateur manager = Utilisateur.builder().id(9L).role(Role.MANAGER).build();
+                Utilisateur admin = Utilisateur.builder().id(9L).role(Role.ADMIN).build();
                 DemandeConge demande = DemandeConge.builder().id(45L).utilisateurId(7L).typeCongeId(1L)
                                 .dateDebut(LocalDate.of(2026, 12, 31)).dateFin(LocalDate.of(2027, 1, 4))
                                 .statut("EN_ATTENTE").build();
@@ -310,7 +296,7 @@ class DemandeCongeServiceTest {
 
                 when(demandeRepo.findByIdForUpdate(45L)).thenReturn(Optional.of(demande));
                 when(utilisateurRepo.findById(7L)).thenReturn(Optional.of(
-                                Utilisateur.builder().id(7L).manager_id(9L).build()));
+                                Utilisateur.builder().id(7L).build()));
                 when(jourFerieService.compterJoursOuvres(LocalDate.of(2026, 12, 31), LocalDate.of(2026, 12, 31)))
                                 .thenReturn(1);
                 when(jourFerieService.compterJoursOuvres(LocalDate.of(2027, 1, 1), LocalDate.of(2027, 1, 4)))
@@ -320,7 +306,7 @@ class DemandeCongeServiceTest {
                 when(soldeRepo.findByUtilisateurIdAndTypeCongeIdAndPeriode(7L, 1L, 2027))
                                 .thenReturn(Optional.of(balance2027));
 
-                DemandeConge result = demandeCongeService.traiterDemande(45L, 9L, "VALIDEE", null, manager);
+                DemandeConge result = demandeCongeService.traiterDemande(45L, 9L, "VALIDEE", null, admin);
 
                 assertEquals(3, result.getNombreJours());
                 assertEquals(1, balance2026.getSoldePris());

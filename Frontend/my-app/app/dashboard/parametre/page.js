@@ -190,7 +190,6 @@ export default function Parametres() {
                 className="select select-bordered w-full text-slate-800"
               >
                 <option value="EMPLOYE">Employé</option>
-                <option value="MANAGER">Manager</option>
                 <option value="ADMIN">Administrateur</option>
               </select>
             ) : (

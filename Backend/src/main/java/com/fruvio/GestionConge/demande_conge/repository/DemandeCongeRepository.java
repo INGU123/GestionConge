@@ -26,7 +26,7 @@ public interface DemandeCongeRepository extends JpaRepository<DemandeConge, Long
 
     boolean existsByValideePar(Long valideePar);
 
-    List<DemandeConge> findByValideeParAndStatut(Long managerId, String statut);
+    List<DemandeConge> findByValideeParAndStatut(Long validateurId, String statut);
 
     List<DemandeConge> findByStatut(String statut);
 

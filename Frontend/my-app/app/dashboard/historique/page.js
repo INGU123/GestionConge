@@ -45,7 +45,7 @@ export default function HistoriquePage() {
 
     setCurrentUser(user);
     const role = String(user.role || "").trim().toUpperCase().replace(/^ROLE_/, "");
-    setViewAll(role === "ADMIN" || role === "MANAGER");
+    setViewAll(role === "ADMIN");
   }, []);
 
   useEffect(() => {
@@ -56,7 +56,7 @@ export default function HistoriquePage() {
       try {
         setLoading(true);
         const role = String(currentUser.role || "").trim().toUpperCase().replace(/^ROLE_/, "");
-        const canViewAll = role === "ADMIN" || role === "MANAGER";
+        const canViewAll = role === "ADMIN";
         const [mouvementsData, typesData, usersRes] = await Promise.all([
           viewAll && canViewAll
             ? getAllHistorique()
@@ -105,7 +105,7 @@ export default function HistoriquePage() {
   };
 
   const currentRole = String(currentUser?.role || "").trim().toUpperCase().replace(/^ROLE_/, "");
-  const isManager = currentRole === "ADMIN" || currentRole === "MANAGER";
+  const isAdmin = currentRole === "ADMIN";
 
   const handleExportPdf = () => {
     try {
@@ -375,7 +375,7 @@ export default function HistoriquePage() {
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
-          {isManager && (
+          {isAdmin && (
             <div className="inline-flex p-1 bg-slate-800 rounded-xl border border-slate-700">
               <button
                 type="button"

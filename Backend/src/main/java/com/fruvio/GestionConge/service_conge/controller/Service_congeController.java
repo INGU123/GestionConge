@@ -30,14 +30,14 @@ public class Service_congeController {
     }
 
     // Récupérer tous les services (Consultation pour tous les utilisateurs authentifiés)
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'EMPLOYE', 'ASSISTANT_DIRECTION', 'ADMINISTRATION_PERSONNEL', 'CHEF_DEPARTEMENT', 'DIRECTEUR')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYE', 'ASSISTANT_DIRECTION', 'ADMINISTRATION_PERSONNEL', 'CHEF_DEPARTEMENT', 'DIRECTEUR')")
     @GetMapping
     public List<Services> getAllServices() {
         return serviceRepository.findAll();
     }
 
     // Récupérer un service par ID
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'EMPLOYE')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYE')")
     @GetMapping("/{id}")
     public ResponseEntity<Services> getServiceById(@PathVariable Long id) {
         return serviceRepository.findById(id)

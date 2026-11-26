@@ -69,7 +69,6 @@ public class UtilisateurUpdateRequest {
 
     private Long service_id;
 
-    private Long manager_id;
 
     private Boolean actif;
 

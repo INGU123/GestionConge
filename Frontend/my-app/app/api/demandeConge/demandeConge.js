@@ -61,12 +61,12 @@ export const creerDemandeConge = async (utilisateurId, demandeData) => {
 
 export const traiterDemandeConge = async (
   demandeId,
-  managerId,
+  validateurId,
   statut,
   motifRefus = ""
 ) => {
   const params = new URLSearchParams({
-    managerId: String(managerId),
+    validateurId: String(validateurId),
     statut,
     motifRefus: motifRefus || "",
   });
@@ -106,23 +106,6 @@ export const getMesDemandes = async (utilisateurId) => {
     return Array.isArray(data) ? data : [];
   } catch (error) {
     console.warn("Erreur réseau lors de la récupération des demandes:", error);
-    return [];
-  }
-};
-
-export const getDemandesEnAttenteManager = async (managerId) => {
-  if (!managerId) return [];
-
-  try {
-    const response = await authFetch(`${API_URL}/manager/${managerId}/en-attente`);
-    if (!response.ok) {
-      console.warn(`Avertissement HTTP getDemandesEnAttenteManager: ${response.status}`);
-      return [];
-    }
-    const data = await response.json();
-    return Array.isArray(data) ? data : [];
-  } catch (error) {
-    console.warn("Erreur lors de la récupération des demandes du manager:", error);
     return [];
   }
 };

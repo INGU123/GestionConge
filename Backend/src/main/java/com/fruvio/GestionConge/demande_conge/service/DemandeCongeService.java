@@ -2,8 +2,6 @@ package com.fruvio.GestionConge.demande_conge.service;
 
 import java.sql.Timestamp;
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.LinkedHashMap;
@@ -157,23 +155,13 @@ public class DemandeCongeService {
                         "INFO", "/dashboard/historique");
 
                 Utilisateur demandeur = utilisateurRepo.findById(utilisateurId).orElse(null);
-                Utilisateur manager = demandeur == null || demandeur.getManager_id() == null
-                        ? null : utilisateurRepo.findById(demandeur.getManager_id()).orElse(null);
-
-                if (manager != null && manager.isActif() && manager.getRole() == Role.MANAGER) {
-                    notificationService.creerNotification(manager.getId(),
-                            "Nouvelle demande de congé de " + safe(demandeur.getPrenom()) + " "
-                                    + safe(demandeur.getNom()) + " du " + demande.getDateDebut()
-                                    + " au " + demande.getDateFin() + ".",
+                for (Utilisateur admin : utilisateurRepo.findByRoleAndActifTrue(Role.ADMIN)) {
+                    notificationService.creerNotification(admin.getId(),
+                            "Nouvelle demande de congé de "
+                                    + safe(demandeur == null ? null : demandeur.getPrenom()) + " "
+                                    + safe(demandeur == null ? null : demandeur.getNom())
+                                    + " (demande #" + saved.getId() + ").",
                             "NOUVELLE_DEMANDE", "/dashboard/historique");
-                } else {
-                    for (Utilisateur admin : utilisateurRepo.findByRoleAndActifTrue(Role.ADMIN)) {
-                        notificationService.creerNotification(admin.getId(),
-                                "Demande de congé sans manager actif : " + safe(demandeur == null ? null : demandeur.getPrenom())
-                                        + " " + safe(demandeur == null ? null : demandeur.getNom())
-                                        + " (demande #" + saved.getId() + ").",
-                                "NOUVELLE_DEMANDE", "/dashboard/historique");
-                    }
                 }
             } catch (Exception e) {
                 log.warn("Demande #{} enregistrée, mais une notification a échoué.", saved.getId(), e);
@@ -183,9 +171,9 @@ public class DemandeCongeService {
         return saved;
     }
 
-    // Traiter une demande avec vérification stricte du périmètre managérial
+    // Traiter une demande historique associée au circuit hiérarchique
     @Transactional
-    public DemandeConge traiterDemande(Long demandeId, Long requestedManagerId, String statut, String motifRefus,
+    public DemandeConge traiterDemande(Long demandeId, Long validatorId, String statut, String motifRefus,
             Utilisateur currentUser) {
         if (currentUser == null) {
             throw new AccessDeniedException("Authentification requise.");
@@ -201,14 +189,6 @@ public class DemandeCongeService {
         Long demandeurId = demande.getUtilisateurId();
         Utilisateur demandeur = utilisateurRepo.findById(demandeurId)
                 .orElseThrow(() -> new IllegalArgumentException("Collaborateur demandeur introuvable."));
-
-        // Un MANAGER ne peut traiter que les demandes des membres de son équipe.
-        if (currentUser.getRole() == Role.MANAGER) {
-            if (!Objects.equals(demandeur.getManager_id(), currentUser.getId())) {
-                throw new AccessDeniedException(
-                        "Accès refusé : vous n'êtes pas le manager responsable de ce collaborateur.");
-            }
-        }
 
         String statutNormalise = statut == null ? "" : statut.trim().toUpperCase();
         if (!Set.of("VALIDEE", "REFUSEE").contains(statutNormalise)) {
@@ -385,13 +365,6 @@ public class DemandeCongeService {
                     "Votre demande de congé du " + demande.getDateDebut() + " au " + demande.getDateFin()
                             + " a été annulée.",
                     "ANNULATION", "/dashboard/historique");
-            Utilisateur demandeur = utilisateurRepo.findById(demande.getUtilisateurId()).orElse(null);
-            if (demandeur != null && demandeur.getManager_id() != null) {
-                notificationService.creerNotification(demandeur.getManager_id(),
-                        "La demande de congé #" + demande.getId() + " de " + safe(demandeur.getPrenom())
-                                + " " + safe(demandeur.getNom()) + " a été annulée.",
-                        "ANNULATION", "/dashboard/historique");
-            }
         } catch (Exception e) {
             log.warn("Demande #{} annulée, mais une notification a échoué.", demandeId, e);
         }
@@ -539,41 +512,7 @@ public class DemandeCongeService {
             return demandeRepo.findByUtilisateurId(utilisateurId);
         }
 
-        if (currentUser.getRole() == Role.MANAGER) {
-            if (Objects.equals(currentUser.getId(), utilisateurId)) {
-                return demandeRepo.findByUtilisateurId(utilisateurId);
-            }
-            Utilisateur target = utilisateurRepo.findById(utilisateurId).orElse(null);
-            if (target == null || !Objects.equals(target.getManager_id(), currentUser.getId())) {
-                throw new AccessDeniedException("Accès non autorisé : cet employé n'appartient pas à votre équipe.");
-            }
-            return demandeRepo.findByUtilisateurId(utilisateurId);
-        }
-
         return Collections.emptyList();
-    }
-
-    // Récupérer les demandes en attente pour un manager
-    public List<DemandeConge> getDemandesEnAttentePourManager(Long managerId, Utilisateur currentUser) {
-        if (currentUser == null) {
-            throw new AccessDeniedException("Authentification requise.");
-        }
-
-        if (currentUser.getRole() != Role.ADMIN && currentUser.getRole() != Role.MANAGER) {
-            throw new AccessDeniedException("Accès réservé aux managers et administrateurs.");
-        }
-
-        if (currentUser.getRole() == Role.MANAGER && !Objects.equals(currentUser.getId(), managerId)) {
-            throw new AccessDeniedException("Vous ne pouvez consulter que les demandes de votre équipe.");
-        }
-
-        List<Utilisateur> team = utilisateurRepo.findByManagerId(managerId);
-        if (team.isEmpty()) {
-            return Collections.emptyList();
-        }
-
-        List<Long> memberIds = team.stream().map(Utilisateur::getId).toList();
-        return demandeRepo.findByUtilisateurIdInAndStatut(memberIds, "EN_ATTENTE");
     }
 
     // Récupérer toutes les demandes en attente (adapté au rôle)
@@ -586,16 +525,7 @@ public class DemandeCongeService {
             return demandeRepo.findByStatut("EN_ATTENTE");
         }
 
-        if (currentUser.getRole() == Role.MANAGER) {
-            List<Utilisateur> team = utilisateurRepo.findByManagerId(currentUser.getId());
-            if (team.isEmpty()) {
-                return Collections.emptyList();
-            }
-            List<Long> memberIds = team.stream().map(Utilisateur::getId).toList();
-            return demandeRepo.findByUtilisateurIdInAndStatut(memberIds, "EN_ATTENTE");
-        }
-
-        throw new AccessDeniedException("Accès réservé aux managers et administrateurs.");
+        throw new AccessDeniedException("Accès réservé à l’administration.");
     }
 
     private List<DemandeConge> enrichirDemandeurs(List<DemandeConge> demandes) {
@@ -627,15 +557,7 @@ public class DemandeCongeService {
             return enrichirDemandeurs(demandeRepo.findAll());
         }
 
-        if (currentUser.getRole() == Role.MANAGER) {
-            List<Utilisateur> team = utilisateurRepo.findByManagerId(currentUser.getId());
-            List<Long> ids = new ArrayList<>(team.stream().map(Utilisateur::getId).toList());
-            if (!ids.contains(currentUser.getId())) {
-                ids.add(currentUser.getId());
-            }
-            return enrichirDemandeurs(demandeRepo.findByUtilisateurIdIn(ids));
-        }
 
-        throw new AccessDeniedException("Accès réservé aux managers et administrateurs.");
+        throw new AccessDeniedException("Accès réservé à l’administration.");
     }
 }

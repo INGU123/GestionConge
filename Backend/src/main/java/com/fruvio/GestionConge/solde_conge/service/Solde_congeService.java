@@ -2,8 +2,6 @@ package com.fruvio.GestionConge.solde_conge.service;
 
 import java.sql.Timestamp;
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -66,11 +64,6 @@ public class Solde_congeService {
         if (currentUser == null) throw new AccessDeniedException("Authentification requise.");
         if (currentUser.getRole() == Role.EMPLOYE && !Objects.equals(currentUser.getId(), utilisateurId))
             throw new AccessDeniedException("Vous ne pouvez consulter que vos propres soldes.");
-        if (currentUser.getRole() == Role.MANAGER && !Objects.equals(currentUser.getId(), utilisateurId)) {
-            Utilisateur target = utilisateurRepository.findById(utilisateurId).orElse(null);
-            if (target == null || !Objects.equals(target.getManager_id(), currentUser.getId()))
-                throw new AccessDeniedException("Accès non autorisé : cet employé n'appartient pas à votre équipe.");
-        }
         return filtrerSoldesAvecTypeExistant(soldeCongeRepository.findByUtilisateurId(utilisateurId));
     }
 
@@ -245,14 +238,8 @@ public class Solde_congeService {
         if (currentUser == null) throw new AccessDeniedException("Authentification requise.");
         if (currentUser.getRole() == Role.ADMIN)
             return filtrerSoldesAvecTypeExistant(soldeCongeRepository.findAll());
-        if (currentUser.getRole() == Role.MANAGER) {
-            List<Utilisateur> subordinates = utilisateurRepository.findByManagerId(currentUser.getId());
-            List<Long> ids = new ArrayList<>(subordinates.stream().map(Utilisateur::getId).toList());
-            if (!ids.contains(currentUser.getId())) ids.add(currentUser.getId());
-            if (ids.isEmpty()) return Collections.emptyList();
-            return filtrerSoldesAvecTypeExistant(soldeCongeRepository.findByUtilisateurIdIn(ids));
-        }
-        throw new AccessDeniedException("Accès refusé : consultation globale réservée aux managers et administrateurs.");
+
+        throw new AccessDeniedException("Accès refusé : consultation globale réservée à l'administration.");
     }
 
     private List<Solde_conge> filtrerSoldesAvecTypeExistant(List<Solde_conge> soldes) {

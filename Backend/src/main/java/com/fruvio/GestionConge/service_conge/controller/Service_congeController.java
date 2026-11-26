@@ -37,7 +37,7 @@ public class Service_congeController {
     }
 
     // Récupérer un service par ID
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'EMPLOYE')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYE')")
     @GetMapping("/{id}")
     public ResponseEntity<Services> getServiceById(@PathVariable Long id) {
         return serviceRepository.findById(id)

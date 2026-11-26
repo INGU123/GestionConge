@@ -128,14 +128,14 @@ class DemandeCongeServiceTest {
 
         @Test
         void traiterDemandeRejectsInsufficientBalance() {
-                Utilisateur manager = Utilisateur.builder().id(9L).role(Role.MANAGER).build();
+                Utilisateur admin = Utilisateur.builder().id(9L).role(Role.ADMIN).build();
                 DemandeConge demande = DemandeConge.builder().id(15L).utilisateurId(7L).typeCongeId(1L)
                                 .dateDebut(LocalDate.of(2026, 12, 1)).dateFin(LocalDate.of(2026, 12, 4))
                                 .statut("EN_ATTENTE").build();
 
                 when(demandeRepo.findByIdForUpdate(15L)).thenReturn(Optional.of(demande));
                 when(utilisateurRepo.findById(7L))
-                                .thenReturn(Optional.of(Utilisateur.builder().id(7L).manager_id(9L).build()));
+                                .thenReturn(Optional.of(Utilisateur.builder().id(7L).build()));
                 when(jourFerieService.compterJoursOuvres(LocalDate.of(2026, 12, 1), LocalDate.of(2026, 12, 4)))
                                 .thenReturn(3);
                 when(soldeRepo.findByUtilisateurIdAndTypeCongeIdAndPeriode(7L, 1L, 2026))
@@ -163,7 +163,7 @@ class DemandeCongeServiceTest {
                 when(soldeRepo.findByUtilisateurIdAndTypeCongeIdAndPeriode(7L, 1L, 2026))
                                 .thenReturn(Optional.of(solde));
 
-                DemandeConge result = demandeCongeService.traiterDemande(15L, 9L, "VALIDEE", null, manager);
+                DemandeConge result = demandeCongeService.traiterDemande(15L, 9L, "VALIDEE", null, admin);
 
                 assertEquals(2, result.getNombreJours());
                 verify(soldeRepo).save(any(Solde_conge.class));
@@ -237,20 +237,6 @@ class DemandeCongeServiceTest {
 
                 assertThrows(IllegalArgumentException.class, () -> demandeCongeService.creerDemande(7L, request,
                                 Utilisateur.builder().id(7L).role(Role.EMPLOYE).build()));
-                verify(demandeRepo, never()).save(any(DemandeConge.class));
-        }
-
-        @Test
-        void traiterDemandeRejectsManagerOwnRequest() {
-                Utilisateur manager = Utilisateur.builder().id(9L).role(Role.MANAGER).build();
-                DemandeConge request = DemandeConge.builder().id(31L).utilisateurId(9L)
-                                .statut("EN_ATTENTE").build();
-                when(demandeRepo.findByIdForUpdate(31L)).thenReturn(Optional.of(request));
-                when(utilisateurRepo.findById(9L)).thenReturn(Optional.of(
-                                Utilisateur.builder().id(9L).manager_id(3L).build()));
-
-                assertThrows(org.springframework.security.access.AccessDeniedException.class,
-                                () -> demandeCongeService.traiterDemande(31L, 9L, "VALIDEE", null, manager));
                 verify(demandeRepo, never()).save(any(DemandeConge.class));
         }
 

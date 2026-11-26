@@ -187,7 +187,7 @@ class UtilisateurServiceTest {
     }
 
     @Test
-    void createUtilisateurRejectsManagerEscalation() {
+    void createUtilisateurRejectsNonAdminActor() {
         UtilisateurCreateRequest request = UtilisateurCreateRequest.builder().matricule("2026102")
                 .email("manager@example.com").role(Role.ADMIN).build();
 
@@ -195,22 +195,22 @@ class UtilisateurServiceTest {
         when(utilisateurRepository.existsByEmail("manager@example.com")).thenReturn(false);
 
         assertThrows(IllegalArgumentException.class, () -> utilisateurService.createUtilisateur(request,
-                Utilisateur.builder().id(8L).role(Role.MANAGER).build()));
+                Utilisateur.builder().id(8L).role(Role.EMPLOYE).build()));
 
         verify(utilisateurRepository, never()).save(any(Utilisateur.class));
     }
 
     @Test
-    void updateUtilisateurRejectsManagerRoleGrant() {
+    void updateUtilisateurRejectsRoleGrantByNonAdmin() {
         Utilisateur target = Utilisateur.builder().id(2L).role(Role.EMPLOYE).build();
-        Utilisateur manager = Utilisateur.builder().id(9L).role(Role.MANAGER).build();
+        Utilisateur employee = Utilisateur.builder().id(9L).role(Role.MANAGER).build();
 
         when(utilisateurRepository.findById(2L)).thenReturn(Optional.of(target));
 
         assertThrows(AccessDeniedException.class,
                 () -> utilisateurService
                         .updateUtilisateur(com.fruvio.GestionConge.utilisateur.dto.UtilisateurUpdateRequest.builder()
-                                .id(2L).role(Role.ADMIN).build(), manager));
+                                .id(2L).role(Role.ADMIN).build(), employee));
     }
 
     @Test

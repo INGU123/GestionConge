@@ -9,5 +9,6 @@ import com.fruvio.GestionConge.confirmation_reliquat.entity.ConfirmationReliquat
 public interface ConfirmationReliquatRepository extends JpaRepository<ConfirmationReliquat, Long> {
     List<ConfirmationReliquat> findByCircuitDemandeCongeIdOrderByDateConfirmationDesc(Long dossierId);
     List<ConfirmationReliquat> findByEmployeIdOrderByDateConfirmationDesc(Long employeId);
+    List<ConfirmationReliquat> findByUtilisateurIdOrderByDateConfirmationDesc(Long utilisateurId);
     boolean existsByReferenceConfirmation(String referenceConfirmation);
 }

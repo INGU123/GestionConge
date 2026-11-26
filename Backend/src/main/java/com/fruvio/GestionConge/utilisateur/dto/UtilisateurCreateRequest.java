@@ -80,7 +80,6 @@ public class UtilisateurCreateRequest {
 
     // Affectations facultatives.
     private Long service_id;
-    private Long manager_id;
 
     @NotNull(message = "La date d'embauche est obligatoire.")
     private LocalDate date_embauche;

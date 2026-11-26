@@ -56,7 +56,7 @@ export default function HistoriquePage() {
       try {
         setLoading(true);
         const role = String(currentUser.role || "").trim().toUpperCase().replace(/^ROLE_/, "");
-        const canViewAll = role === "ADMIN" || role === "MANAGER";
+        const canViewAll = role === "ADMIN";
         const [mouvementsData, typesData, usersRes] = await Promise.all([
           viewAll && canViewAll
             ? getAllHistorique()

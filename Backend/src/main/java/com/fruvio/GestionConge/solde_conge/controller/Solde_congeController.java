@@ -19,13 +19,13 @@ public class Solde_congeController {
     private final Solde_congeService soldeCongeService;
     public Solde_congeController(Solde_congeService service) { this.soldeCongeService = service; }
 
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping({"", "/all"})
     public ResponseEntity<List<Solde_conge>> getAllSoldes() {
         return ResponseEntity.ok(soldeCongeService.getAllSoldes(getCurrentAuthenticatedUser()));
     }
 
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'EMPLOYE', 'ADMINISTRATION_PERSONNEL')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYE', 'ADMINISTRATION_PERSONNEL')")
     @GetMapping("/utilisateur/{utilisateurId}")
     public ResponseEntity<List<Solde_conge>> getSoldesParUtilisateur(@PathVariable Long utilisateurId) {
         return ResponseEntity.ok(soldeCongeService.getSoldesParUtilisateur(utilisateurId, getCurrentAuthenticatedUser()));

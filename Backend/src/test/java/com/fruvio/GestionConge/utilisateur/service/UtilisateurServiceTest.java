@@ -189,7 +189,7 @@ class UtilisateurServiceTest {
     @Test
     void createUtilisateurRejectsNonAdminActor() {
         UtilisateurCreateRequest request = UtilisateurCreateRequest.builder().matricule("2026102")
-                .email("manager@example.com").role(Role.ADMIN).build();
+                .email("employee@example.com").role(Role.ADMIN).build();
 
         when(utilisateurRepository.existsByMatricule("2026102")).thenReturn(false);
         when(utilisateurRepository.existsByEmail("manager@example.com")).thenReturn(false);
@@ -203,7 +203,7 @@ class UtilisateurServiceTest {
     @Test
     void updateUtilisateurRejectsRoleGrantByNonAdmin() {
         Utilisateur target = Utilisateur.builder().id(2L).role(Role.EMPLOYE).build();
-        Utilisateur employee = Utilisateur.builder().id(9L).role(Role.MANAGER).build();
+        Utilisateur employee = Utilisateur.builder().id(9L).role(Role.EMPLOYE).build();
 
         when(utilisateurRepository.findById(2L)).thenReturn(Optional.of(target));
 

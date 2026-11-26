@@ -22,8 +22,7 @@ export default function ReliquatsPage() {
     setRows(data);
     const loadedTypes = await getAllTypeConge();
     setTypesConge(loadedTypes);
-    const dossiersAvecEmploye = data.filter(dossier => Boolean(dossier.employeId));
-    const previews = await Promise.all(dossiersAvecEmploye.map(async dossier => {
+    const previews = await Promise.all(data.map(async dossier => {
       try {
         const response = await authFetch(API + "/reliquats/dossier/" + dossier.id + "/calculer", { method: "POST" });
         const result = await response.json();
@@ -79,6 +78,42 @@ export default function ReliquatsPage() {
       return "Le calcul applique le plafond légal commun des permissions familiales et déduit les jours déjà validés.";
     }
     return "Le solde RH enregistré est prioritaire. En son absence, le calcul utilise le plafond annuel configuré pour ce type et déduit les congés validés.";
+  };
+
+  const confirmManually = async dossier => {
+    const id = dossier.id;
+    const value = values[id] || {};
+    const year = new Date(dossier.dateDebut).getFullYear();
+    const type = getType(dossier);
+    const isAnnual = String(type?.code || "").toUpperCase().includes("ANNUEL")
+      || String(type?.libelle || "").toUpperCase().includes("ANNUEL");
+    const period = value.manualPeriod?.trim() || `Exercice ${isAnnual ? year - 1 : year}`;
+    const reference = value.manualReference?.trim() || `RH-MANUEL-${id}`;
+    if (value.manualDays === undefined || String(value.manualDays).trim() === ""
+        || !period || !reference || !value.observation?.trim()) {
+      toast("Renseignez les jours confirmés, la période, la référence RH et l'observation justificative.", "warning");
+      return;
+    }
+    setBusy(id);
+    try {
+      const response = await authFetch(API + "/reliquats/dossier/" + id + "/confirmer-manuellement", {
+        method: "POST",
+        body: JSON.stringify({
+          nombreJoursConfirme: Number(value.manualDays),
+          periodeReference: period,
+          referenceConfirmation: reference,
+          observation: value.observation.trim()
+        })
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || "Confirmation manuelle impossible.");
+      toast("Rapprochement RH manuel enregistré.", "success");
+      await load();
+    } catch (error) {
+      toast(error.message, "error");
+    } finally {
+      setBusy(null);
+    }
   };
 
   const confirmAutomatically = async dossier => {
@@ -139,15 +174,17 @@ export default function ReliquatsPage() {
       <header>
         <h1 className="text-2xl font-bold">Administration du personnel — Vérification des reliquats</h1>
         <p className="text-sm text-slate-500">
-          Tous les soldes sont lus depuis les données RH enregistrées. Aucun nombre de jours ni référence n'est saisi manuellement.
+          Calcul automatique lorsque les soldes existent ; sinon, rapprochement manuel justifié par l'administration pour les dossiers historiques.
         </p>
       </header>
 
       {rows.map(dossier => {
         const value = values[dossier.id] || {};
         const isEmployee = Boolean(dossier.employeId);
-        const automaticCalculation = isEmployee;
+        const isUserAccount = !isEmployee && Boolean(dossier.utilisateurId);
         const calcul = calculs[dossier.id];
+        const automaticCalculation = isEmployee || (isUserAccount && Boolean(calcul) && !calcul.error);
+        const manualFallback = isUserAccount && Boolean(calcul?.error);
         return (
           <article key={dossier.id} className="card bg-base-100 border p-5 space-y-3">
             <header className="space-y-2">
@@ -194,7 +231,11 @@ export default function ReliquatsPage() {
                   {calcul?.error || (calcul ? `${calcul.periodeReference} · Reliquat brut : ${calcul.reliquatBrut} j` : "Calcul en cours…")}
                 </p>
               </> : <p className="text-sm text-warning">
-                Ce dossier historique n'est pas rattaché à une fiche employé disposant de soldes RH. La confirmation automatique est bloquée.
+                {manualFallback
+                  ? `Calcul automatique indisponible : ${calcul.error} Un rapprochement manuel RH avec justificatif est nécessaire.`
+                  : isUserAccount
+                    ? "Vérification des soldes RH du compte en cours…"
+                    : "Ce dossier ne possède ni fiche employé ni compte utilisateur exploitable."}
               </p>}
             </div>
 
@@ -224,9 +265,44 @@ export default function ReliquatsPage() {
                   {busy === dossier.id ? "Confirmation…" : "Confirmer automatiquement"}
                 </button>
               </section>
+            ) : manualFallback ? (
+              <section className="rounded-xl border border-warning/40 bg-warning/5 p-4 space-y-3">
+                <h3 className="font-semibold">Rapprochement manuel des données RH</h3>
+                <p className="text-sm text-base-content/70">
+                  Aucun solde exploitable n'est enregistré pour ce compte. Saisissez uniquement le montant vérifié dans les pièces RH. Cette opération ne crée ni ne modifie aucun solde.
+                </p>
+                <div className="grid gap-3 md:grid-cols-3">
+                  <label className="form-control">
+                    <span className="label-text text-xs">Reliquat confirmé (jours)</span>
+                    <input type="number" min="0" step="1" required className="input input-bordered"
+                      value={value.manualDays ?? ""}
+                      onChange={event => update(dossier.id, "manualDays", event.target.value)} />
+                  </label>
+                  <label className="form-control">
+                    <span className="label-text text-xs">Période de référence</span>
+                    <input required maxLength={100} className="input input-bordered"
+                      value={value.manualPeriod ?? `Exercice ${getType(dossier)?.code?.toUpperCase().includes("ANNUEL") || getType(dossier)?.libelle?.toUpperCase().includes("ANNUEL") ? new Date(dossier.dateDebut).getFullYear() - 1 : new Date(dossier.dateDebut).getFullYear()}`}
+                      onChange={event => update(dossier.id, "manualPeriod", event.target.value)} />
+                  </label>
+                  <label className="form-control">
+                    <span className="label-text text-xs">Référence RH</span>
+                    <input required maxLength={100} className="input input-bordered"
+                      value={value.manualReference ?? `RH-MANUEL-${dossier.id}`}
+                      onChange={event => update(dossier.id, "manualReference", event.target.value)} />
+                  </label>
+                </div>
+                <p className="text-xs text-base-content/60">L'observation ci-dessous est obligatoire et doit expliquer la source RH de la vérification.</p>
+                <button type="button" className="btn btn-warning"
+                  disabled={busy === dossier.id || value.manualDays === undefined || String(value.manualDays).trim() === "" || !value.observation?.trim()}
+                  onClick={() => confirmManually(dossier)}>
+                  {busy === dossier.id ? "Enregistrement…" : "Enregistrer la confirmation RH"}
+                </button>
+              </section>
+            ) : isUserAccount ? (
+              <p className="text-sm text-base-content/60">Recherche des soldes RH du compte…</p>
             ) : (
               <p className="text-sm text-warning">
-                Confirmation indisponible sans fiche employé et soldes RH enregistrés. Aucun reliquat ne peut être saisi manuellement.
+                Dossier sans rattachement utilisateur exploitable : la confirmation RH est bloquée.
               </p>
             )}
 

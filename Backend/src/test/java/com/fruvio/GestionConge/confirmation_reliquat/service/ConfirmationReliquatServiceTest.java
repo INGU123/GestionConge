@@ -154,4 +154,53 @@ class ConfirmationReliquatServiceTest {
         assertTrue(erreur.getMessage().contains("2025"));
         verify(confirmations, never()).save(any(ConfirmationReliquat.class));
     }
+
+    @ParameterizedTest
+    @EnumSource(Role.class)
+    void permetLeRapprochementManuelPourToutCompteHistoriqueSansCreerDeSolde(Role role) {
+        long utilisateurId = 400L + role.ordinal();
+        Utilisateur proprietaire = compte(utilisateurId, role);
+        when(utilisateurs.findById(utilisateurId)).thenReturn(Optional.of(proprietaire));
+        when(typesConge.findById(1L)).thenReturn(Optional.of(
+                Type_conge.builder().id(1L).code("CONGE_ANNUEL").libelle("Congé annuel").build()));
+        when(circuits.findByIdForUpdate(900L)).thenReturn(Optional.of(dossier(utilisateurId)));
+        when(confirmations.existsByReferenceConfirmation("RH-MANUEL-900")).thenReturn(false);
+        when(confirmations.save(any(ConfirmationReliquat.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        ConfirmationReliquat resultat = service().confirmerManuellementCompteUtilisateur(
+                900L, 2, "Exercice 2025", "RH-MANUEL-900",
+                "Montant rapproché avec le dossier RH papier signé.",
+                compte(1L, Role.ADMINISTRATION_PERSONNEL));
+
+        assertNotNull(resultat);
+        ArgumentCaptor<ConfirmationReliquat> captor = ArgumentCaptor.forClass(ConfirmationReliquat.class);
+        verify(confirmations).save(captor.capture());
+        assertNull(captor.getValue().getEmployeId());
+        assertEquals(utilisateurId, captor.getValue().getUtilisateurId());
+        assertEquals(2, captor.getValue().getNombreJoursConfirme());
+        assertEquals("Montant rapproché avec le dossier RH papier signé.", captor.getValue().getObservation());
+        verify(soldes, never()).save(any(Solde_conge.class));
+        verify(circuits).save(any(CircuitDemandeConge.class));
+        verify(notifications).creerNotification(eq(2L), contains("confirmé manuellement"),
+                eq("CIRCUIT_CONGE"), eq("/dashboard/circuit-conge"));
+    }
+
+    @Test
+    void exigeUneObservationPourTouteConfirmationManuelle() {
+        Utilisateur proprietaire = compte(501L, Role.DIRECTEUR);
+        when(utilisateurs.findById(501L)).thenReturn(Optional.of(proprietaire));
+        when(typesConge.findById(1L)).thenReturn(Optional.of(
+                Type_conge.builder().id(1L).code("CONGE_ANNUEL").libelle("Congé annuel").build()));
+        when(circuits.findByIdForUpdate(900L)).thenReturn(Optional.of(dossier(501L)));
+
+        IllegalArgumentException erreur = assertThrows(IllegalArgumentException.class,
+                () -> service().confirmerManuellementCompteUtilisateur(
+                        900L, 2, "Exercice 2025", "RH-MANUEL-SANS-OBS",
+                        "  ", compte(1L, Role.ADMINISTRATION_PERSONNEL)));
+
+        assertTrue(erreur.getMessage().contains("observation RH"));
+        verify(confirmations, never()).save(any(ConfirmationReliquat.class));
+        verify(circuits, never()).save(any(CircuitDemandeConge.class));
+    }
 }

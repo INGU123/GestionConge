@@ -53,6 +53,22 @@ public class ConfirmationReliquatController {
 
     public record ObservationRequest(@Size(max = 1500) String observation) {}
 
+    public record ManualConfirmationRequest(
+            @NotNull @Min(0) Integer nombreJoursConfirme,
+            @NotBlank @Size(max = 100) String periodeReference,
+            @NotBlank @Size(max = 100) String referenceConfirmation,
+            @NotBlank @Size(max = 1500) String observation) {}
+
+    @PostMapping("/dossier/{dossierId}/confirmer-manuellement")
+    @ResponseStatus(HttpStatus.CREATED)
+    @PreAuthorize("hasAnyRole('ADMIN', 'ADMINISTRATION_PERSONNEL')")
+    public ConfirmationReliquat confirmerManuellement(@PathVariable Long dossierId,
+            @Valid @RequestBody ManualConfirmationRequest body) {
+        return service.confirmerManuellementCompteUtilisateur(dossierId,
+                body.nombreJoursConfirme(), body.periodeReference(), body.referenceConfirmation(),
+                body.observation(), currentUser());
+    }
+
     @PostMapping("/dossier/{dossierId}/confirmer")
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("hasAnyRole('ADMIN', 'ADMINISTRATION_PERSONNEL')")

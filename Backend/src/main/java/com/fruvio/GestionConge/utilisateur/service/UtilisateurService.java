@@ -3,7 +3,6 @@ package com.fruvio.GestionConge.utilisateur.service;
 import java.security.SecureRandom;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -301,7 +300,7 @@ public class UtilisateurService {
                                 .tokenExpiration(initialPasswordToken != null
                                                 ? LocalDateTime.now().plusHours(24) : null)
                                 .role(assignedRole)
-                                .service_id(request.getService_id()).manager_id(request.getManager_id())
+                                .service_id(request.getService_id())
                                 .date_embauche(request.getDate_embauche() != null ? request.getDate_embauche()
                                                 : LocalDate.now())
                                 .date_creation(LocalDate.now())
@@ -401,7 +400,7 @@ public class UtilisateurService {
 
                 if (!isAdmin && (request.getRole() != null || request.getActif() != null
                                 || request.getMatricule() != null || request.getService_id() != null
-                                || request.getManager_id() != null || request.getDateEmbauche() != null)) {
+                                || request.getDateEmbauche() != null)) {
 
                         throw new AccessDeniedException(
                                         "Seul un administrateur peut modifier les informations administratives d'un compte.");
@@ -533,18 +532,6 @@ public class UtilisateurService {
                         }
 
                         targetUser.setService_id(request.getService_id());
-                }
-
-                // Manager
-                if (request.getManager_id() != null && !request.getManager_id().equals(targetUser.getManager_id())) {
-
-                        if (!isAdmin) {
-
-                                throw new AccessDeniedException(
-                                                "Seul un administrateur est autorisé à modifier le manager référent.");
-                        }
-
-                        targetUser.setManager_id(request.getManager_id());
                 }
 
                 return utilisateurRepository.save(targetUser);
@@ -772,23 +759,6 @@ public class UtilisateurService {
                         return target;
                 }
 
-                // Un manager peut voir son propre profil
-                // ou les membres de son équipe
-                if (currentUser.getRole() == Role.MANAGER) {
-
-                        boolean isSelf = Objects.equals(currentUser.getId(), target.getId());
-
-                        boolean isSubordinate = Objects.equals(currentUser.getId(), target.getManager_id());
-
-                        if (!isSelf && !isSubordinate) {
-
-                                throw new AccessDeniedException(
-                                                "Accès non autorisé : cet employé n'appartient pas à votre équipe.");
-                        }
-
-                        return target;
-                }
-
                 throw new AccessDeniedException("Accès non autorisé.");
         }
 
@@ -808,21 +778,6 @@ public class UtilisateurService {
                         return utilisateurRepository.findAll().stream()
                                 .filter(u -> !u.isArchived())
                                 .toList();
-                }
-
-                if (currentUser.getRole() == Role.MANAGER) {
-
-                        List<Utilisateur> subordinates = new ArrayList<>(
-                                        utilisateurRepository.findByManagerId(currentUser.getId()).stream()
-                                                .filter(u -> !u.isArchived())
-                                                .toList());
-
-                        if (subordinates.stream().noneMatch(u -> Objects.equals(u.getId(), currentUser.getId()))) {
-
-                                subordinates.add(currentUser);
-                        }
-
-                        return subordinates;
                 }
 
                 throw new AccessDeniedException(

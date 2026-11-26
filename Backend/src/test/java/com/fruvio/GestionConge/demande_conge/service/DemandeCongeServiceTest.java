@@ -285,7 +285,7 @@ class DemandeCongeServiceTest {
 
         @Test
         void traiterDemandeDebitsEachCalendarYearForMultiYearLeave() {
-                Utilisateur manager = Utilisateur.builder().id(9L).role(Role.MANAGER).build();
+                Utilisateur admin = Utilisateur.builder().id(9L).role(Role.ADMIN).build();
                 DemandeConge demande = DemandeConge.builder().id(45L).utilisateurId(7L).typeCongeId(1L)
                                 .dateDebut(LocalDate.of(2026, 12, 31)).dateFin(LocalDate.of(2027, 1, 4))
                                 .statut("EN_ATTENTE").build();
@@ -296,7 +296,7 @@ class DemandeCongeServiceTest {
 
                 when(demandeRepo.findByIdForUpdate(45L)).thenReturn(Optional.of(demande));
                 when(utilisateurRepo.findById(7L)).thenReturn(Optional.of(
-                                Utilisateur.builder().id(7L).manager_id(9L).build()));
+                                Utilisateur.builder().id(7L).build()));
                 when(jourFerieService.compterJoursOuvres(LocalDate.of(2026, 12, 31), LocalDate.of(2026, 12, 31)))
                                 .thenReturn(1);
                 when(jourFerieService.compterJoursOuvres(LocalDate.of(2027, 1, 1), LocalDate.of(2027, 1, 4)))
@@ -306,7 +306,7 @@ class DemandeCongeServiceTest {
                 when(soldeRepo.findByUtilisateurIdAndTypeCongeIdAndPeriode(7L, 1L, 2027))
                                 .thenReturn(Optional.of(balance2027));
 
-                DemandeConge result = demandeCongeService.traiterDemande(45L, 9L, "VALIDEE", null, manager);
+                DemandeConge result = demandeCongeService.traiterDemande(45L, 9L, "VALIDEE", null, admin);
 
                 assertEquals(3, result.getNombreJours());
                 assertEquals(1, balance2026.getSoldePris());

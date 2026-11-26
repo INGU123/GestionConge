@@ -84,7 +84,7 @@ export default function CalendrierRhPage() {
     });
   };
 
-  const isAdminOrManager = user?.role?.toUpperCase() === "ADMIN" || user?.role?.toUpperCase() === "MANAGER";
+  const isAdmin = user?.role?.toUpperCase() === "ADMIN";
 
   return (
     <div className="space-y-6 p-4" style={{ color: "var(--text-main)" }}>
@@ -93,8 +93,8 @@ export default function CalendrierRhPage() {
         <h1 className="mt-2 text-2xl font-bold">Calendrier des congés validés</h1>
       </div>
 
-      {!isAdminOrManager && (
-        <div className="alert alert-info text-white">Accès réservé à l’administration et aux managers.</div>
+      {!isAdmin && (
+        <div className="alert alert-info text-white">Accès réservé à l’administration.</div>
       )}
 
       {loading ? (

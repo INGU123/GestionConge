@@ -42,7 +42,6 @@ public class UtilisateurResponse {
     private String role;
     private boolean actif;
     private Long service_id;
-    private Long manager_id;
     private LocalDate date_embauche;
     private LocalDate date_creation;
 
@@ -85,7 +84,6 @@ public class UtilisateurResponse {
                 .role(roleName)
                 .actif(utilisateur.isActif())
                 .service_id(utilisateur.getService_id())
-                .manager_id(utilisateur.getManager_id())
                 .date_embauche(utilisateur.getDate_embauche())
                 .date_creation(utilisateur.getDate_creation())
                 .archived(utilisateur.isArchived())

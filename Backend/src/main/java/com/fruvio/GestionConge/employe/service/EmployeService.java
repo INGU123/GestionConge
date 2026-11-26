@@ -32,11 +32,16 @@ public class EmployeService {
             return EmployeLookupResponse.depuis(e,s.getNom(),d.getId(),d.getNom());
         }
         Utilisateur u=utilisateurs.findByMatricule(matricule).filter(Utilisateur::isEnabled)
-                .filter(x -> x.getRole()!=Role.DIRECTEUR)
                 .orElseThrow(() -> new IllegalArgumentException("Aucun employé ou collaborateur actif trouvé pour ce matricule."));
+        if (u.getRole() == null)
+            throw new IllegalStateException("Le rôle du collaborateur doit être renseigné.");
         Departement d;
-        if(u.getRole()==Role.CHEF_DEPARTEMENT) {
-            d=departements.findByChefIdAndActifTrue(u.getId()).orElseThrow(() -> new IllegalStateException("Aucun département actif n'est rattaché à ce chef."));
+        if (u.getRole() == Role.CHEF_DEPARTEMENT) {
+            d = departements.findByChefIdAndActifTrue(u.getId())
+                    .orElseThrow(() -> new IllegalStateException("Aucun département actif n'est rattaché à ce chef."));
+        } else if (u.getRole() == Role.DIRECTEUR) {
+            d = departements.findByDirecteurIdAndActifTrue(u.getId())
+                    .orElseThrow(() -> new IllegalStateException("Aucun département actif n'est rattaché à ce directeur."));
         } else {
             if(u.getService_id()==null) throw new IllegalStateException("Aucun service n'est associé à ce collaborateur.");
             Services s=services.findById(u.getService_id()).orElseThrow(() -> new IllegalStateException("Le service associé à ce collaborateur est introuvable."));

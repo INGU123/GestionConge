@@ -19,8 +19,11 @@ public class ConfirmationReliquat {
     @Column(name = "circuit_demande_conge_id", nullable = false)
     private Long circuitDemandeCongeId;
 
-    @Column(name = "employe_id", nullable = false)
+    @Column(name = "employe_id")
     private Long employeId;
+
+    @Column(name = "utilisateur_id")
+    private Long utilisateurId;
 
     @Column(name = "nombre_jours_confirme", nullable = false)
     private Integer nombreJoursConfirme;

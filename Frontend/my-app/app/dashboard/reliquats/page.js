@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { authFetch } from "@/lib/apiClient";
 import { useToast } from "../../Components/ToastProvider";
 import { getAllTypeConge } from "../../api/typeConge/typeConge";
+import { Inbox } from "lucide-react";
 
 const API = "http://localhost:8080";
 
@@ -150,7 +151,7 @@ export default function ReliquatsPage() {
       <header>
         <h1 className="text-2xl font-bold">Administration du personnel — Vérification des reliquats</h1>
         <p className="text-sm text-slate-500">
-          Calcul automatique lorsque les soldes existent ; sinon, rapprochement manuel justifié par l'administration pour les dossiers historiques.
+          Calcul automatique lorsque les soldes existent ; sinon, rapprochement manuel justifié par l&apos;administration pour les dossiers historiques.
         </p>
       </header>
 
@@ -229,7 +230,7 @@ export default function ReliquatsPage() {
                   </label>
                 </div>
                 <p className="text-xs text-base-content/60">
-                  L'observation reste modifiable.
+                  L&apos;observation reste modifiable.
                 </p>
                 <button type="button" className="btn btn-primary"
                   disabled={busy === dossier.id || !calcul || Boolean(calcul.error)}
@@ -241,7 +242,7 @@ export default function ReliquatsPage() {
               <section className="rounded-xl border border-warning/40 bg-warning/5 p-4 space-y-3">
                 <h3 className="font-semibold">Rapprochement manuel des données RH</h3>
                 <p className="text-sm text-base-content/70">
-                  Aucun solde exploitable n'est enregistré pour ce compte. Saisissez uniquement le montant vérifié dans les pièces RH. Cette opération ne crée ni ne modifie aucun solde.
+                  Aucun solde exploitable n&apos;est enregistré pour ce compte. Saisissez uniquement le montant vérifié dans les pièces RH. Cette opération ne crée ni ne modifie aucun solde.
                 </p>
                 <div className="grid gap-3 md:grid-cols-3">
                   <label className="form-control">
@@ -263,7 +264,7 @@ export default function ReliquatsPage() {
                       onChange={event => update(dossier.id, "manualReference", event.target.value)} />
                   </label>
                 </div>
-                <p className="text-xs text-base-content/60">L'observation ci-dessous est obligatoire et doit expliquer la source RH de la vérification.</p>
+                <p className="text-xs text-base-content/60">L&apos;observation ci-dessous est obligatoire et doit expliquer la source RH de la vérification.</p>
                 <button type="button" className="btn btn-warning"
                   disabled={busy === dossier.id || value.manualDays === undefined || String(value.manualDays).trim() === "" || !value.observation?.trim()}
                   onClick={() => confirmManually(dossier)}>
@@ -290,7 +291,12 @@ export default function ReliquatsPage() {
         );
       })}
 
-      {!rows.length && <p className="text-slate-500">Aucune demande en attente.</p>}
+      {!rows.length && (
+        <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-base-300 bg-base-200/30 px-6 py-12 text-center">
+          <Inbox size={48} strokeWidth={1.5} className="text-base-content/40" />
+          <p className="text-sm text-base-content/60">Aucune demande en attente.</p>
+        </div>
+      )}
     </section>
   );
 }

@@ -3,6 +3,7 @@ import {useEffect,useState} from "react";
 import {authFetch} from "@/lib/apiClient";
 import {useToast} from "../../Components/ToastProvider";
 import {getAllTypeConge} from "../../api/typeConge/typeConge";
+import {Inbox} from "lucide-react";
 const API="http://localhost:8080";
 export default function ChefDepartementPage(){
  const [rows,setRows]=useState([]),[typesConge,setTypesConge]=useState([]),[busy,setBusy]=useState(null);const toast=useToast();
@@ -25,5 +26,10 @@ export default function ChefDepartementPage(){
    <div className="rounded-lg border border-base-300 bg-base-100 p-3 sm:col-span-2 xl:col-span-3"><p className="text-xs font-medium text-base-content/60">Justificatif</p><p className="mt-1 text-sm text-base-content break-words">{d.reliquatJustificatif || "Aucun justificatif renseigné"}</p></div>
    <div className="rounded-lg border border-base-300 bg-base-100 p-3 sm:col-span-2 xl:col-span-3"><p className="text-xs font-medium text-base-content/60">Observation de l’administration</p><p className="mt-1 text-sm text-base-content whitespace-pre-wrap">{d.reliquatObservation || d.reliquatCommentaire || "Aucune observation"}</p></div>
   </div>
- </section></div><button className="btn btn-primary self-center" disabled={busy===d.id} onClick={()=>forward(d.id)}>{busy===d.id?"Transmission…":"Transmettre au directeur"}</button></article>)}{!rows.length&&<p className="text-base-content/60">Aucun dossier à examiner.</p>}</section>;
+ </section></div><button className="btn btn-primary self-center" disabled={busy===d.id} onClick={()=>forward(d.id)}>{busy===d.id?"Transmission…":"Transmettre au directeur"}</button></article>)}{!rows.length && (
+  <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-base-300 bg-base-200/30 px-6 py-12 text-center">
+   <Inbox size={48} strokeWidth={1.5} className="text-base-content/40" />
+   <p className="text-sm text-base-content/60">Aucun dossier à examiner.</p>
+  </div>
+ )}</section>;
 }

@@ -3,6 +3,7 @@ import {useEffect,useState} from "react";
 import {authFetch} from "@/lib/apiClient";
 import {useToast} from "../../Components/ToastProvider";
 import {getAllTypeConge} from "../../api/typeConge/typeConge";
+import {Inbox} from "lucide-react";
 const API="http://localhost:8080";
 export default function DirecteurPage(){
  const [rows,setRows]=useState([]),[typesConge,setTypesConge]=useState([]),[motifs,setMotifs]=useState({}),[busy,setBusy]=useState(null);const toast=useToast();
@@ -25,5 +26,10 @@ export default function DirecteurPage(){
    <div className="rounded-lg border border-base-300 bg-base-100 p-3 sm:col-span-2 xl:col-span-3"><p className="text-xs font-medium text-base-content/60">Justificatif</p><p className="mt-1 text-sm text-base-content break-words">{d.reliquatJustificatif || "Aucun justificatif renseigné"}</p></div>
    <div className="rounded-lg border border-base-300 bg-base-100 p-3 sm:col-span-2 xl:col-span-3"><p className="text-xs font-medium text-base-content/60">Observation de l’administration</p><p className="mt-1 text-sm text-base-content whitespace-pre-wrap">{d.reliquatObservation || d.reliquatCommentaire || "Aucune observation"}</p></div>
   </div>
- </section><textarea className="textarea textarea-bordered w-full" placeholder="Motif obligatoire en cas de refus" value={motifs[d.id]||""} onChange={e=>setMotifs({...motifs,[d.id]:e.target.value})}/><div className="flex gap-2"><button className="btn border-[#14532d] bg-[#166534] text-white hover:border-[#052e16] hover:bg-[#14532d]" disabled={busy===d.id} onClick={()=>decide(d.id,"VALIDEE")}>Accorder</button><button className="btn border-[#7f1d1d] bg-[#991b1b] text-white hover:border-[#450a0a] hover:bg-[#7f1d1d]" disabled={busy===d.id||!motifs[d.id]?.trim()} onClick={()=>decide(d.id,"REFUSEE")}>Refuser</button></div></article>)}{!rows.length&&<p className="text-base-content/60">Aucun dossier en attente.</p>}</section>;
+ </section><textarea className="textarea textarea-bordered w-full" placeholder="Motif obligatoire en cas de refus" value={motifs[d.id]||""} onChange={e=>setMotifs({...motifs,[d.id]:e.target.value})}/><div className="flex gap-2"><button className="btn border-[#14532d] bg-[#166534] text-white hover:border-[#052e16] hover:bg-[#14532d]" disabled={busy===d.id} onClick={()=>decide(d.id,"VALIDEE")}>Accorder</button><button className="btn border-[#7f1d1d] bg-[#991b1b] text-white hover:border-[#450a0a] hover:bg-[#7f1d1d]" disabled={busy===d.id||!motifs[d.id]?.trim()} onClick={()=>decide(d.id,"REFUSEE")}>Refuser</button></div></article>)}{!rows.length && (
+  <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-base-300 bg-base-200/30 px-6 py-12 text-center">
+   <Inbox size={48} strokeWidth={1.5} className="text-base-content/40" />
+   <p className="text-sm text-base-content/60">Aucun dossier en attente.</p>
+  </div>
+ )}</section>;
 }

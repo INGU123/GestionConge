@@ -134,7 +134,7 @@ public class UtilisateurController {
     // LISTE DES COLLABORATEURS (Filtrée selon rôle)
     // =========================================================
 
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/all")
     public ResponseEntity<List<UtilisateurResponse>> getAll() {
         Utilisateur currentUser = getCurrentAuthenticatedUser();

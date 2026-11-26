@@ -202,10 +202,6 @@ public class DemandeCongeService {
         Utilisateur demandeur = utilisateurRepo.findById(demandeurId)
                 .orElseThrow(() -> new IllegalArgumentException("Collaborateur demandeur introuvable."));
 
-        if (Objects.equals(demandeur.getId(), currentUser.getId())) {
-            throw new AccessDeniedException("Vous ne pouvez pas approuver ou refuser votre propre demande.");
-        }
-
         // Un MANAGER ne peut traiter que les demandes des membres de son équipe.
         if (currentUser.getRole() == Role.MANAGER) {
             if (!Objects.equals(demandeur.getManager_id(), currentUser.getId())) {

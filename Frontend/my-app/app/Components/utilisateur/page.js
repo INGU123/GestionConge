@@ -10,9 +10,7 @@ export default function Utilisateur() {
     email: "",
     password: "", // Utiliser "password" conformément à l'entité Spring Boot
     role: "EMPLOYE",
-    service_id: null,
-    manager_id: null,
-    date_embauche: "",
+    service_id: null,    date_embauche: "",
     actif: true,
     date_creation: new Date().toISOString(),
   });
@@ -36,9 +34,7 @@ export default function Utilisateur() {
 
     const payload = {
       ...formData,
-      service_id: formData.service_id ? Number(formData.service_id) : null,
-      manager_id: formData.manager_id ? Number(formData.manager_id) : null,
-    };
+      service_id: formData.service_id ? Number(formData.service_id) : null,    };
 
     try {
       const result = await postData("/utilisateur/create", payload);
@@ -126,14 +122,7 @@ export default function Utilisateur() {
             onChange={handleChange}
             placeholder="ID Service"
           />
-          <input
-            type="number"
-            className="input input-sm text-white px-4"
-            name="manager_id"
-            onChange={handleChange}
-            placeholder="ID Manager"
-          />
-          <input
+<input
             type="date"
             className="input input-sm text-white px-4"
             name="date_embauche"

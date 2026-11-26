@@ -43,22 +43,22 @@ public class Demande_CongeController {
         return new ResponseEntity<>(nouvelleDemande, HttpStatus.CREATED);
     }
 
-    // Valider ou refuser une demande (Réservé au Manager et Admin)
+    // Ancienne route de traitement désactivée : le circuit hiérarchique est utilisé.
     @PreAuthorize("denyAll()")
     @PutMapping("/{demandeId}/traiter")
     public ResponseEntity<DemandeConge> traiterDemande(
             @PathVariable Long demandeId,
-            @RequestParam(required = false) Long managerId,
+            @RequestParam(required = false) Long validatorId,
             @RequestParam String statut,
             @RequestParam(required = false) String motifRefus) {
 
         Utilisateur currentUser = getCurrentAuthenticatedUser();
-        DemandeConge demandeTraitee = congeService.traiterDemande(demandeId, managerId, statut, motifRefus, currentUser);
+        DemandeConge demandeTraitee = congeService.traiterDemande(demandeId, validatorId, statut, motifRefus, currentUser);
         return ResponseEntity.ok(demandeTraitee);
     }
 
     // Annuler une demande
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'EMPLOYE')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYE')")
     @PutMapping("/{demandeId}/annuler")
     public ResponseEntity<DemandeConge> annulerDemande(
             @PathVariable Long demandeId,
@@ -77,16 +77,8 @@ public class Demande_CongeController {
         return ResponseEntity.ok(congeService.getDemandesParUtilisateur(utilisateurId, currentUser));
     }
 
-    // Liste des demandes en attente pour un manager
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
-    @GetMapping("/manager/{managerId}/en-attente")
-    public ResponseEntity<List<DemandeConge>> getDemandesEnAttenteManager(@PathVariable Long managerId) {
-        Utilisateur currentUser = getCurrentAuthenticatedUser();
-        return ResponseEntity.ok(congeService.getDemandesEnAttentePourManager(managerId, currentUser));
-    }
-
     // Liste de toutes les demandes en attente (selon périmètre)
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/en-attente")
     public ResponseEntity<List<DemandeConge>> getToutesDemandesEnAttente() {
         Utilisateur currentUser = getCurrentAuthenticatedUser();

@@ -136,30 +136,6 @@ export default function ReliquatsPage() {
     }
   };
 
-  const downloadScan = async id => {
-    try {
-      const response = await authFetch(API + "/circuit-conge/" + id + "/piece-jointe");
-      if (!response.ok) {
-        const detail = await response.text();
-        throw new Error(detail || "Scan indisponible pour ce dossier.");
-      }
-      const blob = await response.blob();
-      const extension = blob.type.includes("pdf") ? "pdf"
-        : blob.type.includes("png") ? "png"
-        : blob.type.includes("jpeg") ? "jpg" : "bin";
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = "scan-demande-conge-" + id + "." + extension;
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      setTimeout(() => URL.revokeObjectURL(url), 1000);
-    } catch (error) {
-      toast(error.message, "error");
-    }
-  };
-
   const update = (id, key, value) => {
     setValues(previous => ({
       ...previous,
@@ -201,10 +177,6 @@ export default function ReliquatsPage() {
                   </label>
                 </div>
                 <p className="text-xs text-base-content/60">{dossier.dateDebut} → {dossier.dateFin}</p>
-                <button type="button" className="btn btn-sm btn-outline"
-                  onClick={() => downloadScan(dossier.id)}>
-                  Télécharger le scan
-                </button>
               </div>
             </header>
 
@@ -257,7 +229,7 @@ export default function ReliquatsPage() {
                   </label>
                 </div>
                 <p className="text-xs text-base-content/60">
-                  Le justificatif est consultable dans le scan du dossier. Seule l'observation reste modifiable.
+                  L'observation reste modifiable.
                 </p>
                 <button type="button" className="btn btn-primary"
                   disabled={busy === dossier.id || !calcul || Boolean(calcul.error)}

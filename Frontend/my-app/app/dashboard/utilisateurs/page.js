@@ -336,7 +336,7 @@ export default function UtilisateursPage() {
     setNewUser({
       matricule: "", nom: "", prenom: "", numero_cin: "", date_naissance: "",
       telephone: "", adresse: "", fonction: "", type_contrat: "", email: "", mot_de_pass: "",
-      role: "ASSISTANT_DIRECTION", service_id: "", manager_id: "",
+      role: "ASSISTANT_DIRECTION", service_id: "",
       date_embauche: new Date().toISOString().split("T")[0], actif: true,
     });
     setShowModal(true);

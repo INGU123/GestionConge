@@ -42,7 +42,7 @@ public class Type_congeController {
     }
 
     // Récupérer un type par son ID
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'EMPLOYE', 'ASSISTANT_DIRECTION', 'ADMINISTRATION_PERSONNEL', 'CHEF_DEPARTEMENT', 'DIRECTEUR')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYE', 'ASSISTANT_DIRECTION', 'ADMINISTRATION_PERSONNEL', 'CHEF_DEPARTEMENT', 'DIRECTEUR')")
     @GetMapping("/{id}")
     public ResponseEntity<Type_conge> getTypeById(@PathVariable Long id) {
         Type_conge type = typeCongeService.findById(id);

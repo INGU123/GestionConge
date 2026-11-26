@@ -243,6 +243,68 @@ public class ConfirmationReliquatService {
                 Math.max(0, restant - reserves), periode);
     }
 
+    /**
+     * Rapprochement RH manuel des dossiers historiques rattachés à un compte utilisateur.
+     * Cette voie ne crée aucun solde et n'invente aucun droit : l'administration saisit
+     * explicitement le montant vérifié sur ses pièces RH et justifie obligatoirement la décision.
+     */
+    @Transactional
+    public ConfirmationReliquat confirmerManuellementCompteUtilisateur(Long dossierId, Integer jours,
+            String periode, String reference, String observation, Utilisateur acteur) {
+        exigerAdministration(acteur);
+        if (jours == null || jours < 0)
+            throw new IllegalArgumentException("Le nombre de jours confirmé doit être positif ou nul.");
+        if (periode == null || periode.isBlank())
+            throw new IllegalArgumentException("La période de référence est obligatoire.");
+        if (reference == null || reference.isBlank())
+            throw new IllegalArgumentException("La référence RH est obligatoire.");
+        if (observation == null || observation.isBlank())
+            throw new IllegalArgumentException("Une observation RH justifiant la saisie manuelle est obligatoire.");
+
+        CircuitDemandeConge dossier = circuits.findByIdForUpdate(dossierId)
+                .orElseThrow(() -> new IllegalArgumentException("Dossier introuvable."));
+        if (!"RELIQUAT_EN_ATTENTE".equals(dossier.getStatut()))
+            throw new IllegalStateException("Ce dossier n'attend pas une confirmation de reliquat.");
+        if (dossier.getEmployeId() != null || dossier.getUtilisateurId() == null)
+            throw new IllegalStateException("La confirmation manuelle est réservée aux dossiers historiques rattachés à un compte utilisateur.");
+        if (confirmations.existsByReferenceConfirmation(reference.trim()))
+            throw new IllegalArgumentException("Cette référence de confirmation existe déjà.");
+
+        Utilisateur utilisateur = utilisateurDuDossier(dossier);
+        if (estCongeAnnuel(dossier.getTypeCongeId())) {
+            int anneeAttendue = dossier.getDateDebut().getYear() - 1;
+            int anneeReference = extraireAnneeReference(periode);
+            if (anneeReference != anneeAttendue)
+                throw new IllegalArgumentException("La période de référence du reliquat annuel doit correspondre à l'exercice précédent (" + anneeAttendue + ").");
+        } else {
+            extraireAnneeReference(periode);
+        }
+
+        ConfirmationReliquat confirmation = confirmations.save(ConfirmationReliquat.builder()
+                .circuitDemandeCongeId(dossier.getId())
+                .employeId(null)
+                .utilisateurId(utilisateur.getId())
+                .nombreJoursConfirme(jours)
+                .periodeReference(periode.trim())
+                .confirmePar(acteur.getId())
+                .dateConfirmation(LocalDateTime.now())
+                .referenceConfirmation(reference.trim())
+                .observation(observation.trim())
+                .build());
+
+        dossier.setReliquatJours(jours);
+        dossier.setReliquatCommentaire(observation.trim());
+        dossier.setAdministrationPersonnelId(acteur.getId());
+        dossier.setDateReliquat(LocalDateTime.now());
+        dossier.setStatut("RELIQUAT_RETOURNE");
+        circuits.save(dossier);
+
+        notifications.creerNotification(dossier.getAssistantId(),
+                "Le reliquat du dossier #" + dossier.getId() + " a été confirmé manuellement par l'administration (" + jours + " jour(s)).",
+                "CIRCUIT_CONGE", "/dashboard/circuit-conge");
+        return confirmation;
+    }
+
     private ConfirmationReliquat confirmerCompteUtilisateur(CircuitDemandeConge dossier, Integer jours,
             String periode, String reference, String justificatif, String observation, Utilisateur acteur) {
         Utilisateur utilisateur = utilisateurDuDossier(dossier);

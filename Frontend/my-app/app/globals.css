@@ -1404,7 +1404,6 @@ html[data-theme="night"] body :is(input, textarea, select) {
 .theme-shell[data-theme="night"] main :is(.reliquats-theme, .circuit-conge-theme) .text-slate-500,
 .theme-shell[data-theme="night"] main :is(.reliquats-theme, .circuit-conge-theme) .text-slate-400,
 .theme-shell[data-theme="night"] main :is(.reliquats-theme, .circuit-conge-theme) .text-gray-500 {
-  color: #a9bdd5 !important;}
   color: #a9bdd5 !important;
 }
 

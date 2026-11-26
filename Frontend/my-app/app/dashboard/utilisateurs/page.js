@@ -19,13 +19,13 @@ import {
   Send,
   X,
 } from "lucide-react";
-import { 
-  FiMoreVertical, 
-  FiEye, 
-  FiEdit2, 
-  FiUserX, 
-  FiUserCheck, 
-  FiTrash2 
+import {
+  FiMoreVertical,
+  FiEye,
+  FiEdit2,
+  FiUserX,
+  FiUserCheck,
+  FiTrash2
 } from "react-icons/fi";
 
 export default function UtilisateursPage() {
@@ -47,8 +47,6 @@ export default function UtilisateursPage() {
   
   // État pour la modale de visualisation complète (Voir tout)
   const [viewUserModal, setViewUserModal] = useState(null);
-
-  // État pour gérer l'ouverture du menu 3 points par ligne (ID utilisateur actif)
   const [activeMenuId, setActiveMenuId] = useState(null);
   const menuRef = useRef(null);
 
@@ -69,15 +67,16 @@ export default function UtilisateursPage() {
     date_embauche: new Date().toISOString().split("T")[0],
     actif: true,
   });
+
   const showToast = useToast();
 
-  // Fermer le menu 3 points si on clique en dehors
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (menuRef.current && !menuRef.current.contains(event.target)) {
         setActiveMenuId(null);
       }
     };
+
     document.addEventListener("mousedown", handleClickOutside);
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
@@ -91,6 +90,7 @@ export default function UtilisateursPage() {
       try {
         setLoading(true);
         const res = await authFetch("http://localhost:8080/utilisateur/all");
+
         if (res.ok) {
           const data = await res.json();
           if (isMounted) {
@@ -99,11 +99,21 @@ export default function UtilisateursPage() {
         } else {
           const errorMsg = await res.text();
           console.error("Erreur serveur:", errorMsg);
-          if (isMounted) showToast(errorMsg || "Impossible de charger la liste des collaborateurs.", "error");
+          if (isMounted) {
+            showToast(
+              errorMsg || "Impossible de charger la liste des collaborateurs.",
+              "error"
+            );
+          }
         }
       } catch (err) {
         console.error("Erreur chargement utilisateurs:", err);
-        if (isMounted) showToast("Impossible de charger la liste des collaborateurs.", "error");
+        if (isMounted) {
+          showToast(
+            "Impossible de charger la liste des collaborateurs.",
+            "error"
+          );
+        }
       } finally {
         if (isMounted) setLoading(false);
       }
@@ -118,22 +128,36 @@ export default function UtilisateursPage() {
 
   useEffect(() => {
     let isMounted = true;
+
     const loadServices = async () => {
       try {
         setServicesLoading(true);
         const res = await authFetch("http://localhost:8080/services");
-        if (!res.ok) throw new Error("Impossible de charger les services.");
+
+        if (!res.ok) {
+          throw new Error("Impossible de charger les services.");
+        }
+
         const data = await res.json();
-        if (isMounted) setServices(Array.isArray(data) ? data : []);
+
+        if (isMounted) {
+          setServices(Array.isArray(data) ? data : []);
+        }
       } catch (err) {
         console.error("Erreur chargement services:", err);
-        if (isMounted) showToast("Impossible de charger les services.", "error");
+        if (isMounted) {
+          showToast("Impossible de charger les services.", "error");
+        }
       } finally {
         if (isMounted) setServicesLoading(false);
       }
     };
+
     loadServices();
-    return () => { isMounted = false; };
+
+    return () => {
+      isMounted = false;
+    };
   }, [showToast]);
 
   const handleSubmit = async (e) => {
@@ -148,11 +172,20 @@ export default function UtilisateursPage() {
         newUser.date_naissance, newUser.telephone, newUser.adresse,
         newUser.role, newUser.date_embauche, newUser.fonction, newUser.type_contrat,
       ];
-      if (requiredValues.some((value) => value == null || String(value).trim() === "")) {
-        showToast("Compléter toutes les informations de l'utilisateur", "warning");
+
+      if (
+        requiredValues.some(
+          (value) => value == null || String(value).trim() === ""
+        )
+      ) {
+        showToast(
+          "Compléter toutes les informations de l'utilisateur",
+          "warning"
+        );
         return;
       }
     }
+
     try {
       const payload = {
         ...(editingUser ? { id: editingUser.id } : {}),
@@ -169,8 +202,12 @@ export default function UtilisateursPage() {
         service_id: newUser.service_id ? Number(newUser.service_id) : null,
         role: newUser.role,
         actif: editingUser ? newUser.actif : true,
-        ...(newUser.date_embauche ? { date_embauche: newUser.date_embauche } : {}),
-        ...(newUser.mot_de_pass?.trim() ? { password: newUser.mot_de_pass.trim() } : {}),
+        ...(newUser.date_embauche
+          ? { date_embauche: newUser.date_embauche }
+          : {}),
+        ...(newUser.mot_de_pass?.trim()
+          ? { password: newUser.mot_de_pass.trim() }
+          : {}),
       };
 
       const res = await authFetch(
@@ -184,12 +221,18 @@ export default function UtilisateursPage() {
       if (res.ok) {
         const responseData = await res.json();
         const createdUser = responseData.utilisateur || responseData;
-        setUsers((prev) => editingUser
-          ? prev.map((user) => user.id === createdUser.id ? createdUser : user)
-          : [...prev, createdUser]
+
+        setUsers((prev) =>
+          editingUser
+            ? prev.map((user) =>
+                user.id === createdUser.id ? createdUser : user
+              )
+            : [...prev, createdUser]
         );
+
         setShowModal(false);
         setEditingUser(null);
+
         setNewUser({
           matricule: "", nom: "", prenom: "", numero_cin: "", date_naissance: "",
           telephone: "", adresse: "", fonction: "", type_contrat: "", email: "",
@@ -205,11 +248,18 @@ export default function UtilisateursPage() {
       } else {
         const txt = await res.text();
         let errMsg = txt;
+
         try {
           const parsed = JSON.parse(txt);
-          if (parsed && parsed.message) errMsg = parsed.message;
-        } catch { }
-        showToast(errMsg || "Erreur lors de l'enregistrement du collaborateur.", "error");
+          if (parsed && parsed.message) {
+            errMsg = parsed.message;
+          }
+        } catch {}
+
+        showToast(
+          errMsg || "Erreur lors de l'enregistrement du collaborateur.",
+          "error"
+        );
       }
     } catch (err) {
       showToast(`Erreur : ${err.message}`, "error");
@@ -218,21 +268,32 @@ export default function UtilisateursPage() {
 
   const handleArchive = async () => {
     if (!userToDelete) return;
+
     const user = userToDelete;
     setDeletingUserId(user.id);
+
     try {
-      const res = await authFetch(`http://localhost:8080/utilisateur/${user.id}`, {
-        method: "DELETE",
-        body: JSON.stringify({ motif: archiveReason.trim() || null }),
-      });
+      const res = await authFetch(
+        `http://localhost:8080/utilisateur/${user.id}`,
+        {
+          method: "DELETE",
+          body: JSON.stringify({ motif: archiveReason.trim() || null }),
+        }
+      );
+
       if (!res.ok) {
         const text = await res.text();
         let errorMessage = text;
+
         try {
           const parsed = JSON.parse(text);
           errorMessage = parsed.message || errorMessage;
-        } catch { }
-        showToast(errorMessage || "Erreur lors de l'archivage du collaborateur.", "error");
+        } catch {}
+
+        showToast(
+          errorMessage || "Erreur lors de l'archivage du collaborateur.",
+          "error"
+        );
         return;
       }
 
@@ -250,14 +311,25 @@ export default function UtilisateursPage() {
 
   const loadArchivedUsers = async () => {
     setArchivedLoading(true);
+
     try {
-      const res = await authFetch("http://localhost:8080/utilisateur/archived");
-      if (!res.ok) throw new Error(await res.text());
+      const res = await authFetch(
+        "http://localhost:8080/utilisateur/archived"
+      );
+
+      if (!res.ok) {
+        throw new Error(await res.text());
+      }
+
       const data = await res.json();
       setArchivedUsers(Array.isArray(data) ? data : []);
+
       return true;
     } catch (err) {
-      showToast(err.message || "Impossible de charger les collaborateurs archivés.", "error");
+      showToast(
+        err.message || "Impossible de charger les collaborateurs archivés.",
+        "error"
+      );
       return false;
     } finally {
       setArchivedLoading(false);
@@ -267,7 +339,9 @@ export default function UtilisateursPage() {
   const toggleArchivedView = async () => {
     if (!showArchived) {
       const loaded = await loadArchivedUsers();
+
       if (!loaded) return;
+
       setShowArchived(true);
       setSearch("");
     } else {
@@ -278,49 +352,76 @@ export default function UtilisateursPage() {
 
   const handleRestore = async (user) => {
     try {
-      const res = await authFetch(`http://localhost:8080/utilisateur/restore/${user.id}`, {
-        method: "PUT",
-      });
+      const res = await authFetch(
+        `http://localhost:8080/utilisateur/restore/${user.id}`,
+        {
+          method: "PUT",
+        }
+      );
+
       if (!res.ok) {
         const text = await res.text();
         let message = text;
-        try { message = JSON.parse(text).message || text; } catch {}
-        throw new Error(message || "Impossible de restaurer ce collaborateur.");
+
+        try {
+          message = JSON.parse(text).message || text;
+        } catch {}
+
+        throw new Error(
+          message || "Impossible de restaurer ce collaborateur."
+        );
       }
 
       const [activeResponse, archivedResponse] = await Promise.all([
         authFetch("http://localhost:8080/utilisateur/all"),
         authFetch("http://localhost:8080/utilisateur/archived"),
       ]);
-      if (activeResponse.ok) setUsers(await activeResponse.json());
-      if (archivedResponse.ok) setArchivedUsers(await archivedResponse.json());
+
+      if (activeResponse.ok) {
+        setUsers(await activeResponse.json());
+      }
+
+      if (archivedResponse.ok) {
+        setArchivedUsers(await archivedResponse.json());
+      }
+
       showToast("Collaborateur restauré avec succès.", "success");
     } catch (err) {
       showToast(err.message || "Erreur lors de la restauration.", "error");
     }
   };
 
-  // Basculer l'état actif / désactivé d'un utilisateur
   const handleToggleActive = async (user) => {
     setActiveMenuId(null);
+
     try {
       const updatedStatus = user.actif === false ? true : false;
+
       const payload = {
         ...user,
         actif: updatedStatus,
       };
 
-      const res = await authFetch(`http://localhost:8080/utilisateur/update`, {
-        method: "PUT",
-        body: JSON.stringify(payload),
-      });
+      const res = await authFetch(
+        "http://localhost:8080/utilisateur/update",
+        {
+          method: "PUT",
+          body: JSON.stringify(payload),
+        }
+      );
 
       if (res.ok) {
         const responseData = await res.json();
         const savedUser = responseData.utilisateur || responseData;
-        setUsers((prev) => prev.map((u) => u.id === savedUser.id ? savedUser : u));
+
+        setUsers((prev) =>
+          prev.map((u) => (u.id === savedUser.id ? savedUser : u))
+        );
+
         showToast(
-          updatedStatus ? "Collaborateur activé avec succès." : "Collaborateur désactivé avec succès.", 
+          updatedStatus
+            ? "Collaborateur activé avec succès."
+            : "Collaborateur désactivé avec succès.",
           "success"
         );
       } else {
@@ -333,18 +434,21 @@ export default function UtilisateursPage() {
 
   const startCreate = () => {
     setEditingUser(null);
+
     setNewUser({
       matricule: "", nom: "", prenom: "", numero_cin: "", date_naissance: "",
       telephone: "", adresse: "", fonction: "", type_contrat: "", email: "", mot_de_pass: "",
       role: "ASSISTANT_DIRECTION", service_id: "",
       date_embauche: new Date().toISOString().split("T")[0], actif: true,
     });
+
     setShowModal(true);
   };
 
   const startEdit = (user) => {
     setActiveMenuId(null);
     setEditingUser(user);
+
     setNewUser({
       ...user,
       numero_cin: user.numero_cin || "",
@@ -355,8 +459,11 @@ export default function UtilisateursPage() {
       type_contrat: user.type_contrat || "",
       service_id: user.service_id == null ? "" : String(user.service_id),
       mot_de_pass: "",
-      date_embauche: user.date_embauche || "",
+      date_embauche: user.date_embauche ?? "",
+      role: user.role ?? "EMPLOYE",
+      actif: user.actif !== false,
     });
+
     setShowModal(true);
   };
 
@@ -372,9 +479,13 @@ export default function UtilisateursPage() {
       <div className="bg-amber-50 border-l-4 border-amber-500 rounded-2xl p-6 shadow-sm flex items-start gap-4">
         <ShieldAlert className="w-6 h-6 text-amber-600 shrink-0 mt-0.5" />
         <div>
-          <h3 className="text-base font-bold text-amber-900">Accès Restreint — SPAT</h3>
+          <h3 className="text-base font-bold text-amber-900">
+            Accès Restreint — SPAT
+          </h3>
           <p className="text-sm text-amber-700 mt-1">
-            {"Seuls les Administrateurs RH de la SPAT sont habilités à gérer l'annuaire et les comptes collaborateurs."}
+            {
+              "Seuls les Administrateurs RH de la SPAT sont habilités à gérer l'annuaire et les comptes collaborateurs."
+            }
           </p>
         </div>
       </div>
@@ -382,8 +493,10 @@ export default function UtilisateursPage() {
   }
 
   const sourceUsers = showArchived ? archivedUsers : users;
+
   const filteredUsers = sourceUsers.filter((u) => {
     const term = search.toLowerCase();
+
     return (
       (u.matricule && u.matricule.toLowerCase().includes(term)) ||
       (u.nom && u.nom.toLowerCase().includes(term)) ||
@@ -437,7 +550,11 @@ export default function UtilisateursPage() {
 
   const getServiceName = (serviceId) => {
     if (!serviceId) return "-";
-    const found = services.find((s) => s.id === Number(serviceId));
+
+    const found = services.find(
+      (s) => s.id === Number(serviceId)
+    );
+
     return found ? found.nom : `Service #${serviceId}`;
   };
 
@@ -449,16 +566,27 @@ export default function UtilisateursPage() {
           <div className="text-xs font-semibold uppercase tracking-widest text-blue-400 mb-1">
             SPAT — Société du Port à Gestion Autonome de Toamasina
           </div>
+
           <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
             <Users className="w-6 h-6 text-blue-400" />
             Gestion des Collaborateurs & Accès
           </h1>
+
           <p className="text-slate-400 text-sm mt-1">
             {`Création de comptes, attribution des privilèges et consultation de l'annuaire du personnel.`}
           </p>
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
+          <button
+            type="button"
+            onClick={toggleArchivedView}
+            className="btn btn-outline btn-sm border-slate-500 !text-white hover:bg-slate-700 hover:!text-white"
+          >
+            {showArchived
+              ? "Retour aux collaborateurs"
+              : "Collaborateurs archivés"}
+          </button>
 
           {!showArchived && (
             <button
@@ -477,6 +605,7 @@ export default function UtilisateursPage() {
         <div className="flex justify-between items-center mb-4 gap-4 flex-wrap">
           <div className="relative w-full max-w-xs">
             <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+
             <input
               type="text"
               placeholder="Rechercher matricule, nom, rôle..."
@@ -485,19 +614,26 @@ export default function UtilisateursPage() {
               className="input input-bordered input-sm w-full pl-9 text-xs text-slate-800 bg-white focus:outline-hidden"
             />
           </div>
+
           <span className="text-xs text-slate-500 font-medium bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200">
-            {showArchived ? "Archivés" : "Total"} : <strong className="text-slate-800">{filteredUsers.length}</strong> collaborateur(s)
+            {showArchived ? "Archivés" : "Total"} :{" "}
+            <strong className="text-slate-800">
+              {filteredUsers.length}
+            </strong>{" "}
+            collaborateur(s)
           </span>
         </div>
 
-        {(loading || (showArchived && archivedLoading)) ? (
+        {loading || (showArchived && archivedLoading) ? (
           <div className="flex justify-center items-center py-16">
             <span className="loading loading-spinner loading-lg text-primary"></span>
           </div>
         ) : filteredUsers.length === 0 ? (
           <div className="text-center py-16 text-slate-400">
             <Users className="w-12 h-12 mx-auto mb-2 text-slate-300" />
-            <p className="font-semibold text-slate-600">Aucun utilisateur trouvé.</p>
+            <p className="font-semibold text-slate-600">
+              Aucun utilisateur trouvé.
+            </p>
           </div>
         ) : (
           <div className="overflow-x-auto min-h-[300px]">
@@ -513,51 +649,73 @@ export default function UtilisateursPage() {
                   <th className="py-3 text-right">Actions</th>
                 </tr>
               </thead>
+
               <tbody>
                 {filteredUsers.map((u) => {
                   const isMenuOpen = activeMenuId === u.id;
                   const isSelf = u.id === currentUser?.id;
-                  const isProtectedAdmin = u.role?.toUpperCase() === "ADMIN";
+                  const isProtectedAdmin =
+                    u.role?.toUpperCase() === "ADMIN";
 
                   return (
-                    <tr key={u.id} className="hover:bg-slate-50/80 transition-colors border-b border-slate-100">
+                    <tr
+                      key={u.id}
+                      className="hover:bg-slate-50/80 transition-colors border-b border-slate-100"
+                    >
                       <td className="py-3.5">
                         <span className="font-mono text-xs font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded border border-blue-100">
-                          {u.matricule || `-`}
+                          {u.matricule || "-"}
                         </span>
                       </td>
+
                       <td className="py-3.5">
                         <div className="flex items-center gap-2.5">
                           <div className="w-8 h-8 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center font-bold text-xs border border-slate-200">
-                            {u.prenom ? u.prenom[0].toUpperCase() : "U"}
+                            {u.prenom
+                              ? u.prenom[0].toUpperCase()
+                              : "U"}
                           </div>
+
                           <span className="font-bold text-slate-800 text-sm">
                             {u.prenom} {u.nom}
                           </span>
                         </div>
                       </td>
+
                       <td className="py-3.5 text-xs text-slate-600 font-medium">
                         <div className="flex items-center gap-1.5">
                           <Mail className="w-3.5 h-3.5 text-slate-400" />
-                          {u.email}
+                          {u.email || "-"}
                         </div>
                       </td>
-                      <td className="py-3.5">{getRoleBadge(u.role)}</td>
+
+                      <td className="py-3.5">
+                        {getRoleBadge(u.role)}
+                      </td>
+
                       <td className="py-3.5 text-xs text-slate-600">
                         <div className="flex items-center gap-1.5 font-medium">
                           <Calendar className="w-3.5 h-3.5 text-slate-400" />
                           {u.date_embauche || "-"}
                         </div>
                       </td>
+
                       <td className="py-3.5">
                         {u.archived ? (
                           <span
-                            title={u.deletion_reason || "Aucun motif renseigné"}
+                            title={
+                              u.deletion_reason ||
+                              "Aucun motif renseigné"
+                            }
                             className="inline-flex flex-col items-start gap-0.5 px-2 py-0.5 rounded text-xs font-bold bg-slate-100 text-slate-700 border border-slate-200"
                           >
                             <span>Archivé</span>
                             <span className="font-normal text-[10px]">
-                              {u.deleted_at ? new Date(u.deleted_at).toLocaleString("fr-FR") : ""}
+                              {u.deleted_at
+                                ? new Date(u.deleted_at).toLocaleString(
+                                    "fr-FR"
+                                  )
+                                : ""}
                             </span>
                           </span>
                         ) : u.actif !== false ? (
@@ -572,6 +730,7 @@ export default function UtilisateursPage() {
                           </span>
                         )}
                       </td>
+
                       <td className="py-3.5 text-right relative">
                         {showArchived ? (
                           <button
@@ -595,69 +754,93 @@ export default function UtilisateursPage() {
   <FiMoreVertical size={24} color="#334155" />
 </button>
 
-                          {isMenuOpen && (
-                            <div className="absolute right-0 mt-1 w-44 bg-white rounded-xl shadow-lg border border-slate-200 py-1.5 z-30 text-xs text-slate-700 font-medium">
-                              <button
-                                type="button"
-                                onClick={() => handleViewDetails(u)}
-                                className="w-full text-left px-4 py-2 hover:bg-slate-50 flex items-center gap-2.5 text-slate-700 transition-colors"
-                              >
-                                <FiEye className="w-3.5 h-3.5 text-blue-600" />
-                                Voir tout
-                              </button>
+                            {isMenuOpen && (
+                              <div className="absolute right-0 mt-1 w-44 bg-white rounded-xl shadow-lg border border-slate-200 py-1.5 z-30 text-xs text-slate-700 font-medium">
+                                <button
+                                  type="button"
+                                  onClick={() => handleViewDetails(u)}
+                                  className="w-full text-left px-4 py-2 hover:bg-slate-50 flex items-center gap-2.5 text-slate-700 transition-colors"
+                                >
+                                  <FiEye className="w-3.5 h-3.5 text-blue-600" />
+                                  Voir tout
+                                </button>
 
-                              <button
-                                type="button"
-                                onClick={() => startEdit(u)}
-                                disabled={isProtectedAdmin}
-                                title={isProtectedAdmin ? "Le compte administrateur est protégé" : ""}
-                                className={`w-full text-left px-4 py-2 flex items-center gap-2.5 transition-colors ${isProtectedAdmin ? "cursor-not-allowed opacity-40 text-slate-400" : "hover:bg-slate-50 text-slate-700"}`}
-                              >
-                                <FiEdit2 className="w-3.5 h-3.5 text-amber-600" />
-                                {isProtectedAdmin ? "Modification protégée" : "Modifier"}
-                              </button>
+                                <button
+                                  type="button"
+                                  onClick={() => startEdit(u)}
+                                  disabled={isProtectedAdmin}
+                                  title={
+                                    isProtectedAdmin
+                                      ? "Le compte administrateur est protégé"
+                                      : ""
+                                  }
+                                  className={`w-full text-left px-4 py-2 flex items-center gap-2.5 transition-colors ${
+                                    isProtectedAdmin
+                                      ? "cursor-not-allowed opacity-40 text-slate-400"
+                                      : "hover:bg-slate-50 text-slate-700"
+                                  }`}
+                                >
+                                  <FiEdit2 className="w-3.5 h-3.5 text-amber-600" />
+                                  {isProtectedAdmin
+                                    ? "Modification protégée"
+                                    : "Modifier"}
+                                </button>
 
-                              <button
-                                type="button"
-                                onClick={() => handleToggleActive(u)}
-                                disabled={isProtectedAdmin}
-                                title={isProtectedAdmin ? "Le compte administrateur ne peut pas être désactivé" : ""}
-                                className={`w-full text-left px-4 py-2 flex items-center gap-2.5 transition-colors ${isProtectedAdmin ? "cursor-not-allowed opacity-40 text-slate-400" : "hover:bg-slate-50 text-slate-700"}`}
-                              >
-                                {u.actif !== false ? (
-                                  <>
-                                    <FiUserX className="w-3.5 h-3.5 text-orange-600" />
-                                    Désactiver
-                                  </>
-                                ) : (
-                                  <>
-                                    <FiUserCheck className="w-3.5 h-3.5 text-emerald-600" />
-                                    Activer
-                                  </>
-                                )}
-                              </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleToggleActive(u)}
+                                  disabled={isProtectedAdmin}
+                                  title={
+                                    isProtectedAdmin
+                                      ? "Le compte administrateur ne peut pas être désactivé"
+                                      : ""
+                                  }
+                                  className={`w-full text-left px-4 py-2 flex items-center gap-2.5 transition-colors ${
+                                    isProtectedAdmin
+                                      ? "cursor-not-allowed opacity-40 text-slate-400"
+                                      : "hover:bg-slate-50 text-slate-700"
+                                  }`}
+                                >
+                                  {u.actif !== false ? (
+                                    <>
+                                      <FiUserX className="w-3.5 h-3.5 text-orange-600" />
+                                      Désactiver
+                                    </>
+                                  ) : (
+                                    <>
+                                      <FiUserCheck className="w-3.5 h-3.5 text-emerald-600" />
+                                      Activer
+                                    </>
+                                  )}
+                                </button>
 
-                              <div className="my-1 border-t border-slate-100"></div>
+                                <div className="my-1 border-t border-slate-100"></div>
 
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setActiveMenuId(null);
-                                  setArchiveReason("");
-                                   setUserToDelete(u);
-                                }}
-                                disabled={isSelf || isProtectedAdmin}
-                                className={`w-full text-left px-4 py-2 flex items-center gap-2.5 transition-colors ${
-                                  isSelf || isProtectedAdmin ? "opacity-40 cursor-not-allowed text-slate-400" : "hover:bg-rose-50 text-rose-600"
-                                }`}
-                                title={isSelf ? "Impossible d'archiver votre propre compte" : ""}
-                              >
-                                <FiTrash2 className="w-3.5 h-3.5" />
-                                Archiver
-                              </button>
-                            </div>
-                          )}
-                        </div>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setActiveMenuId(null);
+                                    setArchiveReason("");
+                                    setUserToDelete(u);
+                                  }}
+                                  disabled={isSelf || isProtectedAdmin}
+                                  className={`w-full text-left px-4 py-2 flex items-center gap-2.5 transition-colors ${
+                                    isSelf || isProtectedAdmin
+                                      ? "opacity-40 cursor-not-allowed text-slate-400"
+                                      : "hover:bg-rose-50 text-rose-600"
+                                  }`}
+                                  title={
+                                    isSelf
+                                      ? "Impossible d'archiver votre propre compte"
+                                      : ""
+                                  }
+                                >
+                                  <FiTrash2 className="w-3.5 h-3.5" />
+                                  Archiver
+                                </button>
+                              </div>
+                            )}
+                          </div>
                         )}
                       </td>
                     </tr>
@@ -676,8 +859,10 @@ export default function UtilisateursPage() {
             <div className="flex justify-between items-center pb-3 border-b border-slate-100">
               <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
                 <Users className="w-5 h-5 text-blue-600" />
-                Fiche Collaborateur — {viewUserModal.prenom} {viewUserModal.nom}
+                Fiche Collaborateur — {viewUserModal.prenom}{" "}
+                {viewUserModal.nom}
               </h3>
+
               <button
                 onClick={() => setViewUserModal(null)}
                 className="text-slate-400 hover:text-slate-600 transition-colors"
@@ -688,48 +873,100 @@ export default function UtilisateursPage() {
 
             <div className="grid grid-cols-2 gap-4 text-xs">
               <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
-                <span className="text-slate-400 block font-bold uppercase mb-1">Matricule</span>
-                <span className="font-mono font-bold text-slate-800 text-sm">{viewUserModal.matricule || "-"}</span>
+                <span className="text-slate-400 block font-bold uppercase mb-1">
+                  Matricule
+                </span>
+                <span className="font-mono font-bold text-slate-800 text-sm">
+                  {viewUserModal.matricule || "-"}
+                </span>
               </div>
+
               <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
-                <span className="text-slate-400 block font-bold uppercase mb-1">Rôle & Privilèges</span>
+                <span className="text-slate-400 block font-bold uppercase mb-1">
+                  Rôle & Privilèges
+                </span>
                 <div>{getRoleBadge(viewUserModal.role)}</div>
               </div>
+
               <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
-                <span className="text-slate-400 block font-bold uppercase mb-1">Email Institutionnel</span>
-                <span className="font-medium text-slate-800">{viewUserModal.email || "-"}</span>
+                <span className="text-slate-400 block font-bold uppercase mb-1">
+                  Email Institutionnel
+                </span>
+                <span className="font-medium text-slate-800">
+                  {viewUserModal.email || "-"}
+                </span>
               </div>
+
               <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
-                <span className="text-slate-400 block font-bold uppercase mb-1">Téléphone</span>
-                <span className="font-medium text-slate-800">{viewUserModal.telephone || "-"}</span>
+                <span className="text-slate-400 block font-bold uppercase mb-1">
+                  Téléphone
+                </span>
+                <span className="font-medium text-slate-800">
+                  {viewUserModal.telephone || "-"}
+                </span>
               </div>
+
               <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
-                <span className="text-slate-400 block font-bold uppercase mb-1">Numéro CIN</span>
-                <span className="font-medium text-slate-800">{viewUserModal.numero_cin || "-"}</span>
+                <span className="text-slate-400 block font-bold uppercase mb-1">
+                  Numéro CIN
+                </span>
+                <span className="font-medium text-slate-800">
+                  {viewUserModal.numero_cin || "-"}
+                </span>
               </div>
+
               <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
-                <span className="text-slate-400 block font-bold uppercase mb-1">Date de naissance</span>
-                <span className="font-medium text-slate-800">{viewUserModal.date_naissance || "-"}</span>
+                <span className="text-slate-400 block font-bold uppercase mb-1">
+                  Date de naissance
+                </span>
+                <span className="font-medium text-slate-800">
+                  {viewUserModal.date_naissance || "-"}
+                </span>
               </div>
+
               <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
-                <span className="text-slate-400 block font-bold uppercase mb-1">Fonction / Poste</span>
-                <span className="font-medium text-slate-800">{viewUserModal.fonction || "-"}</span>
+                <span className="text-slate-400 block font-bold uppercase mb-1">
+                  Fonction / Poste
+                </span>
+                <span className="font-medium text-slate-800">
+                  {viewUserModal.fonction || "-"}
+                </span>
               </div>
+
               <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
-                <span className="text-slate-400 block font-bold uppercase mb-1">Type de contrat</span>
-                <span className="font-medium text-slate-800">{viewUserModal.type_contrat || "-"}</span>
+                <span className="text-slate-400 block font-bold uppercase mb-1">
+                  Type de contrat
+                </span>
+                <span className="font-medium text-slate-800">
+                  {viewUserModal.type_contrat || "-"}
+                </span>
               </div>
+
               <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
-                <span className="text-slate-400 block font-bold uppercase mb-1">Service</span>
-                <span className="font-medium text-slate-800">{getServiceName(viewUserModal.service_id)}</span>
+                <span className="text-slate-400 block font-bold uppercase mb-1">
+                  Service
+                </span>
+                <span className="font-medium text-slate-800">
+                  {getServiceName(viewUserModal.service_id)}
+                </span>
               </div>
+
               <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
-                <span className="text-slate-400 block font-bold uppercase mb-1">{`Date d'embauche`}</span>
-                <span className="font-medium text-slate-800">{viewUserModal.date_embauche || "-"}</span>
+                <span className="text-slate-400 block font-bold uppercase mb-1">
+                  {`Date d'embauche`}
+                </span>
+                <span className="font-medium text-slate-800">
+                  {viewUserModal.date_embauche || "-"}
+                </span>
               </div>
+
               <div className="col-span-2 bg-slate-50 p-3 rounded-xl border border-slate-100">
-                <span className="text-slate-400 block font-bold uppercase mb-1">Adresse</span>
-                <span className="font-medium text-slate-800">{viewUserModal.adresse || "-"}</span>
+                <span className="text-slate-400 block font-bold uppercase mb-1">
+                  Adresse
+                </span>
+                <span className="font-medium text-slate-800">
+                  {viewUserModal.adresse || "-"}
+                </span>
               </div>
             </div>
 
@@ -752,8 +989,11 @@ export default function UtilisateursPage() {
             <div className="flex justify-between items-center pb-3 border-b border-slate-100">
               <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
                 <UserPlus className="w-5 h-5 text-blue-600" />
-                {editingUser ? "Modifier le collaborateur" : "Ajouter un Collaborateur SPAT"}
+                {editingUser
+                  ? "Modifier le collaborateur"
+                  : "Ajouter un Collaborateur SPAT"}
               </h3>
+
               <button
                 onClick={() => setShowModal(false)}
                 className="text-slate-400 hover:text-slate-600 transition-colors"
@@ -787,11 +1027,14 @@ export default function UtilisateursPage() {
                   <input
                     type="text"
                     required
-                    value={newUser.nom}
-                    onChange={(e) => setNewUser({ ...newUser, nom: e.target.value })}
+                    value={newUser.nom ?? ""}
+                    onChange={(e) =>
+                      setNewUser({ ...newUser, nom: e.target.value })
+                    }
                     className="input input-bordered input-sm w-full bg-white text-slate-800 focus:outline-hidden"
                   />
                 </div>
+
                 <div>
                   <label className="block text-xs font-bold uppercase text-slate-600 mb-1">
                     Prénom
@@ -799,8 +1042,10 @@ export default function UtilisateursPage() {
                   <input
                     type="text"
                     required
-                    value={newUser.prenom}
-                    onChange={(e) => setNewUser({ ...newUser, prenom: e.target.value })}
+                    value={newUser.prenom ?? ""}
+                    onChange={(e) =>
+                      setNewUser({ ...newUser, prenom: e.target.value })
+                    }
                     className="input input-bordered input-sm w-full bg-white text-slate-800 focus:outline-hidden"
                   />
                 </div>
@@ -808,26 +1053,38 @@ export default function UtilisateursPage() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold uppercase text-slate-600 mb-1">Numéro CIN</label>
+                  <label className="block text-xs font-bold uppercase text-slate-600 mb-1">
+                    Numéro CIN
+                  </label>
                   <input
                     type="text"
                     maxLength={30}
                     autoComplete="off"
                     placeholder="Numéro de carte d'identité"
                     required={!editingUser}
-                    value={newUser.numero_cin || ""}
-                    onChange={(e) => setNewUser({ ...newUser, numero_cin: e.target.value })}
+                    value={newUser.numero_cin ?? ""}
+                    onChange={(e) =>
+                      setNewUser({ ...newUser, numero_cin: e.target.value })
+                    }
                     className="input input-bordered input-sm w-full bg-white text-slate-800 focus:outline-hidden"
                   />
                 </div>
+
                 <div>
-                  <label className="block text-xs font-bold uppercase text-slate-600 mb-1">Date de naissance</label>
+                  <label className="block text-xs font-bold uppercase text-slate-600 mb-1">
+                    Date de naissance
+                  </label>
                   <input
                     type="date"
                     required={!editingUser}
-                    value={newUser.date_naissance || ""}
+                    value={newUser.date_naissance ?? ""}
                     max={new Date().toISOString().split("T")[0]}
-                    onChange={(e) => setNewUser({ ...newUser, date_naissance: e.target.value })}
+                    onChange={(e) =>
+                      setNewUser({
+                        ...newUser,
+                        date_naissance: e.target.value,
+                      })
+                    }
                     className="input input-bordered input-sm w-full bg-white text-slate-800 focus:outline-hidden"
                   />
                 </div>
@@ -848,26 +1105,35 @@ export default function UtilisateursPage() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold uppercase text-slate-600 mb-1">Téléphone</label>
+                  <label className="block text-xs font-bold uppercase text-slate-600 mb-1">
+                    Téléphone
+                  </label>
                   <input
                     type="tel"
                     maxLength={30}
                     autoComplete="tel"
                     required={!editingUser}
-                    value={newUser.telephone || ""}
-                    onChange={(e) => setNewUser({ ...newUser, telephone: e.target.value })}
+                    value={newUser.telephone ?? ""}
+                    onChange={(e) =>
+                      setNewUser({ ...newUser, telephone: e.target.value })
+                    }
                     className="input input-bordered input-sm w-full bg-white text-slate-800 focus:outline-hidden"
                   />
                 </div>
+
                 <div>
-                  <label className="block text-xs font-bold uppercase text-slate-600 mb-1">Adresse</label>
+                  <label className="block text-xs font-bold uppercase text-slate-600 mb-1">
+                    Adresse
+                  </label>
                   <input
                     type="text"
                     maxLength={500}
                     autoComplete="street-address"
                     required={!editingUser}
-                    value={newUser.adresse || ""}
-                    onChange={(e) => setNewUser({ ...newUser, adresse: e.target.value })}
+                    value={newUser.adresse ?? ""}
+                    onChange={(e) =>
+                      setNewUser({ ...newUser, adresse: e.target.value })
+                    }
                     className="input input-bordered input-sm w-full bg-white text-slate-800 focus:outline-hidden"
                   />
                 </div>
@@ -881,8 +1147,13 @@ export default function UtilisateursPage() {
                   <input
                     type="password"
                     placeholder="Laisser vide pour auto"
-                    value={newUser.mot_de_pass}
-                    onChange={(e) => setNewUser({ ...newUser, mot_de_pass: e.target.value })}
+                    value={newUser.mot_de_pass ?? ""}
+                    onChange={(e) =>
+                      setNewUser({
+                        ...newUser,
+                        mot_de_pass: e.target.value,
+                      })
+                    }
                     className="input input-bordered input-sm w-full bg-white text-slate-800 focus:outline-hidden"
                   />
                 </div>
@@ -893,8 +1164,10 @@ export default function UtilisateursPage() {
                   </label>
                   <select
                     required={!editingUser}
-                    value={newUser.role}
-                    onChange={(e) => setNewUser({ ...newUser, role: e.target.value })}
+                    value={newUser.role ?? "EMPLOYE"}
+                    onChange={(e) =>
+                      setNewUser({ ...newUser, role: e.target.value })
+                    }
                     className="select select-bordered select-sm w-full bg-white text-slate-800 focus:outline-hidden"
                   >
                     {editingUser?.role === "ADMIN" && <option value="ADMIN">Administrateur</option>}
@@ -913,31 +1186,48 @@ export default function UtilisateursPage() {
                 <input
                   type="date"
                   required={!editingUser}
-                  value={newUser.date_embauche || ""}
-                  onChange={(e) => setNewUser({ ...newUser, date_embauche: e.target.value })}
+                  value={newUser.date_embauche ?? ""}
+                  onChange={(e) =>
+                    setNewUser({
+                      ...newUser,
+                      date_embauche: e.target.value,
+                    })
+                  }
                   className="input input-bordered input-sm w-full bg-white text-slate-800 focus:outline-hidden"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold uppercase text-slate-600 mb-1">Fonction / Poste</label>
+                  <label className="block text-xs font-bold uppercase text-slate-600 mb-1">
+                    Fonction / Poste
+                  </label>
                   <input
                     type="text"
                     maxLength={100}
                     placeholder="Ex. Agent administratif"
                     required={!editingUser}
-                    value={newUser.fonction || ""}
-                    onChange={(e) => setNewUser({ ...newUser, fonction: e.target.value })}
+                    value={newUser.fonction ?? ""}
+                    onChange={(e) =>
+                      setNewUser({ ...newUser, fonction: e.target.value })
+                    }
                     className="input input-bordered input-sm w-full bg-white text-slate-800 focus:outline-hidden"
                   />
                 </div>
+
                 <div>
-                  <label className="block text-xs font-bold uppercase text-slate-600 mb-1">Type de contrat</label>
+                  <label className="block text-xs font-bold uppercase text-slate-600 mb-1">
+                    Type de contrat
+                  </label>
                   <select
                     required={!editingUser}
-                    value={newUser.type_contrat || ""}
-                    onChange={(e) => setNewUser({ ...newUser, type_contrat: e.target.value })}
+                    value={newUser.type_contrat ?? ""}
+                    onChange={(e) =>
+                      setNewUser({
+                        ...newUser,
+                        type_contrat: e.target.value,
+                      })
+                    }
                     className="select select-bordered select-sm w-full bg-white text-slate-800 focus:outline-hidden"
                   >
                     <option value="">Non renseigné</option>
@@ -957,7 +1247,12 @@ export default function UtilisateursPage() {
                   <input
                     type="checkbox"
                     checked={newUser.actif !== false}
-                    onChange={(e) => setNewUser({ ...newUser, actif: e.target.checked })}
+                    onChange={(e) =>
+                      setNewUser({
+                        ...newUser,
+                        actif: e.target.checked,
+                      })
+                    }
                     className="checkbox checkbox-sm"
                   />
                   Compte actif
@@ -967,12 +1262,19 @@ export default function UtilisateursPage() {
               <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
                 <button
                   type="button"
-                  onClick={() => { setShowModal(false); setEditingUser(null); }}
+                  onClick={() => {
+                    setShowModal(false);
+                    setEditingUser(null);
+                  }}
                   className="btn btn-ghost btn-sm font-semibold"
                 >
                   Annuler
                 </button>
-                <button type="submit" className="btn btn-primary btn-sm text-white font-semibold">
+
+                <button
+                  type="submit"
+                  className="btn btn-primary btn-sm text-white font-semibold"
+                >
                   {editingUser ? "Enregistrer" : "Créer le compte"}
                 </button>
               </div>
@@ -998,7 +1300,10 @@ export default function UtilisateursPage() {
       {userToDelete && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4">
           <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
-            <h2 className="text-lg font-bold text-slate-900">Archiver ce collaborateur ?</h2>
+            <h2 className="text-lg font-bold text-slate-900">
+              Archiver ce collaborateur ?
+            </h2>
+
             <p className="mt-2 text-sm text-slate-600">
               Le compte de {userToDelete.prenom} {userToDelete.nom} sera désactivé. Ses demandes de congé,
               soldes et historiques seront conservés.{" "}
@@ -1006,9 +1311,11 @@ export default function UtilisateursPage() {
                 ? "Une notification sera envoyée à son adresse e-mail."
                 : "Aucune adresse e-mail n'est renseignée : l'archivage sera effectué sans notification e-mail."}
             </p>
+
             <label className="mt-4 block text-xs font-bold uppercase text-slate-600">
               Motif (facultatif)
             </label>
+
             <textarea
               value={archiveReason}
               onChange={(e) => setArchiveReason(e.target.value)}
@@ -1017,23 +1324,33 @@ export default function UtilisateursPage() {
               placeholder="Vous pouvez préciser le motif de l'archivage..."
               className="textarea textarea-bordered mt-1 w-full bg-white text-slate-800"
             />
-            <div className="mt-1 text-right text-xs text-slate-400">{archiveReason.length}/1000</div>
+
+            <div className="mt-1 text-right text-xs text-slate-400">
+              {archiveReason.length}/1000
+            </div>
+
             <div className="mt-5 flex justify-end gap-2">
               <button
                 type="button"
                 disabled={deletingUserId === userToDelete.id}
-                onClick={() => { setUserToDelete(null); setArchiveReason(""); }}
+                onClick={() => {
+                  setUserToDelete(null);
+                  setArchiveReason("");
+                }}
                 className="btn btn-ghost btn-sm"
               >
                 Annuler
               </button>
+
               <button
                 type="button"
                 disabled={deletingUserId === userToDelete.id}
                 onClick={handleArchive}
                 className="btn btn-error btn-sm text-white"
               >
-                {deletingUserId === userToDelete.id ? "Archivage..." : "Confirmer l'archivage"}
+                {deletingUserId === userToDelete.id
+                  ? "Archivage..."
+                  : "Confirmer l'archivage"}
               </button>
             </div>
           </div>

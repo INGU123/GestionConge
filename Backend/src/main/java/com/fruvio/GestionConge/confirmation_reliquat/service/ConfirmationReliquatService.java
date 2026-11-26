@@ -57,6 +57,13 @@ public class ConfirmationReliquatService {
     public ConfirmationReliquatService(ConfirmationReliquatRepository confirmations,
             CircuitDemandeCongeRepository circuits, EmployeRepository employes,
             Notification_congeService notifications, Solde_congeRepository soldes,
+            Solde_congeService soldeService, Type_congeRepository typesConge) {
+        this(confirmations, circuits, employes, notifications, soldes, soldeService, typesConge, null);
+    }
+
+    public ConfirmationReliquatService(ConfirmationReliquatRepository confirmations,
+            CircuitDemandeCongeRepository circuits, EmployeRepository employes,
+            Notification_congeService notifications, Solde_congeRepository soldes,
             Solde_congeService soldeService) {
         this(confirmations, circuits, employes, notifications, soldes, soldeService, null, null);
     }
@@ -222,9 +229,10 @@ public class ConfirmationReliquatService {
 
         int acquis = 0, consommes = 0, restant = 0;
         for (int annee = debut; annee <= fin; annee++) {
+            final int exercice = annee;
             Solde_conge solde = soldes.findByUtilisateurIdAndTypeCongeIdAndPeriode(
-                    utilisateur.getId(), dossier.getTypeCongeId(), annee)
-                    .orElseThrow(() -> new IllegalStateException("Aucun solde RH enregistré pour l'exercice " + annee + "."));
+                    utilisateur.getId(), dossier.getTypeCongeId(), exercice)
+                    .orElseThrow(() -> new IllegalStateException("Aucun solde RH enregistré pour l'exercice " + exercice + "."));
             acquis += solde.getSoldeAquis() == null ? 0 : solde.getSoldeAquis();
             consommes += solde.getSoldePris() == null ? 0 : solde.getSoldePris();
             restant += disponibleCompte(solde);

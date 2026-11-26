@@ -162,7 +162,7 @@ public class CircuitDemandeCongeService {
                 .dateDebut(d.getDateDebut()).dateFin(d.getDateFin()).nombreJours(d.getNombreJours())
                 .commentaire(d.getCommentaire()).statut("EN_ATTENTE").dateCreation(java.time.LocalDate.now()).build();
         DemandeConge saved = demandesHistoriques.creerDemandePourCircuit(legacy);
-        DemandeConge decisionResult = demandesHistoriques.traiterDemande(saved.getId(), null, choix, raison, directeur);
+        DemandeConge decisionResult = demandesHistoriques.traiterDemandeCircuit(saved.getId(), choix, raison, directeur);
         d.setLegacyDemandeId(decisionResult.getId()); d.setMotifRefus("REFUSEE".equals(choix) ? raison : null);
         d.setDateDecision(LocalDateTime.now()); d.setStatut(choix);
         CircuitDemandeConge savedCircuit = circuits.save(d);
@@ -182,8 +182,7 @@ public class CircuitDemandeCongeService {
         CircuitDemandeConge dossier = circuits.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Dossier introuvable."));
 
-        boolean demandeur = user.getRole() != Role.DIRECTEUR
-                && user.getId().equals(dossier.getUtilisateurId());
+        boolean demandeur = user.getId().equals(dossier.getUtilisateurId());
         boolean assistantCreateur = user.getRole() == Role.ASSISTANT_DIRECTION
                 && user.getId().equals(dossier.getAssistantId());
 

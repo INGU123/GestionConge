@@ -148,8 +148,10 @@ public class UtilisateurController {
     @PreAuthorize("hasAnyRole('ADMIN', 'ASSISTANT_DIRECTION')")
     @GetMapping("/agents-actifs")
     public ResponseEntity<List<UtilisateurResponse>> getAgentsActifs() {
-        List<UtilisateurResponse> agents = utilisateurRepository.findByRoleAndActifTrue(Role.EMPLOYE).stream()
-                .filter(u -> !u.isArchived()).map(UtilisateurResponse::fromEntity).toList();
+        // Toute personne active peut être demandeuse, quel que soit son rôle applicatif.
+        List<UtilisateurResponse> agents = utilisateurRepository.findAll().stream()
+                .filter(u -> u.isActif() && !u.isArchived())
+                .map(UtilisateurResponse::fromEntity).toList();
         return ResponseEntity.ok(agents);
     }
 

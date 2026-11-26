@@ -116,7 +116,7 @@ export default function Utilisateur() {
             name="role"
             value={formData.role}
             onChange={handleChange}
-            placeholder="Rôle (ex: EMPLOYE, MANAGER, ADMIN)"
+            placeholder="Rôle"
           />
 
           <input

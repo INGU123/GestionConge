@@ -60,7 +60,6 @@ public class SecurityConfig {
                         // Consultation globale réservée à l'ADMIN
                         .requestMatchers("/utilisateur/all").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/conge/*/traiter").denyAll()
-                        .requestMatchers(HttpMethod.GET, "/conge/manager/**").denyAll()
                         .requestMatchers(HttpMethod.GET, "/conge/en-attente").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.GET, "/conge/all").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.GET, "/solde", "/solde/all").hasRole("ADMIN")

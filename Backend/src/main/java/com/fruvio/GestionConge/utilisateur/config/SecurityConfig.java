@@ -57,15 +57,14 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/notification/creer").denyAll()
                         .requestMatchers(HttpMethod.POST, "/jours-feries/create").denyAll()
 
-                        // Endpoints réservés à ADMIN et MANAGER
-                        .requestMatchers("/utilisateur/all").hasAnyRole("ADMIN", "MANAGER")
+                        // Consultation globale réservée à l'ADMIN
+                        .requestMatchers("/utilisateur/all").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/conge/*/traiter").denyAll()
-                        .requestMatchers(HttpMethod.GET, "/conge/manager/**").hasAnyRole("ADMIN", "MANAGER")
-                        .requestMatchers(HttpMethod.GET, "/conge/en-attente").hasAnyRole("ADMIN", "MANAGER")
-                        .requestMatchers(HttpMethod.GET, "/conge/all").hasAnyRole("ADMIN", "MANAGER")
-                        .requestMatchers(HttpMethod.GET, "/solde", "/solde/all").hasAnyRole("ADMIN", "MANAGER")
-                        .requestMatchers(HttpMethod.GET, "/historiques", "/historiques/all")
-                        .hasAnyRole("ADMIN", "MANAGER")
+                        .requestMatchers(HttpMethod.GET, "/conge/manager/**").denyAll()
+                        .requestMatchers(HttpMethod.GET, "/conge/en-attente").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/conge/all").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/solde", "/solde/all").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/historiques", "/historiques/all").hasRole("ADMIN")
 
                         // Endpoints accessibles aux utilisateurs connectés (avec vérifications de
                         // propriété/périmètre)
@@ -76,11 +75,11 @@ public class SecurityConfig {
                         .hasAnyRole("ADMIN", "EMPLOYE", "ASSISTANT_DIRECTION", "ADMINISTRATION_PERSONNEL", "CHEF_DEPARTEMENT", "DIRECTEUR")
                         .requestMatchers(HttpMethod.POST, "/conge/demander/**").denyAll()
                         .requestMatchers(HttpMethod.PUT, "/conge/*/annuler")
-                        .hasAnyRole("ADMIN", "MANAGER", "EMPLOYE")
+                        .hasAnyRole("ADMIN", "EMPLOYE")
                         .requestMatchers(HttpMethod.GET, "/conge/mes-demandes/**")
-                        .hasAnyRole("ADMIN", "MANAGER", "EMPLOYE")
+                        .hasAnyRole("ADMIN", "EMPLOYE")
                         .requestMatchers(HttpMethod.GET, "/solde/utilisateur/**")
-                        .hasAnyRole("ADMIN","MANAGER", "EMPLOYE", "ADMINISTRATION_PERSONNEL").requestMatchers(HttpMethod.GET, "/type-conge/**")
+                        .hasAnyRole("ADMIN", "EMPLOYE", "ADMINISTRATION_PERSONNEL").requestMatchers(HttpMethod.GET, "/type-conge/**")
                         .hasAnyRole("ADMIN", "MANAGER", "EMPLOYE", "ASSISTANT_DIRECTION", "ADMINISTRATION_PERSONNEL", "CHEF_DEPARTEMENT", "DIRECTEUR").requestMatchers(HttpMethod.GET, "/services/**")
                         .hasAnyRole("ADMIN","MANAGER", "EMPLOYE", "ASSISTANT_DIRECTION", "ADMINISTRATION_PERSONNEL", "CHEF_DEPARTEMENT", "DIRECTEUR").requestMatchers("/jours-feries/**")
                         .hasAnyRole("ADMIN", "EMPLOYE").requestMatchers("/notification/**")

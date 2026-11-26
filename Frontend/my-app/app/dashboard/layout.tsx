@@ -126,7 +126,6 @@ export default function DashboardLayout({
 
   const roleLabels: Record<string, string> = {
     ADMIN: "Administrateur",
-    MANAGER: "Manager",
     ASSISTANT_DIRECTION: "Demandeur",
     ADMINISTRATION_PERSONNEL: "Administration du personnel",
     CHEF_DEPARTEMENT: "Chef de département",
@@ -135,7 +134,6 @@ export default function DashboardLayout({
   };
   const roleStyles: Record<string, string> = {
     ADMIN: "border-blue-200 bg-blue-50 text-blue-700",
-    MANAGER: "border-violet-200 bg-violet-50 text-violet-700",
     ASSISTANT_DIRECTION: "border-cyan-200 bg-cyan-50 text-cyan-700",
     ADMINISTRATION_PERSONNEL: "border-emerald-200 bg-emerald-50 text-emerald-700",
     CHEF_DEPARTEMENT: "border-amber-200 bg-amber-50 text-amber-800",
@@ -155,7 +153,6 @@ export default function DashboardLayout({
   const isAdmin =
     userRoleClean === "ADMIN" || userRoleClean === "ROLE_ADMIN";
 
-  const isManager = userRoleClean === "MANAGER" || userRoleClean === "ROLE_MANAGER";
   const isAssistant = userRoleClean === "ASSISTANT_DIRECTION";
   const isPersonnel = userRoleClean === "ADMINISTRATION_PERSONNEL";
   const isChef = userRoleClean === "CHEF_DEPARTEMENT";
@@ -298,7 +295,7 @@ export default function DashboardLayout({
   ];
 
   navItems.push(
-    { href: "/dashboard/consultation-demandes", label: "Consultation des demandes", icon: <span>▤</span>, show: isAdmin || isManager },
+    { href: "/dashboard/consultation-demandes", label: "Consultation des demandes", icon: <span>▤</span>, show: isAdmin },
     { href: "/dashboard/circuit-conge", label: "Circuit des congés", icon: <span>↗</span>, show: isAssistant },
     { href: "/dashboard/reliquats", label: "Vérification des reliquats", icon: <span>✓</span>, show: isPersonnel },
     { href: "/dashboard/chef-departement", label: "Examen du chef", icon: <span>▣</span>, show: isChef },
@@ -377,7 +374,7 @@ export default function DashboardLayout({
             </button>
 
             {/* NOTIFICATIONS */}
-            {!isManager && <NotificationHeaderMenu />}
+            <NotificationHeaderMenu />
 
             {/* PROFIL UTILISATEUR — présentation homogène pour tous les rôles */}
             <div

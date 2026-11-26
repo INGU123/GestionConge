@@ -192,7 +192,7 @@ class UtilisateurServiceTest {
                 .email("employee@example.com").role(Role.ADMIN).build();
 
         when(utilisateurRepository.existsByMatricule("2026102")).thenReturn(false);
-        when(utilisateurRepository.existsByEmail("manager@example.com")).thenReturn(false);
+        when(utilisateurRepository.existsByEmail("employee@example.com")).thenReturn(false);
 
         assertThrows(IllegalArgumentException.class, () -> utilisateurService.createUtilisateur(request,
                 Utilisateur.builder().id(8L).role(Role.EMPLOYE).build()));

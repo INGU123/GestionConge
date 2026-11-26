@@ -71,8 +71,6 @@ public class Utilisateur implements UserDetails {
 
     private Long service_id;
 
-    private Long manager_id;
-
     @Column(nullable = false)
     private LocalDate date_embauche;
 

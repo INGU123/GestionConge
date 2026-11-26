@@ -251,13 +251,15 @@ public class CircuitDemandeCongeService {
         exiger(assistant, Role.ASSISTANT_DIRECTION);
         Utilisateur cible=utilisateurs.findById(utilisateurId).filter(Utilisateur::isEnabled)
                 .orElseThrow(() -> new IllegalArgumentException("Collaborateur actif introuvable."));
-        if (cible.getId().equals(assistant.getId()))
-            throw new IllegalArgumentException("L’Assistant de direction ne peut pas enregistrer sa propre demande. Elle doit être remise à un autre Assistant de direction habilité.");
-        if(cible.getRole()==null||cible.getRole()==Role.DIRECTEUR)
-            throw new IllegalArgumentException("Le directeur ne peut pas être sélectionné pour une demande de congé.");
+        if (cible.getRole() == null)
+            throw new IllegalArgumentException("Le rôle du collaborateur doit être renseigné.");
         Departement dep;
-        if(cible.getRole()==Role.CHEF_DEPARTEMENT) {
-            dep=departements.findByChefIdAndActifTrue(cible.getId()).orElseThrow(() -> new IllegalStateException("Aucun département actif n'est rattaché à ce chef."));
+        if (cible.getRole() == Role.CHEF_DEPARTEMENT) {
+            dep = departements.findByChefIdAndActifTrue(cible.getId())
+                    .orElseThrow(() -> new IllegalStateException("Aucun département actif n'est rattaché à ce chef."));
+        } else if (cible.getRole() == Role.DIRECTEUR) {
+            dep = departements.findByDirecteurIdAndActifTrue(cible.getId())
+                    .orElseThrow(() -> new IllegalStateException("Aucun département actif n'est rattaché à ce directeur."));
         } else {
             if(cible.getService_id()==null) throw new IllegalStateException("Aucun service n'est associé à ce collaborateur.");
             Services s=services.findById(cible.getService_id()).orElseThrow(() -> new IllegalStateException("Le service du collaborateur est introuvable."));
@@ -266,7 +268,6 @@ public class CircuitDemandeCongeService {
         }
         if(!Boolean.TRUE.equals(dep.getActif())||dep.getChefId()==null||dep.getDirecteurId()==null)
             throw new IllegalStateException("Le département doit être actif et avoir un chef et un directeur.");
-        if(cible.getId().equals(dep.getDirecteurId())) throw new IllegalStateException("Le directeur ne peut pas déposer une demande personnelle dans ce circuit.");
         if(debut==null||fin==null||fin.isBefore(debut)) throw new IllegalArgumentException("Période invalide.");
         var type=typeId==null?null:typesConge.findById(typeId).filter(t->Boolean.TRUE.equals(t.getActif()))
                 .orElseThrow(() -> new IllegalArgumentException("Type de congé indisponible."));
@@ -349,7 +350,6 @@ public class CircuitDemandeCongeService {
     public List<CircuitDemandeConge> enAttenteAdministration(Utilisateur user) {
         exiger(user, Role.ADMINISTRATION_PERSONNEL);
         return circuits.findByStatutOrderByDateCreationAsc("RELIQUAT_EN_ATTENTE").stream()
-                .filter(d -> !(d.getEmployeId()==null && user.getId().equals(d.getUtilisateurId())))
                 .map(this::enrichir).toList();
     }
 
@@ -357,7 +357,6 @@ public class CircuitDemandeCongeService {
     public List<CircuitDemandeConge> enAttenteChef(Utilisateur user) {
         exiger(user, Role.CHEF_DEPARTEMENT);
         return circuits.findByChefIdAndStatutOrderByDateCreationAsc(user.getId(), "CHEF_EN_ATTENTE").stream()
-                .filter(d -> !user.getId().equals(d.getUtilisateurId()))
                 .map(this::enrichir).toList();
     }
 
@@ -365,7 +364,6 @@ public class CircuitDemandeCongeService {
     public List<CircuitDemandeConge> enAttenteDirecteur(Utilisateur user) {
         exiger(user, Role.DIRECTEUR);
         return circuits.findByDirecteurIdAndStatutOrderByDateCreationAsc(user.getId(), "DIRECTEUR_EN_ATTENTE").stream()
-                .filter(d -> !user.getId().equals(d.getUtilisateurId()))
                 .map(this::enrichir).toList();
     }
 
@@ -374,8 +372,6 @@ public class CircuitDemandeCongeService {
         exiger(actor, Role.ADMINISTRATION_PERSONNEL);
         if (reliquat == null || reliquat < 0) throw new IllegalArgumentException("Le reliquat doit être positif ou nul.");
         CircuitDemandeConge d = dossierVerrouille(id);
-        if (d.getEmployeId()==null && actor.getId().equals(d.getUtilisateurId()))
-            throw new AccessDeniedException("Vous ne pouvez pas vérifier le reliquat de votre propre demande.");
         if (d.getEmployeId() != null)
             throw new IllegalStateException("Utilisez la confirmation RH avec période et référence pour un employé du référentiel.");
         if (d.getEmployeId() == null) {
@@ -430,12 +426,6 @@ public class CircuitDemandeCongeService {
         d.setChefId(dep.getChefId());
         d.setDirecteurId(dep.getDirecteurId());
         d.setDateSoumissionChef(LocalDateTime.now());
-        if(d.getEmployeId()==null && d.getUtilisateurId().equals(dep.getChefId())) {
-            d.setDateTransmissionDirecteur(LocalDateTime.now()); d.setStatut("DIRECTEUR_EN_ATTENTE");
-            CircuitDemandeConge saved=circuits.save(d);
-            notifications.creerNotification(dep.getDirecteurId(),"Un dossier de congé (#"+d.getId()+") attend votre décision.","CIRCUIT_CONGE","/dashboard/directeur");
-            return saved;
-        }
         d.setStatut("CHEF_EN_ATTENTE");
         CircuitDemandeConge saved=circuits.save(d);
         notifications.creerNotification(d.getChefId(),"Un dossier de congé (#"+d.getId()+") attend votre examen.","CIRCUIT_CONGE","/dashboard/chef-departement");
@@ -447,8 +437,6 @@ public class CircuitDemandeCongeService {
         exiger(chef, Role.CHEF_DEPARTEMENT);
         CircuitDemandeConge d = dossierVerrouille(id);
         if (!chef.getId().equals(d.getChefId())) throw new AccessDeniedException("Ce dossier ne relève pas de votre département.");
-        if (d.getEmployeId()==null && chef.getId().equals(d.getUtilisateurId()))
-            throw new AccessDeniedException("Vous ne pouvez pas examiner votre propre demande.");
         if (!"CHEF_EN_ATTENTE".equals(d.getStatut())) throw new IllegalStateException("Ce dossier n'attend pas l'avis du chef.");
         d.setDateTransmissionDirecteur(LocalDateTime.now()); d.setStatut("DIRECTEUR_EN_ATTENTE");
         CircuitDemandeConge saved = circuits.save(d);
@@ -461,8 +449,6 @@ public class CircuitDemandeCongeService {
         exiger(directeur, Role.DIRECTEUR);
         CircuitDemandeConge d = dossierVerrouille(id);
         if (!directeur.getId().equals(d.getDirecteurId())) throw new AccessDeniedException("Ce dossier ne relève pas de votre département.");
-        if (estDemandePersonnelle(d) && directeur.getId().equals(d.getUtilisateurId()))
-            throw new AccessDeniedException("Vous ne pouvez pas décider de votre propre demande.");
         if (!"DIRECTEUR_EN_ATTENTE".equals(d.getStatut())) throw new IllegalStateException("Ce dossier n'attend pas la décision du directeur.");
         String choix = decision == null ? "" : decision.trim().toUpperCase();
         if (!List.of("VALIDEE", "REFUSEE").contains(choix)) throw new IllegalArgumentException("Décision attendue : VALIDEE ou REFUSEE.");

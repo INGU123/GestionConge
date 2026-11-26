@@ -1524,3 +1524,56 @@ html[data-theme="night"] body :is(
 html[data-theme="night"] body :is(input, textarea, select) {
   color-scheme: dark;
 }
+
+
+/* Mode sombre ciblé : espaces Chef de département et Directeur */
+.theme-shell[data-theme="night"] main :is(.chef-departement-theme, .directeur-theme) {
+  color-scheme: dark;
+  color: #edf4ff;
+  --color-base-100: #101f31;
+  --color-base-200: #142941;
+  --color-base-300: #263b52;
+  --color-base-content: #edf4ff;
+  --color-primary: #60a5fa;
+  --color-primary-content: #071321;
+  --color-success: #34d399;
+  --color-success-content: #062b25;
+  --color-error: #fb7185;
+  --color-error-content: #3b0a16;
+}
+.theme-shell[data-theme="night"] main :is(.chef-departement-theme, .directeur-theme) :is(.card, .bg-base-100) {
+  background-color: #101f31 !important;
+  color: #edf4ff !important;
+  border-color: #30465f !important;
+}
+.theme-shell[data-theme="night"] main :is(.chef-departement-theme, .directeur-theme) [class*="bg-base-200"] {
+  background-color: #142941 !important;
+  color: #edf4ff !important;
+}
+.theme-shell[data-theme="night"] main :is(.chef-departement-theme, .directeur-theme) :is(.border, [class*="border-base-"]) {
+  border-color: #30465f !important;
+}
+.theme-shell[data-theme="night"] main :is(.chef-departement-theme, .directeur-theme) .text-base-content\/60,
+.theme-shell[data-theme="night"] main :is(.chef-departement-theme, .directeur-theme) .text-slate-500,
+.theme-shell[data-theme="night"] main :is(.chef-departement-theme, .directeur-theme) .text-slate-400 {
+  color: #a9bdd5 !important;
+}
+.theme-shell[data-theme="night"] main :is(.chef-departement-theme, .directeur-theme) :is(input,textarea,select) {
+  background-color: #0c1b2b !important;
+  color: #edf4ff !important;
+  border-color: #405873 !important;
+}
+.theme-shell[data-theme="night"] main :is(.chef-departement-theme, .directeur-theme) :is(input,textarea,select)::placeholder {
+  color: #9fb3ca !important;
+  opacity: 1;
+}
+.theme-shell[data-theme="night"] main :is(.chef-departement-theme, .directeur-theme) .btn-success {
+  background-color: #047857 !important;
+  border-color: #059669 !important;
+  color: #ffffff !important;
+}
+.theme-shell[data-theme="night"] main :is(.chef-departement-theme, .directeur-theme) .btn-error {
+  background-color: #9f1239 !important;
+  border-color: #be123c !important;
+  color: #ffffff !important;
+}

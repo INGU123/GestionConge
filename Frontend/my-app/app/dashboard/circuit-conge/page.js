@@ -7,7 +7,7 @@ const API = "http://localhost:8080";
 export default function CircuitCongePage() {
   const [employe,setEmploye]=useState(null), [matricule,setMatricule]=useState(""), [lookupBusy,setLookupBusy]=useState(false), [types,setTypes]=useState([]), [dossiers,setDossiers]=useState([]);
   const [form,setForm]=useState({employeId:"",utilisateurId:"",typeCongeId:"",dateDebut:"",dateFin:"",commentaire:""});
-  const [busy,setBusy]=useState(false); const [scan,setScan]=useState(null); const [pendingScan,setPendingScan]=useState(null); const toast=useToast();
+  const [busy,setBusy]=useState(false); const toast=useToast();
   const load=async()=>{const [t,d]=await Promise.all([
     authFetch(API+"/type-conge/all").then(r=>r.ok?r.json():[]),
     authFetch(API+"/circuit-conge/assistant/mes-dossiers").then(r=>r.ok?r.json():[])
@@ -36,30 +36,8 @@ export default function CircuitCongePage() {
       setLookupBusy(false);
     }
   };
-  const uploadScan=async(id,file)=>{
-    const body=new FormData();
-    body.append("fichier",file);
-    const response=await authFetch(API+`/circuit-conge/${id}/piece-jointe`,{method:"POST",body});
-    const data=await response.json().catch(()=>({}));
-    if(!response.ok)throw new Error(data.message||"Envoi du scan impossible");
-  };
-
-  const retryScan=async()=>{
-    if(!pendingScan)return;
-    setBusy(true);
-    try{
-      await uploadScan(pendingScan.id,pendingScan.file);
-      setPendingScan(null);
-      toast("Scan joint au dossier #"+pendingScan.id+".","success");
-      await load();
-    }catch(error){toast(error.message,"error");}
-    finally{setBusy(false);}
-  };
-
   const create=async e=>{
     e.preventDefault();
-    if(!scan){toast("Sélectionnez le scan du formulaire papier.","warning");return;}
-    if(scan.size>10*1024*1024){toast("Le scan dépasse 10 Mo.","error");return;}
     setBusy(true);
     try{
       const r=await authFetch(API+"/circuit-conge",{method:"POST",body:JSON.stringify({...form,
@@ -71,16 +49,7 @@ export default function CircuitCongePage() {
       setEmploye(null);
       setMatricule("");
       setForm({employeId:"",utilisateurId:"",typeCongeId:"",dateDebut:"",dateFin:"",commentaire:""});
-      try{
-        await uploadScan(data.id,scan);
-        setScan(null);
-        setPendingScan(null);
-        toast("Demande créée et scan joint au dossier #"+data.id+".","success");
-      }catch(error){
-        setScan(null);
-        setPendingScan({id:data.id,file:scan});
-        toast("Dossier créé, mais scan non envoyé : "+error.message,"warning");
-      }
+      toast("Demande numérique créée avec succès (#"+data.id+").","success");
       await load();
     }catch(error){toast(error.message,"error");}
     finally{setBusy(false);}
@@ -170,37 +139,12 @@ export default function CircuitCongePage() {
           </div>
         </section>
 
-        <section className="space-y-3">
-          <div className="flex items-center gap-2">
-            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10 text-sm font-bold text-primary">3</span>
-            <h3 className="font-semibold">Formulaire papier</h3>
-          </div>
-          <div className="rounded-xl border border-dashed border-base-300 bg-base-200/30 p-4 sm:p-5">
-            <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" className="h-6 w-6"><path strokeLinecap="round" strokeLinejoin="round" d="M12 16V4m0 0L7.5 8.5M12 4l4.5 4.5M4 16.5v2A1.5 1.5 0 005.5 20h13a1.5 1.5 0 001.5-1.5v-2"/></svg>
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="font-semibold">Joindre le formulaire papier scanné <span className="text-error">*</span></p>
-                <p className="mt-1 text-xs text-base-content/55">Formats acceptés : PDF, JPG ou PNG · Taille maximale : 10 Mo</p>
-                <p className="mt-2 truncate text-sm text-base-content/75">{scan?scan.name:"Aucun fichier sélectionné"}</p>
-              </div>
-              <label className="relative inline-flex shrink-0 cursor-pointer items-center gap-2 rounded-lg border border-base-300 bg-base-100 px-4 py-2.5 text-sm font-semibold shadow-sm transition hover:border-primary hover:bg-primary/5">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-4 w-4"><path strokeLinecap="round" strokeLinejoin="round" d="M12 16V4m0 0L7.5 8.5M12 4l4.5 4.5M4 16.5v2A1.5 1.5 0 005.5 20h13a1.5 1.5 0 001.5-1.5v-2"/></svg>
-                {scan?"Remplacer le fichier":"Choisir un fichier"}
-                <input type="file" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png" required className="absolute inset-0 h-full w-full cursor-pointer opacity-0" onChange={e=>{const file=e.target.files?.[0]||null;if(file&&file.size>10*1024*1024){toast("Le scan dépasse 10 Mo.","error");e.target.value="";setScan(null);}else setScan(file);}}/>
-              </label>
-            </div>
-          </div>
-        </section>
-
         <div className="flex flex-col-reverse gap-3 border-t border-base-300 pt-5 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-xs text-base-content/50">Vérifiez les informations avant la création du dossier.</p>
-          <button disabled={busy||lookupBusy||(!form.employeId&&!form.utilisateurId)||!form.typeCongeId||!scan} className="btn btn-primary min-w-56">
-            {busy?"Enregistrement…":"Créer la demande et joindre le scan"}
+          <button disabled={busy||lookupBusy||(!form.employeId&&!form.utilisateurId)||!form.typeCongeId||!form.dateDebut||!form.dateFin} className="btn btn-primary min-w-56">
+            {busy?"Enregistrement…":"Créer la demande"}
           </button>
         </div>
-        {pendingScan&&<div className="rounded-lg border border-warning/50 bg-warning/10 p-3 text-sm"><p>Le dossier #{pendingScan.id} existe, mais son scan reste à envoyer.</p><button type="button" className="btn btn-sm btn-warning mt-2" disabled={busy} onClick={retryScan}>Réessayer l’envoi du scan</button></div>}
       </div>
     </form>
     <section className="card bg-base-100 border p-5"><h2 className="font-semibold mb-3">Mes dossiers et décisions reçues</h2><div className="overflow-x-auto"><table className="table table-sm"><thead><tr><th>Agent</th><th>Période</th><th>Jours</th><th>Reliquat</th><th>Observation RH</th><th>Statut</th><th>Action</th></tr></thead><tbody>{dossiers.map(d=><tr key={d.id}><td>{d.utilisateurPrenom} {d.utilisateurNom} ({d.utilisateurMatricule})</td><td>{d.dateDebut} → {d.dateFin}</td><td>{d.nombreJours}</td><td>{d.reliquatJours??"—"}</td><td>{d.reliquatCommentaire||"—"}</td><td>{d.statut}</td><td className="flex gap-2">{d.statut==="RELIQUAT_RETOURNE"&&<button className="btn btn-xs btn-primary" disabled={d.reliquatJours < d.nombreJours} onClick={()=>submit(d.id)}>{d.reliquatJours < d.nombreJours ? "Reliquat insuffisant" : "Soumettre au chef"}</button>}{["VALIDEE","REFUSEE"].includes(d.statut)&&<button className="btn btn-xs btn-outline" onClick={()=>download(d.id)}>PDF décision</button>}</td></tr>)}{!dossiers.length&&<tr><td colSpan="7" className="text-center text-slate-400">Aucun dossier.</td></tr>}</tbody></table></div></section>

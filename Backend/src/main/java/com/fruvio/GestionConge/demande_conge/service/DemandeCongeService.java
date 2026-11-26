@@ -560,6 +560,6 @@ public class DemandeCongeService {
         }
 
 
-        throw new AccessDeniedException("Accès réservé aux managers et administrateurs.");
+        throw new AccessDeniedException("Accès réservé à l’administration.");
     }
 }

@@ -174,6 +174,25 @@ public class DemandeCongeService {
     @Transactional
     public DemandeConge traiterDemande(Long demandeId, Long requestedManagerId, String statut, String motifRefus,
             Utilisateur currentUser) {
+        return traiterDemandeInterne(demandeId, requestedManagerId, statut, motifRefus, currentUser, false);
+    }
+
+    /**
+     * Traitement final exclusivement appelé par le circuit hiérarchique.
+     * Le Directeur peut exceptionnellement décider de sa propre demande puisque
+     * la procédure confirmée SPAT prévoit que son dossier suit le circuit jusqu'à lui.
+     */
+    @Transactional
+    public DemandeConge traiterDemandeCircuit(Long demandeId, String statut, String motifRefus,
+            Utilisateur directeur) {
+        if (directeur == null || directeur.getRole() != Role.DIRECTEUR) {
+            throw new AccessDeniedException("La décision finale du circuit est réservée au Directeur.");
+        }
+        return traiterDemandeInterne(demandeId, null, statut, motifRefus, directeur, true);
+    }
+
+    private DemandeConge traiterDemandeInterne(Long demandeId, Long requestedManagerId, String statut,
+            String motifRefus, Utilisateur currentUser, boolean decisionCircuit) {
         if (currentUser == null) {
             throw new AccessDeniedException("Authentification requise.");
         }
@@ -189,7 +208,8 @@ public class DemandeCongeService {
         Utilisateur demandeur = utilisateurRepo.findById(demandeurId)
                 .orElseThrow(() -> new IllegalArgumentException("Collaborateur demandeur introuvable."));
 
-        if (Objects.equals(demandeur.getId(), currentUser.getId())) {
+        if (Objects.equals(demandeur.getId(), currentUser.getId())
+                && !(decisionCircuit && currentUser.getRole() == Role.DIRECTEUR)) {
             throw new AccessDeniedException("Vous ne pouvez pas approuver ou refuser votre propre demande.");
         }
 

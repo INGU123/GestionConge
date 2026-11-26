@@ -409,10 +409,12 @@ public class CircuitDemandeCongeService {
             throw new IllegalStateException("Reliquat insuffisant : " + d.getNombreJours() + " jour(s) demandés, "
                     + (d.getReliquatJours() == null ? 0 : d.getReliquatJours()) + " jour(s) retournés par l'administration.");
         }
-        int joursVerifies = d.getEmployeId() != null
-                ? joursFeries.compterJoursCalendaires(d.getDateDebut(), d.getDateFin())
-                : demandesHistoriques.verifierEligibiliteWorkflow(d.getUtilisateurId(), d.getTypeCongeId(), d.getDateDebut(), d.getDateFin());
-        if (joursVerifies != d.getNombreJours()) throw new IllegalStateException("Le nombre de jours calendaires a changé. Recréez le dossier après vérification.");
+        // Tous les dossiers du circuit enregistrent des jours calendaires à leur création.
+        // Ne pas comparer les dossiers liés à un compte utilisateur avec le calcul historique
+        // en jours ouvrés, qui produit un total différent pour les week-ends et jours fériés.
+        int joursVerifies = joursFeries.compterJoursCalendaires(d.getDateDebut(), d.getDateFin());
+        if (joursVerifies != d.getNombreJours())
+            throw new IllegalStateException("Le nombre de jours calendaires a changé. Recréez le dossier après vérification.");
         if (d.getEmployeId() == null) utilisateurActif(d.getUtilisateurId());
         else employes.findById(d.getEmployeId()).filter(Employe::isActif).orElseThrow(() -> new IllegalStateException("Employé inactif ou introuvable."));
         if (d.getDepartementId() == null)

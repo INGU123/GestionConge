@@ -30,7 +30,6 @@ import com.fruvio.GestionConge.historique_mouvement.repository.Historique_mouvem
 import com.fruvio.GestionConge.historique_mouvement.service.Historique_mouvementService;
 import com.fruvio.GestionConge.type_conge.repository.Type_congeRepository;
 import com.fruvio.GestionConge.utilisateur.config.CustomUserDetails;
-import com.fruvio.GestionConge.utilisateur.entity.Role;
 import com.fruvio.GestionConge.utilisateur.entity.Utilisateur;
 import com.fruvio.GestionConge.utilisateur.repository.UtilisateurRepository;
 
@@ -54,14 +53,14 @@ public class Historique_mouvementController {
         this.typeCongeRepository = typeCongeRepository;
     }
 
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping({"", "/all"})
     public ResponseEntity<List<Historique_mouvement>> getAll() {
         Utilisateur currentUser = getCurrentAuthenticatedUser();
         return ResponseEntity.ok(historiqueService.getAllMouvements(currentUser));
     }
 
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'EMPLOYE')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYE')")
     @GetMapping("/utilisateur/{utilisateurId}")
     public ResponseEntity<List<Historique_mouvement>> getParUtilisateur(@PathVariable Long utilisateurId) {
         Utilisateur currentUser = getCurrentAuthenticatedUser();
@@ -99,9 +98,6 @@ public class Historique_mouvementController {
                 .map(Historique_mouvement::getUtilisateurId)
                 .filter(id -> id != null)
                 .collect(Collectors.toCollection(LinkedHashSet::new));
-        if (currentUser != null && currentUser.getRole() == Role.MANAGER) {
-            visibleUserIds.add(currentUser.getId());
-        }
         if (currentUser != null && currentUser.getRole() == Role.ADMIN) {
             mouvements.stream().map(Historique_mouvement::getEffectue_par)
                     .filter(id -> id != null).forEach(visibleUserIds::add);
